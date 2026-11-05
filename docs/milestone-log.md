@@ -369,3 +369,18 @@ Review and accept the M0 milestone gate, then request authorization to begin Mil
 ### Next smallest task
 
 Implement Slice 2: Trip data model, migrations (`trips`, `trip_members`), `TripPolicy`, and Trip CRUD API (`/api/v1/trips`) supporting all four traveler planning modes (`diy`, `existing`, `guided`, `simple`).
+
+## 2026-11-05 — Remote Git repository linked and synchronized
+
+### Completed
+
+- Initialized Git repository on branch `main`.
+- Verified `.gitignore` coverage across `.env`, `.local/`, `.obsidian/`, `vendor/`, and build artifacts to prevent credential or temporary data leaks.
+- Configured remote origin: `https://github.com/monroenikko/tapittrip.git`.
+- Committed and pushed initial project baseline (M0 foundation, Boost agent parity, M1 Slice 1 auth API) to `origin/main`.
+- Rule established: Every phase and milestone slice will be committed and pushed to `https://github.com/monroenikko/tapittrip.git`.
+
+### Verification
+
+- `git status` — **passed**: Working tree clean, tracking `origin/main`.
+- `git push -u origin main` — **passed**: 374 objects uploaded successfully.

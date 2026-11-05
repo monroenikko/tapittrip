@@ -23,4 +23,4 @@ Before the first offline mutation, settle operation identity, aggregate versioni
 
 ## Remaining M0 gaps
 
-Flutter shell is scaffolded and verified with package ID `com.tapittrip.app` ([ADR 0001](decisions/0001-mobile-framework.md)). Swagger UI, PHP static analysis, and an actual green remote CI run remain open. The current directory has no Git metadata. See the [milestone log](milestone-log.md), not this document, for current verification results.
+Flutter shell is scaffolded and verified with package ID `com.tapittrip.app` ([ADR 0001](decisions/0001-mobile-framework.md)). Swagger UI and PHP static analysis remain open. Repository is connected to remote `https://github.com/monroenikko/tapittrip.git`. See the [milestone log](milestone-log.md), not this document, for current verification results.
