@@ -26,9 +26,19 @@ For state, repositories, and offline sync, also follow the root skill `tapittrip
 - Navy leads, orange accents. Roughly 60% neutral surface / 30% navy / 10% orange.
 - White text on orange fails contrast for normal text. Put dark text (`onSecondary`) on orange fills; use `#B84A00` for orange text on white.
 
-## 3. Build rules
+## 3. Build rules & travel component system
 - Material 3 with a single app theme (`ThemeData` + `ColorScheme` + `TextTheme`). Support light and dark.
-- Spacing scale: 4, 8, 12, 16, 24, 32. Radius scale: 8, 12, 16. No other values without reason.
+- Spacing scale: 4, 8, 12, 16, 24, 32. Radius scale: 8, 12, 16, 28 (stadium pills). No other values without reason.
+- Follow the **Travel Component System** ([`references/travel-component-system.md`](references/travel-component-system.md)):
+  - **Search Pill Bar**: Stadium shape `BorderRadius.circular(28)`, search input with trailing circular action button in `primary` (Navy).
+  - **Destination Showcase**: Horizontal scrolling cards (`140w x 180h`), `BorderRadius.circular(16)`, full-bleed photo with subtle dark gradient and white text.
+  - **Quick Action Squircles**: Square rounded cards (`BorderRadius.circular(16)`) in soft surface fill with brand icon and label.
+  - **Segmented Filter Pills**: Stadium filter tabs; active tab filled in `primary` (Navy), inactive outlined.
+  - **Timeline Activity Cards**: Connected by vertical connector lines, day badges in `primary`, activity card with title, bullet highlights, and thumbnail.
+  - **Boarding Pass & Stay Cards**: Dual-segment ticket styling (Navy top header band + status badge in `secondary` Orange, white body with route/QR, stay thumbnail).
+  - **Stat & Progress Widgets**: 2-column dashboard cards (weather icon/temp, circular progress meter in `secondary` Orange).
+  - **Floating Action Bar**: Sticky bottom stadium CTA (`BorderRadius.circular(28)`) in `primary` (Navy) with icon and text.
+- Mapping third-party mockups: When adopting travel UI patterns that use green accents, map the green fills to **TapIt Navy (`#00376D`)** for primary buttons/headers and **Trip Orange (`#F76405`)** for status badges, highlights, progress rings, and map pins.
 - Keep it clean: no purple, no glassmorphism, no heavy shadows, no decorative gradients in UI chrome (the logo gradient is for brand art only).
 - Content first. Use cards only when grouping helps.
 - Small widgets, `const` where possible, lazy lists for long data. No business logic in `build`.

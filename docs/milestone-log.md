@@ -3,9 +3,34 @@
 ## Current milestone
 
 - Milestone: **M1 — Auth and trip CRUD**
-- Status: **Completed** (Slices 1, 2, and 3 completed; ready for M1 review and M2 approval)
+- Status: **Completed** (Slices 1, 2, and 3 completed; UI Component Design System established and verified; ready for M1 review and M2 approval)
 - Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
 - Boundary: Milestone M1 complete; do not implement M2 itinerary/places or later features until M2 is approved.
+
+## 2026-11-05 — Travel Component Design System & Mobile UI Elevation
+
+### Completed
+
+- Codified the travel app design language from the reference mockup into `client/.agents/skills/flutter-premium-ui/references/travel-component-system.md` with token mappings:
+  - Primary Navy (`#00376D`): Headers, primary buttons, day badge circles, search action circle.
+  - Secondary Orange (`#F76405`): Live status indicators, map pins, active progress rings.
+  - Tertiary Sky Blue (`#0166BE`): Links, info chips, secondary route accents.
+  - Canvas Surface (`#F7F9FC`): Clean, warm background.
+- Updated `client/.agents/skills/flutter-premium-ui/SKILL.md` and `.agents/skills/tapittrip-flutter-mobile/SKILL.md` to reference the 14 visual component rules and layout specs.
+- Built `SearchPillBar` widget (`R28` stadium container with search input and TapIt Navy circular action button).
+- Built `QuickActionsRow` widget (`R16` squircles for AI Itinerary, Smart Route, Budget Plan, and Travel Guide).
+- Elevated `TripCard` with `R16` containers, leading icon squircles, destination indicators, and pill badges for planning mode and trip style.
+- Elevated `TripListPage` with hero greeting ("Your Journey,\nIntelligently Planned."), search pill bar, quick actions row, trip list, bottom navigation bar (`Home`, `Itinerary`, `Bookings`, `Profile`), and floating action button.
+
+### Verification
+
+- `cd client && dart format .` — **passed**: 27 files formatted.
+- `cd client && flutter analyze` — **passed**: 0 issues found.
+- `cd client && flutter test` — **passed**: 13 unit/widget tests passing.
+
+### Next smallest task
+
+Review Milestone M1 with project owner and request approval to begin Milestone M2 (Itinerary, places, and maps).
 
 ## 2026-11-05 — M1 Slice 3 Flutter mobile auth & trip management with .env configuration
 
