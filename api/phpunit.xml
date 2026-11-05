@@ -12,6 +12,7 @@
             <directory>tests/Feature</directory>
             <exclude>tests/Feature/PostgresFoundationTest.php</exclude>
             <exclude>tests/Feature/AuthTest.php</exclude>
+            <exclude>tests/Feature/TripTest.php</exclude>
         </testsuite>
     </testsuites>
     <source>

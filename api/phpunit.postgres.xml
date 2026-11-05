@@ -4,6 +4,7 @@
         <testsuite name="PostgreSQL">
             <file>tests/Feature/PostgresFoundationTest.php</file>
             <file>tests/Feature/AuthTest.php</file>
+            <file>tests/Feature/TripTest.php</file>
         </testsuite>
     </testsuites>
     <php>

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: TapItTrip API
-  version: 0.1.0
+  version: 0.1.1
   description: >-
     Contract for implemented behavior in the TapItTrip versioned JSON API.
     Paths are added only when a milestone slice approves and implements the
@@ -53,6 +53,25 @@ paths:
                 $ref: "#/components/schemas/TokenResponse"
         "422":
           description: Invalid credentials or validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidCredentials:
+                  value:
+                    error:
+                      code: invalid_credentials
+                      message: The provided credentials are incorrect.
+                validationFailed:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: The given data was invalid.
+                      details:
+                        fields:
+                          email:
+                            - The email field must be a valid email address.
   /auth/logout:
     post:
       operationId: logout
@@ -65,7 +84,7 @@ paths:
         "204":
           description: Successfully logged out.
         "401":
-          description: Unauthenticated.
+          $ref: "#/components/responses/Unauthenticated"
   /me:
     get:
       operationId: getProfile
@@ -82,7 +101,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/UserResponse"
         "401":
-          description: Unauthenticated.
+          $ref: "#/components/responses/Unauthenticated"
     delete:
       operationId: deleteAccount
       summary: Delete traveler account and revoke access tokens
@@ -94,14 +113,192 @@ paths:
         "204":
           description: Account deleted.
         "401":
-          description: Unauthenticated.
+          $ref: "#/components/responses/Unauthenticated"
+  /trips:
+    get:
+      operationId: listTrips
+      summary: List trips the authenticated traveler is a member of
+      tags:
+        - Trips
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: List of trips.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    post:
+      operationId: createTrip
+      summary: Create a new trip
+      tags:
+        - Trips
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreTripRequest"
+      responses:
+        "201":
+          description: Trip created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "422":
+          description: Validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /trips/{trip}:
+    parameters:
+      - name: trip
+        in: path
+        required: true
+        description: UUID of the trip
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTrip
+      summary: Get trip details
+      tags:
+        - Trips
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Trip details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not a member of this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Trip not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateTrip
+      summary: Update trip details
+      tags:
+        - Trips
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTripRequest"
+      responses:
+        "200":
+          description: Trip updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to edit this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Trip not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteTrip
+      summary: Delete trip
+      tags:
+        - Trips
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Trip deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Only trip owner can delete trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Trip not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       description: Personal access token issued by /auth/token
+  responses:
+    Unauthenticated:
+      description: A valid access token is required.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: unauthenticated
+              message: Authentication is required.
   schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              pattern: "^[a-z][a-z0-9_]*$"
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
     HealthResponse:
       type: object
       additionalProperties: false
@@ -197,4 +394,160 @@ components:
               const: Bearer
             user:
               $ref: "#/components/schemas/User"
+    StoreTripRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        primary_timezone:
+          type: string
+          nullable: true
+        origin_country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          nullable: true
+        destination_country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          nullable: true
+        trip_type:
+          type: string
+          enum: [leisure, business, family, solo, group]
+          nullable: true
+        planning_mode:
+          type: string
+          enum: [diy, existing, guided, simple]
+          nullable: true
+    UpdateTripRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        primary_timezone:
+          type: string
+          nullable: true
+        origin_country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          nullable: true
+        destination_country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          nullable: true
+        trip_type:
+          type: string
+          enum: [leisure, business, family, solo, group]
+          nullable: true
+        planning_mode:
+          type: string
+          enum: [diy, existing, guided, simple]
+          nullable: true
+        status:
+          type: string
+          enum: [planned, active, completed, archived]
+          nullable: true
+    Trip:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - owner_id
+        - title
+        - primary_timezone
+        - trip_type
+        - planning_mode
+        - status
+        - version
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        owner_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        primary_timezone:
+          type: string
+        origin_country:
+          type: string
+          nullable: true
+        destination_country:
+          type: string
+          nullable: true
+        trip_type:
+          type: string
+        planning_mode:
+          type: string
+          enum: [diy, existing, guided, simple]
+        status:
+          type: string
+          enum: [planned, active, completed, archived]
+        version:
+          type: integer
+          minimum: 1
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TripResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/Trip"
+    TripListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trip"
 

@@ -3,9 +3,74 @@
 ## Current milestone
 
 - Milestone: **M1 — Auth and trip CRUD**
-- Status: **In progress** (Slice 1 completed)
+- Status: **In progress** (Slices 1 & 2 completed; Slice 3 mobile integration in progress)
 - Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
 - Boundary: Implement M1 features only; do not implement M2 itinerary/places or later features until M1 is verified and approved.
+
+## 2026-11-05 — M1 API service and response implementation refactor
+
+### Completed
+
+- Added `ApiResponse` as the single HTTP-layer builder for `data`, `error`, and empty `204` responses.
+- Added centralized `ApiExceptionResponse` mapping for validation, invalid credentials, authentication, HTTP failures, and safe unexpected failures while preserving framework response headers.
+- Extracted credential verification/token issuance, current-token revocation, and account deletion into behavior-specific services under `App\Application\Identity\Services`, with an explicit `AccessTokenResult` DTO in the application layer.
+- Standardized the precise architecture convention: framework-aware use cases live in `app/Application/<Feature>/Services`; `app/Domain/<Feature>/Services` is reserved for framework-independent business rules.
+- Added a non-reportable `InvalidCredentials` application exception so invalid logins have a stable error code without logging expected authentication failures.
+- Refactored health, authentication, and profile controllers to use the shared response class while preserving successful `data` payloads and empty `204` responses.
+- Updated OpenAPI to version `0.1.1` with reusable error schemas/responses and updated the identity feature documentation.
+- Added focused coverage for validation, invalid credentials, unauthenticated access, not found, method not allowed with preserved headers, and safe unexpected errors.
+
+### Verification
+
+- `./vendor/bin/sail pint --format agent app/Application app/Http/Controllers/Api/V1/AuthController.php app/Http/Controllers/Api/V1/ProfileController.php app/Support/Http/ApiExceptionResponse.php` — **passed** after the application-service namespace refactor.
+- `./vendor/bin/sail artisan test --compact tests/Feature/ApiErrorResponseTest.php tests/Feature/HealthEndpointTest.php` — **passed**: 4 tests, 10 assertions.
+- `bash bin/test-postgres` — **passed**: 13 PostgreSQL feature tests with 74 assertions, plus 1 migration test with 5 assertions.
+- `./vendor/bin/sail artisan test --compact` — **passed**: 4 tests, 10 assertions in the default non-PostgreSQL suite.
+- `./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI semantic validation and live health response.
+- Static analysis — **not run** because PHPStan/Larastan is not installed in the API project.
+
+### Security and offline considerations
+
+- API failures expose only fixed safe messages and stable codes; exception messages, traces, SQL, credentials, tokens, and provider payloads are not serialized.
+- Expected invalid-credential failures are excluded from exception reporting, while unexpected failures remain reportable and receive a generic client response.
+- The refactor changes online HTTP error shapes only. It adds no local persistence, sync/outbox behavior, or new traveler data.
+
+### Known limitations
+
+- No implemented endpoint currently produces authorization, conflict, or rate-limit failures, so their centralized mappings are present but do not yet have endpoint-level feature coverage.
+- The mobile authentication flow has not yet integrated the standardized error codes.
+
+### Next smallest task
+
+Implement M1 Slice 2 Trip CRUD using the new action and response boundaries, including trip membership policy isolation, all four planning modes, OpenAPI contracts, and PostgreSQL-backed feature tests.
+
+## 2026-11-05 — Laravel service and API response rules standardized
+
+### Completed
+
+- Made behavior-focused application services mandatory for Laravel use cases, with typed inputs, dependency injection, explicit transaction ownership, and no HTTP-layer return types.
+- Prohibited generic base/catch-all CRUD services and kept domain services limited to genuine cross-entity business rules.
+- Defined one reusable HTTP-layer response class/factory as the source of response-envelope behavior; controller traits may only delegate to it.
+- Standardized success, pagination, no-content, and safe error-envelope shapes and required centralized exception rendering, OpenAPI alignment, compatibility handling, and feature coverage.
+- Synchronized the root repository rules, Laravel API pattern reference, and cross-stack engineering guide. No runtime API behavior changed in this documentation-only task.
+
+### Verification
+
+- Markdown content and cross-file rule consistency checks — **passed**.
+- Laravel formatter, static analysis, and tests — **not run** because no PHP/runtime files or API behavior changed.
+
+### Security and offline considerations
+
+- The error contract forbids leaking exceptions, stack traces, SQL, provider payloads, tokens, booking references, private coordinates, and document contents.
+- This rules-only change does not alter local persistence, sync behavior, endpoint payloads, or mobile offline behavior.
+
+### Known limitations
+
+- This entry records the rules-only step. The runtime implementation and verification are recorded in the subsequent M1 API refactor entry above.
+
+### Next smallest task
+
+Apply these rules to each M1 API slice; the shared response and exception infrastructure is now implemented as recorded above.
 
 ## 2026-11-03 — KOS and engineering workflow foundation
 
@@ -341,7 +406,7 @@ Review and accept the M0 milestone gate, then request authorization to begin Mil
 - Implemented `POST /api/v1/auth/token` (`AuthController::token`) for credential authentication and personal access token issuance.
 - Implemented `POST /api/v1/auth/logout` (`AuthController::logout`) for revoking current tokens.
 - Implemented `GET /api/v1/me` (`ProfileController::show`) returning standard JSON envelope via `UserResource`.
-- Implemented `DELETE /api/v1/me` (`ProfileController::destroy`) using domain action `DeleteAccount` for transactional token revocation, session cleanup, and account soft-deletion.
+- Implemented `DELETE /api/v1/me` (`ProfileController::destroy`) using application service `DeleteAccountService` for transactional token revocation, session cleanup, and account soft-deletion.
 - Updated `docs/api/openapi.yaml` with `BearerAuth`, authentication, and profile operations/schemas.
 - Added feature test suite `tests/Feature/AuthTest.php` verifying token issue, validation errors, profile access, unauthorized rejection, logout, and account deletion.
 - Added feature documentation in `docs/features/identity-and-auth.md`.
@@ -384,3 +449,40 @@ Implement Slice 2: Trip data model, migrations (`trips`, `trip_members`), `TripP
 
 - `git status` — **passed**: Working tree clean, tracking `origin/main`.
 - `git push -u origin main` — **passed**: 374 objects uploaded successfully.
+
+## 2026-11-05 — M1 Slice 2: Trip data model, policies, and CRUD API
+
+### Completed
+
+- Added migration `2026_11_05_030000_create_trips_table.php` defining `trips` (`id` UUID, `owner_id`, `title`, `start_date`, `end_date`, `primary_timezone`, `origin_country`, `destination_country`, `trip_type`, `planning_mode`, `status`, `version`, soft deletes) and `trip_members` (`id`, `trip_id`, `user_id`, `role`, `invitation_status`).
+- Added Eloquent models `App\Domain\Trips\Models\Trip` and `App\Domain\Trips\Models\TripMember` with UUID concerns, relations, casts, and role checks.
+- Implemented `App\Domain\Trips\Policies\TripPolicy` enforcing server-side authorization: members can view, owners/editors can update, and only owners can delete trips.
+- Implemented application Actions `CreateTrip`, `UpdateTrip`, and `DeleteTrip` with transaction boundaries and monotonic `version` counter increments.
+- Implemented Form Requests `StoreTripRequest` and `UpdateTripRequest` with date-ordering and planning mode validation.
+- Implemented `TripResource` serializing normalized trip attributes and viewer role.
+- Implemented `TripController` and registered `trips` apiResource under `auth:sanctum` in `routes/api.php`.
+- Documented all operations and schemas in `docs/api/openapi.yaml`.
+- Created feature documentation in `docs/features/trip-management.md`.
+- Added test suite `tests/Feature/TripTest.php` covering all 4 planning modes, validation, isolation, role-based editing, and owner deletion.
+
+### Verification
+
+- `cd api && bash bin/test-postgres` — **passed**: 26 tests, 120 assertions passed across `PostgresFoundationTest`, `AuthTest`, and `TripTest`.
+- `cd api && ./vendor/bin/sail artisan test --compact` — **passed**: Fast non-database suite passed.
+- `cd api && ./vendor/bin/sail pint --test` — **passed**: Pint code style clean.
+- `cd api && ./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI 3.1 semantic check passed.
+- `ruby -e ...` Markdown relative link audit — **passed** (`ALL_LINKS_OK`).
+
+### Security and offline considerations
+
+- Strict tenant isolation enforced server-side via `TripPolicy`; unauthorized access yields HTTP 403.
+- Database cascades clean up `trip_members` on parent deletion.
+- Positive integer `version` field enables optimistic locking and sync conflict resolution for offline clients.
+
+### Known limitations
+
+- Mobile client UI for trip list and trip creation is scheduled for Slice 3.
+
+### Next smallest task
+
+Implement Slice 3: Flutter mobile integration for authentication state and trip creation/listing across all four planning modes.

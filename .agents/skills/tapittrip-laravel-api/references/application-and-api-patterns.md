@@ -9,7 +9,7 @@ Route
   -> Form Request (authorize coarse access, validate, normalize)
   -> Versioned Controller (translate HTTP only)
   -> Policy (resource/trip membership authorization)
-  -> Application Service or Action (one use case, transaction boundary)
+  -> Application Service (one use case, transaction boundary)
   -> Domain Model / Domain Service / Provider Port
   -> API Resource (stable response mapping)
 ```
@@ -20,7 +20,7 @@ The controller must not contain business decisions, persistence orchestration, p
 
 Use “service” only when the class has a clear role:
 
-### Application service or action
+### Application service
 
 Orchestrates one user/system use case such as `CreateTrip`, `UpdateStay`, or `PushSyncOperations`.
 
@@ -28,10 +28,10 @@ Orchestrates one user/system use case such as `CreateTrip`, `UpdateStay`, or `Pu
 - Enforce use-case ordering and transaction boundaries.
 - Call domain models/services and provider ports.
 - Return a model or explicit result object, not a JSON response.
-- Name by behavior. Prefer `CreateTrip` or `CreateTripService` over `TripService`.
+- Place it under `app/Application/<Feature>/Services` and name by behavior with a `Service` suffix. Prefer `CreateTripService` over `TripService`.
 
 ```php
-final class CreateTrip
+final class CreateTripService
 {
     public function __construct(
         private Clock $clock,
@@ -82,13 +82,15 @@ Prefer a domain/feature structure that keeps a capability together:
 
 ```text
 api/app/
-  Domain/Trips/
-    Actions/CreateTrip.php
+  Application/Trips/
+    Services/CreateTripService.php
     Data/CreateTripData.php
+    Exceptions/
+  Domain/Trips/
     Models/Trip.php
-    Policies/TripPolicy.php
     Rules/
     Services/                    # only genuine domain services
+  Policies/TripPolicy.php
   Http/Controllers/Api/V1/Trips/
     TripController.php
   Http/Requests/Api/V1/Trips/
@@ -110,7 +112,7 @@ For each operation, implement in this order:
 2. Add the versioned route and select only required resource actions.
 3. Add a Form Request using `validated()`/`safe()` data; normalize carefully and reject unknown or unsafe input according to the contract.
 4. Add or update the Policy. Authorize nested resources against the parent trip and prevent cross-trip binding mistakes.
-5. Add the application action/service and its transaction/idempotency boundary.
+5. Add the application service and its transaction/idempotency boundary.
 6. Persist with explicit constraints, indexes, casts, fillable/guarded strategy, and UTC/timezone/currency rules.
 7. Return an API Resource and documented status/headers; do not expose Eloquent models directly.
 8. Add unit tests for domain rules and feature tests for the complete HTTP contract.
@@ -123,9 +125,9 @@ final class TripController
 {
     public function store(
         StoreTripRequest $request,
-        CreateTrip $createTrip,
+        CreateTripService $createTripService,
     ): JsonResponse {
-        $trip = $createTrip->handle(
+        $trip = $createTripService->handle(
             $request->user(),
             CreateTripData::from($request->validated()),
         );
@@ -136,6 +138,19 @@ final class TripController
     }
 }
 ```
+
+## Standard API response pattern
+
+Keep response construction at the HTTP boundary. Application and domain services return models, value objects, or explicit result objects; they never return `Response`, `JsonResponse`, API Resource, or envelope arrays.
+
+- Use API Resources and Resource Collections to serialize approved fields.
+- Use one reusable response-envelope class or factory (for example, `App\Support\Http\ApiResponse`) as the single implementation for shared success and error responses. A controller trait is acceptable only as a thin delegator to that class; do not maintain response logic in both a class and a trait.
+- Return successful single-item and action payloads as `{"data": ...}`. Paginated collections may add top-level `links` and `meta`. A `204` response has no body.
+- Return failures as `{"error":{"code":"stable_machine_code","message":"safe human-readable message","details":{...}}}`. Omit `details` when there are no safe structured details; validation details may contain field-keyed messages when the OpenAPI contract permits them.
+- Render framework, authentication, authorization, domain, conflict, rate-limit, and unexpected exceptions through the centralized exception configuration so every versioned API route follows the same safe envelope.
+- Do not expose exception messages, stack traces, SQL, provider payloads, tokens, booking references, private coordinates, or document contents.
+
+The OpenAPI schema is authoritative for status codes, headers, payload fields, pagination metadata, and stable error codes. Any envelope change requires matching contract, feature-test, mobile-mapping, compatibility, and rollout updates.
 
 ## API invariants
 
@@ -163,7 +178,7 @@ Prefer real Laravel/container/database behavior in feature tests over mocking co
 
 - `TripService`/`BaseService` classes that grow unrelated CRUD methods.
 - Controllers calling `Model::create($request->all())`.
-- Passing Request, Response, Resource, or authenticated globals into domain services.
+- Passing Request, Response, Resource, or authenticated globals into application or domain services.
 - A repository per model without a boundary benefit.
 - Service-to-service cycles, hidden service-locator lookups, or business logic in observers.
 - Generic catch-all exceptions that erase conflict, validation, or provider failure meaning.

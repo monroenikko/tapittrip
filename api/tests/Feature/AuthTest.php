@@ -64,8 +64,34 @@ final class AuthTest extends TestCase
         ]);
 
         $response
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['email']);
+            ->assertUnprocessable()
+            ->assertExactJson([
+                'error' => [
+                    'code' => 'invalid_credentials',
+                    'message' => 'The provided credentials are incorrect.',
+                ],
+            ]);
+    }
+
+    public function test_token_request_validation_uses_standard_error_envelope(): void
+    {
+        $response = $this->postJson('/api/v1/auth/token', [
+            'email' => 'not-an-email',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonPath('error.message', 'The given data was invalid.')
+            ->assertJsonStructure([
+                'error' => [
+                    'code',
+                    'message',
+                    'details' => [
+                        'fields' => ['email', 'password'],
+                    ],
+                ],
+            ]);
     }
 
     public function test_authenticated_user_can_view_profile(): void
@@ -98,7 +124,14 @@ final class AuthTest extends TestCase
     {
         $response = $this->getJson('/api/v1/me');
 
-        $response->assertUnauthorized();
+        $response
+            ->assertUnauthorized()
+            ->assertExactJson([
+                'error' => [
+                    'code' => 'unauthenticated',
+                    'message' => 'Authentication is required.',
+                ],
+            ]);
     }
 
     public function test_authenticated_user_can_logout(): void
@@ -139,4 +172,3 @@ final class AuthTest extends TestCase
         ]);
     }
 }
-

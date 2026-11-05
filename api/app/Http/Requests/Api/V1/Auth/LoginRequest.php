@@ -30,4 +30,3 @@ final class LoginRequest extends FormRequest
         ];
     }
 }
-

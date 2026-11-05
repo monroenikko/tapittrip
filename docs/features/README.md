@@ -7,7 +7,7 @@ Feature documents explain how TapItTrip behavior works across the traveler exper
 | Area | What it does | How it works | Delivery direction | Status |
 | --- | --- | --- | --- | --- |
 | M0 foundation | Provides buildable mobile/API shells and local infrastructure. | Laravel Sail runs the API against local PostgreSQL/PostGIS and Redis with a tested health check; Flutter mobile shell (`com.tapittrip.app`) is scaffolded with format/analyze/test verification. | Establish reproducible development and documentation gates before product behavior. | Foundation slices implemented; awaiting M0 final acceptance gate |
-| M1 authentication and trips | Creates secure sessions and basic trip organization for all starting modes. | Laravel Sanctum personal access tokens authenticate UUID users; policies isolate trip data; trip mode remains an editable preference. | Deliver auth foundation and trip CRUD slices without requiring itinerary data. | Slice 1 (Auth API) implemented; Slice 2 (Trip CRUD) in progress |
+| M1 authentication and trips | Creates secure sessions and basic trip organization for all starting modes. | Laravel Sanctum personal access tokens authenticate UUID users; policies isolate trip data; trip mode remains an editable preference. | Deliver auth foundation and trip CRUD slices without requiring itinerary data. | Slices 1 & 2 (Auth & Trip CRUD APIs) implemented; Slice 3 (Mobile integration) in progress |
 | M2 itinerary, places, and maps | Organizes optional activities and opens trusted directions. | Local-first activities sync to versioned API records; provider place IDs and attribution remain explicit. | Support DIY and guided items together while keeping itinerary optional. | Planned |
 | M2b stays and arrival transport | Saves already-booked accommodation and luggage-aware arrival options. | Protected stay details remain available offline; verified route snapshots are ranked deterministically or shown as unknown. | Start with honest maps handoff and provider-backed comparisons; no invented fares or policies. | Planned |
 | M3 today dashboard | Shows the most relevant trip/stay/activity information now. | Renders local data first using trip-local time, then refreshes with explicit offline or stale state. | Remain useful for trips with no itinerary activities. | Planned |
@@ -20,6 +20,7 @@ Feature documents explain how TapItTrip behavior works across the traveler exper
 
 - [`api-health.md`](api-health.md) — implemented M0 Laravel liveness contract and security boundary.
 - [`identity-and-auth.md`](identity-and-auth.md) — implemented M1 Laravel identity, Sanctum auth, and profile lifecycle.
+- [`trip-management.md`](trip-management.md) — implemented M1 Laravel trips, planning modes, and membership policies.
 
 Create a document from [`_template.md`](_template.md) when a feature slice begins. Name it after the stable capability, not a ticket number—for example, `trip-creation.md` or `offline-checklist-sync.md`.
 

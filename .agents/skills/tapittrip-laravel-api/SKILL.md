@@ -30,7 +30,7 @@ For schema design, migrations, constraints, indexes, transactions, sync persiste
 
 ## Implement
 
-- Keep versioned controllers thin. Use Form Requests for validation, Policies for trip membership/ability checks, one-purpose application services/actions for use-case orchestration, domain services only for genuine cross-entity rules, and API Resources for stable responses.
+- Keep versioned controllers thin. Use Form Requests for validation, Policies for trip membership/ability checks, one-purpose services under `app/Application/<Feature>/Services` for use-case orchestration, domain services only for genuine framework-independent cross-entity rules, and API Resources for stable responses.
 - Model UUID keys, tenant/trip-safe foreign keys, constraints, delete behavior, and query-driven indexes explicitly. Store instants in UTC-aware columns while preserving required IANA timezone context; store money in integer minor units with currency.
 - Wrap multi-record invariants in transactions. Dispatch side effects after commit where appropriate. Make retried writes and jobs idempotent.
 - Use interfaces/adapters at external provider boundaries and deterministic fakes in tests. Validate and sanitize untrusted provider, upload, URL, OCR, AI, and webhook input.

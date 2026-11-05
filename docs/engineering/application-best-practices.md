@@ -31,7 +31,9 @@ Do not build abstractions for speculative later features. Extract shared code af
 ### Boundaries
 
 - Version public controllers under `/api/v1`; keep controllers responsible for HTTP translation only.
-- Use Form Requests for validation and normalization, Policies for trip-scoped authorization, API Resources for response shape, and application/domain services for business rules.
+- Use Form Requests for validation and normalization, Policies for trip-scoped authorization, API Resources for response shape, and behavior-focused services under `app/Application/<Feature>/Services` for use-case orchestration. Application services receive typed DTOs or explicit inputs and return domain/result objects, never HTTP requests or responses.
+- Reserve `app/Domain/<Feature>/Services` for framework-independent business rules. Laravel facades, Eloquent persistence, token/session handling, queues, and transaction orchestration remain in the application layer.
+- Keep shared response construction in one reusable HTTP-layer response class/factory. A controller trait may delegate to it but must not become a second implementation. Avoid generic base services, catch-all CRUD services, and duplicated response arrays in controllers.
 - Organize business behavior by domain capability, not by framework file type alone. Keep external maps, transit, AI, OCR, notification, flight, and storage providers behind interfaces/adapters.
 - Do not trust the mobile client for authorization, price/freshness claims, version checks, or sensitive-field filtering.
 
@@ -47,7 +49,8 @@ Do not build abstractions for speculative later features. Extract shared code af
 
 ### Errors and observability
 
-- Return predictable JSON error envelopes with stable machine-readable codes and safe human messages.
+- Return successful JSON as `{"data": ...}` (plus `links` and `meta` for paginated collections) and no body for `204` responses. Return failures as `{"error":{"code":"stable_machine_code","message":"safe human-readable message","details":{...}}}`, omitting `details` when unused.
+- Apply error envelopes through centralized exception rendering and document/test response schemas, statuses, headers, and stable codes as public OpenAPI contracts.
 - Use structured logs with request/correlation identifiers, but redact tokens, booking references, private coordinates, stay notes, document contents, and provider payloads containing PII.
 - Record operational metrics for latency, errors, queue delay, retries, conflicts, provider calls, and rate/cost limits without creating user surveillance.
 
