@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Trips\Models;
 
+use App\Domain\Itinerary\Models\ItineraryItem;
+use App\Domain\Itinerary\Models\TripDay;
 use App\Models\User;
 use Database\Factories\TripFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -32,6 +34,14 @@ final class Trip extends Model
 {
     /** @use HasFactory<TripFactory> */
     use HasFactory, HasUuids, SoftDeletes;
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory(): TripFactory
+    {
+        return TripFactory::new();
+    }
 
     /**
      * Get the attributes that should be cast.
@@ -100,5 +110,28 @@ final class Trip extends Model
         $member = $this->members()->where('user_id', $userId)->first();
 
         return $member?->role;
+    }
+
+    /**
+     * All scheduled days for this trip.
+     *
+     * @return HasMany<TripDay, $this>
+     */
+    public function days(): HasMany
+    {
+        return $this->hasMany(TripDay::class)->orderBy('local_date');
+    }
+
+    /**
+     * All itinerary items and stops planned for this trip.
+     *
+     * @return HasMany<ItineraryItem, $this>
+     */
+    public function itineraryItems(): HasMany
+    {
+        return $this->hasMany(ItineraryItem::class)
+            ->orderBy('sort_order')
+            ->orderBy('starts_at_utc')
+            ->orderBy('created_at');
     }
 }

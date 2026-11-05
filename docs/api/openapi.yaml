@@ -337,6 +337,400 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /trips/{trip}/days:
+    get:
+      operationId: listTripDays
+      summary: List days for a trip
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of trip days.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripDayListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createTripDay
+      summary: Create or find a trip day
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreTripDayRequest"
+      responses:
+        "201":
+          description: Day created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripDayResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /trips/{trip}/itinerary-items:
+    get:
+      operationId: listItineraryItems
+      summary: List itinerary items for a trip
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: trip_day_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of itinerary items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItineraryItemListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createItineraryItem
+      summary: Create an itinerary item or stop
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreItineraryItemRequest"
+      responses:
+        "201":
+          description: Item created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItineraryItemResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /trips/{trip}/itinerary-items/reorder:
+    post:
+      operationId: reorderItineraryItems
+      summary: Reorder itinerary items for a trip
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderItineraryItemsRequest"
+      responses:
+        "200":
+          description: Reordered items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItineraryItemListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /itinerary-items/{item}:
+    get:
+      operationId: getItineraryItem
+      summary: Get details of an itinerary item
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Item details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItineraryItemResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateItineraryItem
+      summary: Update an itinerary item
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateItineraryItemRequest"
+      responses:
+        "200":
+          description: Updated item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItineraryItemResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteItineraryItem
+      summary: Soft delete an itinerary item
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Item deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /places/search:
+    get:
+      operationId: searchPlaces
+      summary: Search places by name or address
+      tags:
+        - Places
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching places.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /places:
+    post:
+      operationId: createPlace
+      summary: Create or retrieve a place
+      tags:
+        - Places
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorePlaceRequest"
+      responses:
+        "201":
+          description: Place stored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /places/{place}:
+    get:
+      operationId: getPlace
+      summary: Get place details
+      tags:
+        - Places
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: place
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Place details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          description: Place not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -660,4 +1054,319 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Trip"
+    Place:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - provider
+        - name
+        - google_maps_url
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        provider_place_id:
+          type: string
+          nullable: true
+        name:
+          type: string
+        formatted_address:
+          type: string
+          nullable: true
+        country_code:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        photo_reference:
+          type: string
+          nullable: true
+        attribution:
+          type: string
+          nullable: true
+        google_maps_url:
+          type: string
+        last_refreshed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    PlaceResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/Place"
+    PlaceListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Place"
+    StorePlaceRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        provider:
+          type: string
+        provider_place_id:
+          type: string
+        formatted_address:
+          type: string
+        country_code:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        photo_reference:
+          type: string
+        attribution:
+          type: string
+    TripDay:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - local_date
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        local_date:
+          type: string
+          format: date
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    TripDayResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/TripDay"
+    TripDayListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TripDay"
+    StoreTripDayRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - local_date
+      properties:
+        local_date:
+          type: string
+          format: date
+        notes:
+          type: string
+    ItineraryItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - kind
+        - title
+        - timezone
+        - sort_order
+        - status
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        trip_day_id:
+          type: string
+          format: uuid
+          nullable: true
+        place_id:
+          type: string
+          format: uuid
+          nullable: true
+        kind:
+          type: string
+          enum: [attraction, meal, transport, flight, hotel, custom]
+        title:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        starts_at_utc:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at_utc:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+        sort_order:
+          type: integer
+        status:
+          type: string
+          enum: [planned, visited, skipped]
+        version:
+          type: integer
+        place:
+          $ref: "#/components/schemas/Place"
+        day:
+          $ref: "#/components/schemas/TripDay"
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    ItineraryItemResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/ItineraryItem"
+    ItineraryItemListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItineraryItem"
+    StoreItineraryItemRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        kind:
+          type: string
+          enum: [attraction, meal, transport, flight, hotel, custom]
+        trip_day_id:
+          type: string
+          format: uuid
+        place_id:
+          type: string
+          format: uuid
+        place:
+          $ref: "#/components/schemas/StorePlaceRequest"
+        notes:
+          type: string
+        starts_at_utc:
+          type: string
+          format: date-time
+        ends_at_utc:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+        sort_order:
+          type: integer
+        status:
+          type: string
+          enum: [planned, visited, skipped]
+    UpdateItineraryItemRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        kind:
+          type: string
+          enum: [attraction, meal, transport, flight, hotel, custom]
+        trip_day_id:
+          type: string
+          format: uuid
+          nullable: true
+        place_id:
+          type: string
+          format: uuid
+          nullable: true
+        place:
+          $ref: "#/components/schemas/StorePlaceRequest"
+        notes:
+          type: string
+          nullable: true
+        starts_at_utc:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at_utc:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+        sort_order:
+          type: integer
+        status:
+          type: string
+          enum: [planned, visited, skipped]
+    ReorderItineraryItemsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - item_ids
+      properties:
+        item_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
 

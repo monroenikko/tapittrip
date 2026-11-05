@@ -3,9 +3,48 @@
 ## Current milestone
 
 - Milestone: **M2 — Itinerary, places and maps**
-- Status: **In progress** (Slice 1: Backend Itinerary & Place Foundation)
+- Status: **In progress** (Slice 1 completed; proceeding to Slice 2 Flutter mobile itinerary timeline and maps integration)
 - Basis: Approved by user on 2026-11-05 to advance to the next phase (Milestone M2).
 - Boundary: Implement M2 itinerary/stops, places, and maps; do not implement M2b accommodation/transport comparisons or later milestones until M2 acceptance gate passes.
+
+## 2026-11-05 — M2 Slice 1 Backend Itinerary, Trip Days, and Places Foundation
+
+### Completed
+
+- Implemented database migrations:
+  - `places` table with UUIDs, coordinates, provider metadata, and photo/attribution.
+  - `trip_days` table with UUIDs, trip FK, local dates, and unique `[trip_id, local_date]`.
+  - `itinerary_items` table with UUIDs, trip FK, trip day FK, place FK, kind enum, UTC timestamps, timezone, sort order, status, optimistic sync version, and soft deletes.
+- Implemented Eloquent Domain models:
+  - `App\Domain\Itinerary\Models\Place` with computed `google_maps_url`.
+  - `App\Domain\Itinerary\Models\TripDay`.
+  - `App\Domain\Itinerary\Models\ItineraryItem`.
+  - Added `days()` and `itineraryItems()` relationships to `Trip`.
+- Implemented Application Services (`App\Application\Itinerary\Services`):
+  - `CreateItineraryItemService` (handles inline place creation and auto sort-order incrementation).
+  - `UpdateItineraryItemService` (updates fields and increments sync version).
+  - `ReorderItineraryItemsService` (atomic bulk reordering of stops).
+  - `DeleteItineraryItemService` (soft deletes item).
+  - `CreatePlaceService` (persists coordinates and provider attribution).
+  - `EnsureTripDayService` (gets or creates trip day by local date).
+- Implemented API Boundary:
+  - Form Requests: `StoreTripDayRequest`, `StoreItineraryItemRequest`, `UpdateItineraryItemRequest`, `ReorderItineraryItemsRequest`, `StorePlaceRequest`.
+  - Resources: `TripDayResource`, `ItineraryItemResource`, `PlaceResource`.
+  - Controllers: `TripDayController`, `ItineraryItemController`, `PlaceController`.
+  - Registered 10 new API endpoints in `routes/api.php` under `auth:sanctum`.
+- Updated OpenAPI specification in `docs/api/openapi.yaml` with all new schemas and endpoints.
+- Documented feature architecture in `docs/features/itinerary-and-places.md` and updated `docs/features/README.md`.
+- Added model factories and feature tests covering creation, auto-sorting, version increment, 3-stop reordering, soft deletion, multi-tenant isolation, and place searching.
+
+### Verification
+
+- `cd api && bash bin/test-postgres` — **passed**: 42 PostgreSQL feature tests with 214 assertions, plus 1 migration test with 5 assertions.
+- `cd api && ./vendor/bin/sail pint --test` — **passed`.
+- `cd api && ./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI 3.1 semantic validation.
+
+### Next smallest task
+
+Proceed to M2 Slice 2: Flutter mobile itinerary timeline view with circular day badges (`1`, `2`, `3`), vertical connecting lines, activity cards, Google Maps deep linking, and offline caching.
 
 ## 2026-11-05 — Brand Logo Implementation in Flutter Mobile App
 

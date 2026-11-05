@@ -90,3 +90,4 @@ class AppLogo extends StatelessWidget {
     return image;
   }
 }
+

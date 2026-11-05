@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\ItineraryItemController;
+use App\Http\Controllers\Api\V1\PlaceController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\TripController;
+use App\Http\Controllers\Api\V1\TripDayController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -19,5 +22,19 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/me', [ProfileController::class, 'destroy'])->name('me.destroy');
 
         Route::apiResource('trips', TripController::class);
+
+        Route::get('/trips/{trip}/days', [TripDayController::class, 'index'])->name('trips.days.index');
+        Route::post('/trips/{trip}/days', [TripDayController::class, 'store'])->name('trips.days.store');
+
+        Route::get('/trips/{trip}/itinerary-items', [ItineraryItemController::class, 'index'])->name('trips.itinerary-items.index');
+        Route::post('/trips/{trip}/itinerary-items', [ItineraryItemController::class, 'store'])->name('trips.itinerary-items.store');
+        Route::post('/trips/{trip}/itinerary-items/reorder', [ItineraryItemController::class, 'reorder'])->name('trips.itinerary-items.reorder');
+        Route::get('/itinerary-items/{item}', [ItineraryItemController::class, 'show'])->name('itinerary-items.show');
+        Route::patch('/itinerary-items/{item}', [ItineraryItemController::class, 'update'])->name('itinerary-items.update');
+        Route::delete('/itinerary-items/{item}', [ItineraryItemController::class, 'destroy'])->name('itinerary-items.destroy');
+
+        Route::get('/places/search', [PlaceController::class, 'search'])->name('places.search');
+        Route::post('/places', [PlaceController::class, 'store'])->name('places.store');
+        Route::get('/places/{place}', [PlaceController::class, 'show'])->name('places.show');
     });
 });

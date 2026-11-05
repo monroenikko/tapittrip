@@ -5,6 +5,9 @@
             <file>tests/Feature/PostgresFoundationTest.php</file>
             <file>tests/Feature/AuthTest.php</file>
             <file>tests/Feature/TripTest.php</file>
+            <file>tests/Feature/ItineraryItemTest.php</file>
+            <file>tests/Feature/TripDayTest.php</file>
+            <file>tests/Feature/PlaceTest.php</file>
         </testsuite>
     </testsuites>
     <php>

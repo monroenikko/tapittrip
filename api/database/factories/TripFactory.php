@@ -41,6 +41,19 @@ final class TripFactory extends Factory
     }
 
     /**
+     * Configure the factory.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Trip $trip): void {
+            $trip->members()->firstOrCreate(
+                ['user_id' => $trip->owner_id],
+                ['role' => 'owner', 'invitation_status' => 'accepted']
+            );
+        });
+    }
+
+    /**
      * Set the planning mode.
      */
     public function mode(string $mode): static
