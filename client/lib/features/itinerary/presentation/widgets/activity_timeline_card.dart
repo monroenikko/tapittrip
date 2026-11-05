@@ -35,30 +35,31 @@ class ActivityTimelineCard extends StatelessWidget {
 
   Future<void> _openGoogleMaps(BuildContext context) async {
     final place = item.place;
-    String url;
+    final destination = (place?.latitude != null && place?.longitude != null)
+        ? '${place!.latitude},${place.longitude}'
+        : (place?.formattedAddress ?? place?.name ?? item.title);
 
-    if (place?.googleMapsUrl != null && place!.googleMapsUrl!.isNotEmpty) {
-      url = place.googleMapsUrl!;
-    } else if (place?.latitude != null && place?.longitude != null) {
-      url =
-          'https://www.google.com/maps/search/?api=1&query=${place!.latitude},${place.longitude}';
-    } else {
-      final query = place?.formattedAddress ?? place?.name ?? item.title;
-      url =
-          'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}';
-    }
-
+    final url =
+        'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(destination)}';
     final uri = Uri.parse(url);
+
     try {
-      final launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
+      // 1. Try launching in external application (e.g. Google Maps app or native map handler)
+      bool launched = false;
+      try {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        launched = false;
+      }
+
+      // 2. Fallback to platform default (browser or in-app Safari/Chrome) if external app failed or is unavailable (e.g. Simulator)
+      if (!launched) {
+        launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+
       if (!launched && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open Google Maps directions.'),
-          ),
+          const SnackBar(content: Text('Could not open maps navigation.')),
         );
       }
     } catch (_) {
