@@ -7,6 +7,28 @@
 - Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
 - Boundary: Implement M1 features only; do not implement M2 itinerary/places or later features until M1 is verified and approved.
 
+## 2026-11-05 — Wired interactive Swagger UI documentation at /docs
+
+### Completed
+
+- Added read-only bind mount for `../docs/api:/var/www/docs:ro` in `api/compose.yaml` to ensure zero contract drift from the committed OpenAPI file.
+- Created interactive Swagger UI view in `resources/views/docs/swagger.blade.php` and web routes `GET /docs` and `GET /docs/openapi.yaml`.
+- Added automated feature tests in `tests/Feature/DocsEndpointTest.php` ensuring documentation and specification are served with correct headers.
+- Updated documentation in `README.md` and `docs/api/README.md`.
+
+### Verification
+
+- `curl -i http://127.0.0.1:8088/docs` — **passed**: HTTP 200 HTML page with SwaggerUIBundle.
+- `curl -i http://127.0.0.1:8088/docs/openapi.yaml` — **passed**: HTTP 200 with OpenAPI 3.1 YAML content.
+- `./vendor/bin/sail artisan test --compact tests/Feature/DocsEndpointTest.php` — **passed**: 2 tests, 7 assertions.
+- `bash bin/test-postgres` — **passed**: 31 PostgreSQL feature tests with 159 assertions, plus 1 migration test with 5 assertions.
+- `./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI semantic validation.
+- `./vendor/bin/sail pint --test` — **passed**.
+
+### Next smallest task
+
+Proceed to M1 Slice 3: Flutter mobile integration for authentication and trip management across all four planning modes (`diy`, `existing`, `guided`, `simple`).
+
 ## 2026-11-05 — Added password confirmation validation to register endpoint
 
 ### Completed

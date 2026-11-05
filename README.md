@@ -29,6 +29,10 @@ Open `http://127.0.0.1:8088/api/v1/health`. The expected response is:
    {"data":{"status":"ok"}}
    ```
 
+Interactive Swagger API documentation is available locally at:
+- `http://127.0.0.1:8088/docs` (interactive UI)
+- `http://127.0.0.1:8088/docs/openapi.yaml` (raw contract)
+
 Useful checks from `api/`:
 
 ```sh

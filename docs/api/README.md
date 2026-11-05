@@ -29,16 +29,15 @@ Use synthetic examples only. Never place real tokens, booking references, privat
 - Mark deprecated behavior in OpenAPI and document compatibility and removal direction before changing clients.
 - Do not describe provider data as live unless the implementation has a fresh, attributed source.
 
-## Swagger UI direction
+## Swagger UI
 
-Swagger UI must read the committed `docs/api/openapi.yaml` rather than maintaining a second generated contract.
+Swagger UI reads directly from the committed [`docs/api/openapi.yaml`](openapi.yaml) to eliminate contract drift.
 
-- Local/development: provide a documented command or development route for interactive Swagger UI.
-- CI: lint the specification and fail on invalid references or incompatible contract changes once a baseline exists.
-- Test/staging: expose documentation only under the environment's normal access controls.
-- Production: disabled by default. Public or authenticated exposure requires an explicit security and operational decision.
-
-The Swagger UI dependency and exposure model remain an M0 decision. Record the choice and whether the repository remains contract-first in an ADR if it creates a durable tooling dependency.
+- **Interactive Swagger UI**: [`http://127.0.0.1:8088/docs`](http://127.0.0.1:8088/docs)
+- **Raw OpenAPI Spec**: [`http://127.0.0.1:8088/docs/openapi.yaml`](http://127.0.0.1:8088/docs/openapi.yaml)
+- **Local/development**: available out-of-the-box via Sail.
+- **CI**: validates syntax and semantic compliance on every build.
+- **Production**: disabled by default pending explicit access authorization.
 
 ## Implemented operations
 
