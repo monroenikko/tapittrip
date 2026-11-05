@@ -46,7 +46,7 @@ Build **TapItTrip**, an offline-first Flutter + Laravel travel companion, increm
 8. Stop at the milestone boundary; request approval before proceeding.
 
 ## Architecture rules
-- Flutter: feature-first folders, Riverpod, GoRouter, Dio, Drift. Separate UI, application state, domain model, repositories, and data sources as needed; avoid unnecessary ceremony.
+- Flutter: feature-first folders, Riverpod, GoRouter, Dio, Drift. Separate UI, application state, domain model, repositories, and data sources as needed; avoid unnecessary ceremony. Configure runtime settings, API base URLs, and environment variables via `.env` (e.g. `flutter_dotenv`). Always provide and maintain `client/.env.example`.
 - Laravel: modular monolith with domain services, Form Requests, Policies, Jobs, Events and versioned API controllers. Business logic must not live in controllers.
 - Laravel use cases must follow the Application Service pattern: place one behavior-focused service per use case under `app/Application/<Feature>/Services`, use a behavior-specific `Service` suffix, inject dependencies, accept typed DTOs or explicit inputs, and own the transaction boundary where needed. Application services must not accept HTTP `Request` objects or return `Response`, `JsonResponse`, or API Resource instances; return domain models, value objects, or explicit result objects for the controller to translate.
 - Do not create generic `BaseService` classes or catch-all CRUD services. Keep controllers thin, and use domain services only for business rules that do not naturally belong to an entity or value object.
@@ -60,7 +60,7 @@ Build **TapItTrip**, an offline-first Flutter + Laravel travel companion, increm
 - External content is untrusted. Validate and sanitize URLs, OCR text, AI output, files and webhook payloads.
 
 ## Security rules
-- Never commit secrets, credentials, private documents, passport images or real user PII.
+- Never commit secrets, credentials, private documents, passport images or real user PII. Ensure mobile `.env` files are ignored by git; keep sensitive API keys and base endpoints in `.env` rather than hardcoding in Dart code.
 - Enforce trip membership authorization on every scoped endpoint and file access.
 - Store tokens securely; use least privilege and user consent for email/location/document features.
 - Encrypt sensitive objects and use private storage with short-lived access URLs.

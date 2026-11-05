@@ -3,9 +3,50 @@
 ## Current milestone
 
 - Milestone: **M1 — Auth and trip CRUD**
-- Status: **In progress** (Slices 1 & 2 completed; Slice 3 mobile integration in progress)
+- Status: **Completed** (Slices 1, 2, and 3 completed; ready for M1 review and M2 approval)
 - Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
-- Boundary: Implement M1 features only; do not implement M2 itinerary/places or later features until M1 is verified and approved.
+- Boundary: Milestone M1 complete; do not implement M2 itinerary/places or later features until M2 is approved.
+
+## 2026-11-05 — M1 Slice 3 Flutter mobile auth & trip management with .env configuration
+
+### Completed
+
+- Added `.env` configuration instructions and skills rules in `AGENTS.md` and `.agents/skills/tapittrip-flutter-mobile/SKILL.md`.
+- Ignored `.env*` files in `.gitignore` and `client/.gitignore` while preserving `.env.example`.
+- Created `client/.env.example` and `client/.env` pointing to local API (`http://127.0.0.1:8088/api/v1`).
+- Integrated `flutter_dotenv`, `flutter_riverpod`, `dio`, `flutter_secure_storage`, and `go_router` in `client/pubspec.yaml`.
+- Implemented core infrastructure in `client/lib/core`:
+  - `AppConfig`: environment-driven API base URL resolution.
+  - `AppTheme` & `AppColors`: TapIt Navy `#00376D` and Trip Orange `#F76405` Material 3 theme.
+  - `TokenStorage`: Secure token persistence with in-memory test fallback.
+  - `ApiClient`: Dio HTTP client with automatic `Bearer` token injection and typed error handling.
+  - `AppRouter`: GoRouter with dynamic authentication redirects.
+- Implemented `features/auth`:
+  - `AuthUser` and `AuthState` domain models.
+  - `AuthRepository`: login, registration with password confirmation, profile lookup, logout, and account deletion.
+  - `AuthNotifier`: Riverpod auth state machine.
+  - `LoginPage` and `RegisterPage`: Material 3 authentication screens with loading and error states.
+- Implemented `features/trips`:
+  - `Trip`, `PlanningMode`, and `TripType` domain models supporting all 4 starting modes from v1.4 traveler inclusivity rules (`diy`, `existing`, `guided`, `simple`).
+  - `TripRepository`: complete remote API integration.
+  - `TripListNotifier`: async trip state management with refresh, creation, and deletion.
+  - `TripListPage`: displays trip cards, planning mode badges, pull-to-refresh, empty state, and account menu.
+  - `TripCreatePage`: creates trips across any of the 4 planning modes, with date ranges and styles.
+  - `PlanningModeSelector`: accessible selection cards for DIY, Already-Booked, Guided Tour, and Simple modes.
+  - `TripCard`: accessible card displaying trip metadata and planning badges.
+- Verified all unit and widget tests: brand tokens, all 4 planning modes, TripCard interaction, auth flows, and trip CRUD operations.
+
+### Verification
+
+- `cd client && dart format .` — **passed**: 25 files formatted.
+- `cd client && flutter analyze` — **passed**: 0 issues found.
+- `cd client && flutter test` — **passed**: 13 unit/widget tests passing.
+- `cd api && bash bin/test-postgres` — **passed**: 31 PostgreSQL tests with 159 assertions.
+- `cd api && ./vendor/bin/sail pint --test` — **passed**.
+
+### Next smallest task
+
+Request milestone review for M1 completion and approval to begin Milestone M2 (Itinerary, places, and maps).
 
 ## 2026-11-05 — Wired interactive Swagger UI documentation at /docs
 

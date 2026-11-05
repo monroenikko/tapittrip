@@ -31,6 +31,7 @@ For feature state, Riverpod providers, services/repositories, reusable widgets, 
 - Model async state explicitly and make retry/sync/stale status understandable. Do not hide provider limitations or fabricate live data.
 - Keep GoRouter navigation shallow and contextual. Do not require itinerary creation for basic trip, booking, stay, reminder, or essential-information flows.
 - Use Dio through configured clients/adapters, secure storage for tokens, and deterministic clocks/providers in tests. Do not log tokens, booking references, private coordinates, or document contents.
+- Load sensitive configuration, API base URLs, and environment variables from `.env` (via `flutter_dotenv`). Never hardcode API URLs, keys, or credentials in Dart source code. Maintain `client/.env.example` with clear placeholders and ensure `.env*` is ignored in git.
 - Use localized strings, semantic labels, scalable text, adequate contrast and touch targets, and locale-aware dates/currencies with explicit IANA timezones.
 - For screens, widgets, and theming, follow `client/.agents/skills/flutter-premium-ui/SKILL.md` (brand colors: primary navy `#00376D`, secondary orange `#F76405`; read from `ColorScheme`, never hard-code hex in widgets).
 
