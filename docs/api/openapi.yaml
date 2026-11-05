@@ -398,6 +398,7 @@ components:
         - name
         - email
         - password
+        - password_confirmation
       properties:
         name:
           type: string
@@ -407,6 +408,9 @@ components:
           format: email
           maxLength: 255
         password:
+          type: string
+          minLength: 8
+        password_confirmation:
           type: string
           minLength: 8
         device_name:

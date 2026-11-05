@@ -20,6 +20,7 @@ final class AuthTest extends TestCase
             'name' => 'John Doe',
             'email' => 'john.doe@example.com',
             'password' => 'secret-pass-123',
+            'password_confirmation' => 'secret-pass-123',
             'device_name' => 'pixel-test',
             'home_timezone' => 'Asia/Tokyo',
         ]);
@@ -69,6 +70,7 @@ final class AuthTest extends TestCase
             'name' => 'Another User',
             'email' => 'existing@example.com',
             'password' => 'new-secret-123',
+            'password_confirmation' => 'new-secret-123',
         ]);
 
         $response
@@ -83,6 +85,7 @@ final class AuthTest extends TestCase
             'name' => '',
             'email' => 'not-an-email',
             'password' => 'short',
+            'password_confirmation' => 'different',
         ]);
 
         $response
@@ -101,6 +104,21 @@ final class AuthTest extends TestCase
                     ],
                 ],
             ]);
+    }
+
+    public function test_register_validation_fails_when_password_confirmation_does_not_match(): void
+    {
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'john.mismatch@example.com',
+            'password' => 'secret-pass-123',
+            'password_confirmation' => 'wrong-pass-123',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonPath('error.details.fields.password.0', 'The password field confirmation does not match.');
     }
 
     public function test_user_can_login_with_valid_credentials(): void

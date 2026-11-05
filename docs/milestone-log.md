@@ -7,6 +7,25 @@
 - Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
 - Boundary: Implement M1 features only; do not implement M2 itinerary/places or later features until M1 is verified and approved.
 
+## 2026-11-05 — Added password confirmation validation to register endpoint
+
+### Completed
+
+- Added `'confirmed'` validation rule to `password` and required `password_confirmation` in `RegisterRequest`.
+- Updated OpenAPI `RegisterRequest` schema to include `password_confirmation` as a required field.
+- Added feature tests in `AuthTest.php` verifying mismatched or missing password confirmation returns 422 with validation errors.
+
+### Verification
+
+- `bash bin/test-postgres` — **passed**: 31 PostgreSQL feature tests with 159 assertions, plus 1 migration test with 5 assertions.
+- `./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI semantic validation and live health response.
+- `./vendor/bin/sail pint --test` — **passed**.
+- Live curl verification for valid, mismatched, and missing confirmation.
+
+### Next smallest task
+
+Proceed to M1 Slice 3: Flutter mobile integration for authentication and trip management across all four planning modes (`diy`, `existing`, `guided`, `simple`).
+
 ## 2026-11-05 — Implemented user registration endpoint POST /api/v1/auth/register
 
 ### Completed
