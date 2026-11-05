@@ -31,10 +31,51 @@ paths:
               example:
                 data:
                   status: ok
+  /auth/login:
+    post:
+      operationId: login
+      summary: Authenticate with credentials and receive an API token
+      tags:
+        - Auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "422":
+          description: Invalid credentials or validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidCredentials:
+                  value:
+                    error:
+                      code: invalid_credentials
+                      message: The provided credentials are incorrect.
+                validationFailed:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: The given data was invalid.
+                      details:
+                        fields:
+                          email:
+                            - The email field must be a valid email address.
   /auth/token:
     post:
       operationId: createAuthToken
-      summary: Issue an API token with credentials
+      summary: Backward-compatible alias for /auth/login
       tags:
         - Auth
       security: []

@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function (): void {
     Route::get('/health', HealthController::class)->name('health.show');
 
-    Route::post('/auth/token', [AuthController::class, 'token'])->name('auth.token');
+    Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
+    Route::post('/auth/token', [AuthController::class, 'login'])->name('auth.token');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');

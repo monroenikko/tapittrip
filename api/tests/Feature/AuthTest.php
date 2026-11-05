@@ -14,14 +14,14 @@ final class AuthTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_user_can_obtain_token_with_valid_credentials(): void
+    public function test_user_can_login_with_valid_credentials(): void
     {
         $user = User::factory()->create([
             'email' => 'traveler@example.com',
             'password' => Hash::make('secret-pass-123'),
         ]);
 
-        $response = $this->postJson('/api/v1/auth/token', [
+        $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'traveler@example.com',
             'password' => 'secret-pass-123',
             'device_name' => 'iphone-test',
@@ -51,14 +51,32 @@ final class AuthTest extends TestCase
         $this->assertSame($user->id, $response->json('data.user.id'));
     }
 
-    public function test_user_cannot_obtain_token_with_invalid_credentials(): void
+    public function test_auth_token_alias_remains_available(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'traveler@example.com',
+            'password' => Hash::make('secret-pass-123'),
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/token', [
+            'email' => 'traveler@example.com',
+            'password' => 'secret-pass-123',
+            'device_name' => 'legacy-client',
+        ]);
+
+        $response->assertOk();
+        $this->assertSame('Bearer', $response->json('data.token_type'));
+        $this->assertSame($user->id, $response->json('data.user.id'));
+    }
+
+    public function test_user_cannot_login_with_invalid_credentials(): void
     {
         User::factory()->create([
             'email' => 'traveler@example.com',
             'password' => Hash::make('secret-pass-123'),
         ]);
 
-        $response = $this->postJson('/api/v1/auth/token', [
+        $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'traveler@example.com',
             'password' => 'wrong-password',
         ]);
@@ -73,9 +91,9 @@ final class AuthTest extends TestCase
             ]);
     }
 
-    public function test_token_request_validation_uses_standard_error_envelope(): void
+    public function test_login_request_validation_uses_standard_error_envelope(): void
     {
-        $response = $this->postJson('/api/v1/auth/token', [
+        $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'not-an-email',
         ]);
 

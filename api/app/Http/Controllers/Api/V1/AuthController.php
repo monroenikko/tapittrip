@@ -16,7 +16,7 @@ use Illuminate\Http\Response;
 
 final class AuthController extends Controller
 {
-    public function token(
+    public function login(
         LoginRequest $request,
         IssueAccessTokenService $issueAccessTokenService,
         ApiResponse $response,

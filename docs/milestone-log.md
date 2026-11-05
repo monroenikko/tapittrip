@@ -7,6 +7,25 @@
 - Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
 - Boundary: Implement M1 features only; do not implement M2 itinerary/places or later features until M1 is verified and approved.
 
+## 2026-11-05 — Renamed auth controller action to login with /auth/login route
+
+### Completed
+
+- Renamed `AuthController::token` method to `AuthController::login` for clearer, idiomatic nomenclature.
+- Added primary route `POST /api/v1/auth/login` (`auth.login`) while retaining `POST /api/v1/auth/token` (`auth.token`) as a backward-compatible alias.
+- Updated `docs/api/openapi.yaml`, `docs/features/identity-and-auth.md`, and feature tests in `AuthTest.php`.
+
+### Verification
+
+- `bash bin/test-postgres` — **passed**: 27 PostgreSQL feature tests with 123 assertions, plus 1 migration test with 5 assertions.
+- `./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI semantic validation and live health response.
+- `./vendor/bin/sail pint --test` — **passed**.
+- `curl -i -X POST http://127.0.0.1:8088/api/v1/auth/login` — **passed**: verified response formatting.
+
+### Next smallest task
+
+Proceed to M1 Slice 3: Flutter mobile integration for authentication and trip management across all four planning modes (`diy`, `existing`, `guided`, `simple`).
+
 ## 2026-11-05 — Reconfigured Sail application host port to 8088
 
 ### Completed
