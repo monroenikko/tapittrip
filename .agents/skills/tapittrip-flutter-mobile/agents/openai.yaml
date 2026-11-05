@@ -1,0 +1,3 @@
+interface:
+  display_name: "TapItTrip Flutter Mobile"
+  short_description: "Apply TapItTrip Riverpod, service, and widget patterns"

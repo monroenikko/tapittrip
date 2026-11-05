@@ -1,0 +1,104 @@
+# For more information: https://laravel.com/docs/sail
+services:
+  laravel.test:
+    build:
+      context: ./vendor/laravel/sail/runtimes/8.4
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: '${WWWGROUP:-1000}'
+    image: tapittrip-sail-8.4/app
+    pull_policy: build
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '127.0.0.1:${APP_PORT:-8000}:80'
+    environment:
+      WWWUSER: '${WWWUSER:-1000}'
+      LARAVEL_SAIL: 1
+      XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+      XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+      IGNITION_LOCAL_SITES_PATH: '${PWD}'
+    volumes:
+      - '.:/var/www/html'
+    networks:
+      - sail
+    depends_on:
+      pgsql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  pgsql:
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    image: tapittrip-postgis-17/app
+    pull_policy: build
+    ports:
+      - '127.0.0.1:${FORWARD_DB_PORT:-15432}:5432'
+    env_file:
+      - ../.local/postgres.env
+    volumes:
+      - 'sail-pgsql:/var/lib/postgresql/data'
+      - './docker/postgres/init:/docker-entrypoint-initdb.d:ro'
+    networks:
+      - sail
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -q -d "$${POSTGRES_DB}" -U "$${POSTGRES_USER}"']
+      interval: 5s
+      retries: 12
+      timeout: 5s
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - '127.0.0.1:${FORWARD_REDIS_PORT:-16379}:6379'
+    volumes:
+      - 'sail-redis:/data'
+    networks:
+      - sail
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 12
+      timeout: 3s
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    image: tapittrip-sail-8.4/app
+    profiles: ['tools']
+    env_file:
+      - ../.local/migrate.env
+    environment:
+      WWWUSER: '${WWWUSER:-1000}'
+      DB_CONNECTION: pgsql
+      DB_HOST: pgsql
+      DB_DATABASE: '${DB_DATABASE:-tapittrip}'
+      DB_URL: ''
+      APP_CONFIG_CACHE: /tmp/tapittrip-migration-config.php
+    volumes:
+      - '.:/var/www/html'
+    networks: [sail]
+    command: ['php', 'artisan', 'migrate', '--force', '--no-interaction']
+
+  contracts:
+    image: python:3.12-slim
+    profiles: ['tools']
+    working_dir: /checks
+    volumes:
+      - '../tools/contracts:/checks:ro'
+      - '../docs/api:/contract:ro'
+    networks: [sail]
+    command: ['sh', '-c', 'pip install --quiet --disable-pip-version-check -r requirements.txt && python check.py']
+
+
+networks:
+  sail:
+    driver: bridge
+
+volumes:
+  sail-pgsql:
+  sail-redis:

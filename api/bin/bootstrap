@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+mkdir -p vendor
+# Do not mount source or secrets; regenerate app autoloading in Sail afterwards.
+docker run --rm --user "$(id -u):$(id -g)" \
+  -e COMPOSER_HOME=/tmp/composer \
+  -v "$PWD/composer.json:/app/composer.json:ro" \
+  -v "$PWD/composer.lock:/app/composer.lock:ro" \
+  -v "$PWD/vendor:/app/vendor" -w /app \
+  composer:2 install --no-interaction --no-progress --prefer-dist --no-scripts --no-autoloader

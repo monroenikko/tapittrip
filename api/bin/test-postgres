@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+./vendor/bin/sail exec -T pgsql sh /docker-entrypoint-initdb.d/02-create-test-database.sh
+./vendor/bin/sail --profile tools run --rm --no-deps -e DB_DATABASE=tapittrip_test migrate
+./vendor/bin/sail bin phpunit --configuration=phpunit.postgres.xml
+./vendor/bin/sail --profile tools run --rm --no-deps -e DB_DATABASE=tapittrip_test migrate php vendor/bin/phpunit --configuration=phpunit.migrations.xml

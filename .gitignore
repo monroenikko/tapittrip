@@ -1,0 +1,14 @@
+.DS_Store
+.idea/
+.vscode/
+.obsidian/
+.env
+.local/
+
+# Flutter/Dart generated files
+client/.dart_tool/
+client/.flutter-plugins
+client/.flutter-plugins-dependencies
+client/.packages
+client/build/
+

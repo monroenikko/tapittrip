@@ -1,0 +1,9 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "bash",
+            "args": ["-c", "if [ -f api/bin/boost-mcp ]; then exec bash api/bin/boost-mcp; else exec bash bin/boost-mcp; fi"]
+        }
+    }
+}
+

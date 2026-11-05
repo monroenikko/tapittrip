@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+umask 077
+mkdir -p ../.local
+if [ -f ../.local/postgres.env ] || [ -f ../.local/migrate.env ]; then
+  test -f ../.local/postgres.env && test -f ../.local/migrate.env
+  echo 'Local provisioning files already exist; credentials were preserved.'
+  exit 0
+fi
+test -f .env || cp .env.example .env
+read_value() { sed -n "s/^$1=//p" .env | head -1; }
+# Preserve the previous M0 database passwords when upgrading this workspace.
+admin_password="$(read_value DB_ADMIN_PASSWORD)"
+migration_password="$(read_value DB_MIGRATION_PASSWORD)"
+runtime_password="$(read_value DB_PASSWORD)"
+admin_password="${admin_password:-$(openssl rand -hex 24)}"
+migration_password="${migration_password:-$(openssl rand -hex 24)}"
+runtime_password="${runtime_password:-$(openssl rand -hex 24)}"
+database_name="$(read_value DB_DATABASE)"
+database_name="${database_name:-tapittrip}"
+printf 'POSTGRES_DB=%s\nPOSTGRES_USER=tapittrip_admin\nPOSTGRES_PASSWORD=%s\nTAPITTRIP_DB_MIGRATION_PASSWORD=%s\nTAPITTRIP_DB_RUNTIME_PASSWORD=%s\n' \
+  "$database_name" "$admin_password" "$migration_password" "$runtime_password" > ../.local/postgres.env
+printf 'DB_USERNAME=tapittrip_migrator\nDB_PASSWORD=%s\n' "$migration_password" > ../.local/migrate.env
+runtime_env="$(mktemp ../.local/runtime-env.XXXXXX)"
+sed '/^DB_ADMIN_USERNAME=/d; /^DB_ADMIN_PASSWORD=/d; /^DB_MIGRATION_USERNAME=/d; /^DB_MIGRATION_PASSWORD=/d' .env \
+  | sed "s/^DB_PASSWORD=.*/DB_PASSWORD=$runtime_password/" > "$runtime_env"
+mv "$runtime_env" .env
+echo 'Runtime and provisioning credentials configured separately.'

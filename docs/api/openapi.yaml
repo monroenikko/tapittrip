@@ -1,0 +1,200 @@
+openapi: 3.1.0
+info:
+  title: TapItTrip API
+  version: 0.1.0
+  description: >-
+    Contract for implemented behavior in the TapItTrip versioned JSON API.
+    Paths are added only when a milestone slice approves and implements the
+    behavior with matching tests.
+  contact:
+    name: TapItTrip Engineering
+x-document-status: implemented
+servers:
+  - url: /api/v1
+    description: Relative URL for the version 1 API
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check API availability
+      description: Returns a minimal, unauthenticated liveness response without exposing dependency or environment details.
+      tags:
+        - System
+      security: []
+      responses:
+        "200":
+          description: The API process is available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                data:
+                  status: ok
+  /auth/token:
+    post:
+      operationId: createAuthToken
+      summary: Issue an API token with credentials
+      tags:
+        - Auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Token issued successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "422":
+          description: Invalid credentials or validation failure.
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke current access token
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Successfully logged out.
+        "401":
+          description: Unauthenticated.
+  /me:
+    get:
+      operationId: getProfile
+      summary: Get authenticated traveler profile
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Authenticated user details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Unauthenticated.
+    delete:
+      operationId: deleteAccount
+      summary: Delete traveler account and revoke access tokens
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Account deleted.
+        "401":
+          description: Unauthenticated.
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Personal access token issued by /auth/token
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - status
+          properties:
+            status:
+              type: string
+              const: ok
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        device_name:
+          type: string
+    User:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - display_name
+        - email
+        - avatar_url
+        - locale
+        - home_timezone
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        display_name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        avatar_url:
+          type: string
+          nullable: true
+        locale:
+          type: string
+        home_timezone:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    UserResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/User"
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required:
+            - token
+            - token_type
+            - user
+          properties:
+            token:
+              type: string
+            token_type:
+              type: string
+              const: Bearer
+            user:
+              $ref: "#/components/schemas/User"
+

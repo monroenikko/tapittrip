@@ -1,0 +1,3 @@
+interface:
+  display_name: "TapItTrip Laravel API"
+  short_description: "Apply TapItTrip Laravel API and PostgreSQL patterns"

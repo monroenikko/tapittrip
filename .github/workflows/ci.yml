@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap Laravel Sail
+        run: bash bin/bootstrap
+
+      - name: Configure ephemeral CI environment
+        run: bash bin/configure-local
+
+      - name: Start Sail services
+        run: ./vendor/bin/sail up -d
+
+      - name: Install and discover dependencies in Sail
+        run: ./vendor/bin/sail composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare database
+        run: |
+          ./vendor/bin/sail artisan key:generate --no-interaction
+          ./vendor/bin/sail --profile tools run --rm --no-deps migrate
+
+      - name: Check PHP formatting
+        run: ./vendor/bin/sail pint --test
+
+      - name: Run API tests
+        run: ./vendor/bin/sail artisan test --compact
+
+      - name: Verify PostgreSQL and runtime privileges
+        run: bash bin/test-postgres
+
+      - name: Validate OpenAPI and live response
+        run: ./vendor/bin/sail --profile tools run --rm --no-deps contracts
+
+      - name: Validate and audit Composer dependencies
+        run: |
+          ./vendor/bin/sail composer validate --strict
+          ./vendor/bin/sail composer audit
+
+      - name: Stop Sail services
+        if: always()
+        run: ./vendor/bin/sail down
+
+  client:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check Dart formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze Flutter code
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
+
+

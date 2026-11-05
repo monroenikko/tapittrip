@@ -1,0 +1,9 @@
+{
+  "entries": [
+    {
+      "path": "api/.agents/skills",
+      "exclude": ["laravel-best-practices"]
+    }
+  ]
+}
+
