@@ -11,7 +11,7 @@ Provides secure identity, API session token issuance, traveler profile managemen
 
 ## How it works
 
-1. A traveler authenticates with credentials (`POST /api/v1/auth/login`, alias `POST /api/v1/auth/token`) and receives a personal access token (Bearer token) and profile data.
+1. A traveler creates an account with credentials (`POST /api/v1/auth/register`) or authenticates with existing credentials (`POST /api/v1/auth/login`, alias `POST /api/v1/auth/token`) and receives a personal access token (Bearer token) and profile data.
 2. The authenticated client accesses the traveler's profile (`GET /api/v1/me`) to display their name, display name, preferred locale, and home timezone.
 3. The traveler can log out (`POST /api/v1/auth/logout`), which invalidates the current access token.
 4. The traveler can delete their account (`DELETE /api/v1/me`), which revokes all active tokens, removes sessions, and soft-deletes their user record.
@@ -20,13 +20,14 @@ Provides secure identity, API session token issuance, traveler profile managemen
 
 - **Authentication Guard:** Laravel Sanctum using personal access tokens associated with UUID user identities.
 - **Data model:** PostgreSQL `users` table with UUID primary key, `display_name`, `avatar_url`, `locale`, `home_timezone`, and `deleted_at` timestamp.
-- **Application services:** `IssueAccessTokenService`, `RevokeCurrentAccessTokenService`, and `DeleteAccountService` live under `App\Application\Identity\Services` and own credential verification, token lifecycle, and transactional account deletion. Controllers only translate validated HTTP input and service results.
+- **Application services:** `RegisterUserService`, `IssueAccessTokenService`, `RevokeCurrentAccessTokenService`, and `DeleteAccountService` live under `App\Application\Identity\Services` and own user registration, credential verification, token lifecycle, and transactional account deletion. Controllers only translate validated HTTP input and service results.
 - **Resources:** `App\Http\Resources\Api\V1\UserResource` formats responses into clean API envelopes.
 - **Response boundary:** `App\Support\Http\ApiResponse` is the single success/error envelope builder. `ApiExceptionResponse` maps validation, authentication, HTTP, and unexpected failures through centralized exception rendering.
 
 ## API contract
 
 Documented in [`docs/api/openapi.yaml`](../api/openapi.yaml):
+- `POST /api/v1/auth/register` (`register`)
 - `POST /api/v1/auth/login` (`login`) and legacy alias `POST /api/v1/auth/token` (`createAuthToken`)
 - `POST /api/v1/auth/logout` (`logout`)
 - `GET /api/v1/me` (`getProfile`)

@@ -7,6 +7,28 @@
 - Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
 - Boundary: Implement M1 features only; do not implement M2 itinerary/places or later features until M1 is verified and approved.
 
+## 2026-11-05 — Implemented user registration endpoint POST /api/v1/auth/register
+
+### Completed
+
+- Implemented `RegisterUserService` under `App\Application\Identity\Services` with typed `RegisterUserData` DTO to transactionally persist new traveler accounts with UUIDs and issue an initial Sanctum personal access token.
+- Created `RegisterRequest` with input validation for `name`, `email` (unique), `password` (min: 8), optional `device_name`, `display_name`, `locale`, and `home_timezone`.
+- Added `AuthController::register` endpoint returning HTTP 201 Created with `{ "data": { "token": "...", "token_type": "Bearer", "user": { ... } } }`.
+- Registered `POST /api/v1/auth/register` (`auth.register`) in `routes/api.php`.
+- Documented schema and endpoint in `docs/api/openapi.yaml` and updated `docs/features/identity-and-auth.md`.
+- Added automated feature tests in `AuthTest.php` for successful registration, duplicate email rejection, and input validation failures.
+
+### Verification
+
+- `bash bin/test-postgres` — **passed**: 30 PostgreSQL feature tests with 156 assertions, plus 1 migration test with 5 assertions.
+- `./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI semantic validation and live health response.
+- `./vendor/bin/sail pint --test` — **passed**.
+- `curl -i -X POST http://127.0.0.1:8088/api/v1/auth/register` — **passed**: verified live HTTP 201 response.
+
+### Next smallest task
+
+Proceed to M1 Slice 3: Flutter mobile integration for authentication and trip management across all four planning modes (`diy`, `existing`, `guided`, `simple`).
+
 ## 2026-11-05 — Renamed auth controller action to login with /auth/login route
 
 ### Completed

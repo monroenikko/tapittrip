@@ -14,6 +14,95 @@ final class AuthTest extends TestCase
 {
     use DatabaseTransactions;
 
+    public function test_user_can_register_with_valid_details(): void
+    {
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'John Doe',
+            'email' => 'john.doe@example.com',
+            'password' => 'secret-pass-123',
+            'device_name' => 'pixel-test',
+            'home_timezone' => 'Asia/Tokyo',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonStructure([
+                'data' => [
+                    'token',
+                    'token_type',
+                    'user' => [
+                        'id',
+                        'name',
+                        'display_name',
+                        'email',
+                        'avatar_url',
+                        'locale',
+                        'home_timezone',
+                        'created_at',
+                        'updated_at',
+                    ],
+                ],
+            ]);
+
+        $this->assertSame('Bearer', $response->json('data.token_type'));
+        $this->assertSame('John Doe', $response->json('data.user.name'));
+        $this->assertSame('john.doe@example.com', $response->json('data.user.email'));
+        $this->assertSame('Asia/Tokyo', $response->json('data.user.home_timezone'));
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'john.doe@example.com',
+            'name' => 'John Doe',
+            'home_timezone' => 'Asia/Tokyo',
+        ]);
+
+        $user = User::query()->where('email', 'john.doe@example.com')->firstOrFail();
+        $this->assertTrue(Hash::check('secret-pass-123', (string) $user->password));
+    }
+
+    public function test_user_cannot_register_with_duplicate_email(): void
+    {
+        User::factory()->create([
+            'email' => 'existing@example.com',
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Another User',
+            'email' => 'existing@example.com',
+            'password' => 'new-secret-123',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonPath('error.details.fields.email.0', 'The email has already been taken.');
+    }
+
+    public function test_register_validation_fails_with_invalid_data(): void
+    {
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => '',
+            'email' => 'not-an-email',
+            'password' => 'short',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed')
+            ->assertJsonStructure([
+                'error' => [
+                    'code',
+                    'message',
+                    'details' => [
+                        'fields' => [
+                            'name',
+                            'email',
+                            'password',
+                        ],
+                    ],
+                ],
+            ]);
+    }
+
     public function test_user_can_login_with_valid_credentials(): void
     {
         $user = User::factory()->create([

@@ -31,6 +31,42 @@ paths:
               example:
                 data:
                   status: ok
+  /auth/register:
+    post:
+      operationId: register
+      summary: Register a new traveler account and receive an API token
+      tags:
+        - Auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "422":
+          description: Validation failure or duplicate email.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                validationFailed:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: The given data was invalid.
+                      details:
+                        fields:
+                          email:
+                            - The email has already been taken.
   /auth/login:
     post:
       operationId: login
@@ -355,6 +391,35 @@ components:
             status:
               type: string
               const: ok
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+        device_name:
+          type: string
+          maxLength: 255
+        display_name:
+          type: string
+          maxLength: 255
+        locale:
+          type: string
+          maxLength: 12
+        home_timezone:
+          type: string
     LoginRequest:
       type: object
       additionalProperties: false
