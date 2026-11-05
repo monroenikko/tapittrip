@@ -2,10 +2,33 @@
 
 ## Current milestone
 
-- Milestone: **M1 — Auth and trip CRUD**
-- Status: **Completed** (Slices 1, 2, and 3 completed; UI Component Design System established and verified; ready for M1 review and M2 approval)
-- Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
-- Boundary: Milestone M1 complete; do not implement M2 itinerary/places or later features until M2 is approved.
+- Milestone: **M2 — Itinerary, places and maps**
+- Status: **In progress** (Slice 1: Backend Itinerary & Place Foundation)
+- Basis: Approved by user on 2026-11-05 to advance to the next phase (Milestone M2).
+- Boundary: Implement M2 itinerary/stops, places, and maps; do not implement M2b accommodation/transport comparisons or later milestones until M2 acceptance gate passes.
+
+## 2026-11-05 — Brand Logo Implementation in Flutter Mobile App
+
+### Completed
+
+- Integrated the official TapItTrip brand logo asset (`client/assets/images/logo.png`) and cropped mark (`client/assets/images/logo_icon.png`).
+- Declared `assets/images/` in `client/pubspec.yaml` and resolved assets with `flutter pub get`.
+- Built reusable and accessible `AppLogo` widget (`client/lib/core/widgets/app_logo.dart`) supporting `full` and `iconOnly` variants, customizable sizing, squircle card elevation, accessibility semantics, and graceful fallback.
+- Integrated `AppLogo` into:
+  - `LoginPage`: Prominent 120px elevated brand logo card and tagline replacing generic icon.
+  - `RegisterPage`: Clean 88px elevated brand card above form.
+  - `TripListPage`: 38px `iconOnly` suitcase & plane logo mark in the main app bar title.
+- Added comprehensive unit and widget tests for `AppLogo` in `client/test/widget_test.dart`.
+
+### Verification
+
+- `cd client && dart format .` — **passed**: 28 files formatted.
+- `cd client && flutter analyze` — **passed**: 0 issues found.
+- `cd client && flutter test` — **passed**: 15 unit/widget tests passing.
+
+### Next smallest task
+
+Proceed with Milestone M2 Slice 1: Database migrations, domain models, application services, and REST endpoints for itinerary items, trip days, and places.
 
 ## 2026-11-05 — Travel Component Design System & Mobile UI Elevation
 

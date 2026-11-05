@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:tapittrip/core/network/api_exceptions.dart';
+import 'package:tapittrip/core/widgets/app_logo.dart';
 import 'package:tapittrip/features/auth/domain/models/auth_state.dart';
 import 'package:tapittrip/features/auth/presentation/providers/auth_provider.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
@@ -36,14 +37,11 @@ class _TripListPageState extends ConsumerState<TripListPage> {
         titleSpacing: 16,
         title: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.person, size: 20, color: colorScheme.primary),
+            const AppLogo(
+              height: 38,
+              width: 38,
+              variant: AppLogoVariant.iconOnly,
+              borderRadius: 10,
             ),
             const SizedBox(width: 10),
             Column(
@@ -51,7 +49,7 @@ class _TripListPageState extends ConsumerState<TripListPage> {
               children: [
                 Text(
                   'TapItTrip',
-                  style: theme.textTheme.labelMedium?.copyWith(
+                  style: theme.textTheme.labelLarge?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),

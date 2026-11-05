@@ -126,3 +126,4 @@ All components use TapItTrip's brand palette (TapIt Navy `#00376D` as primary, T
    - Touch targets: Minimum `48x48 dp` for buttons, pills, and tapable cards.
 4. **Offline & Empty States**:
    - Every list, carousel, and widget must provide an offline/cached presentation, a clean loading shimmer/indicator, and an inviting empty state without forcing unnecessary itinerary creation.
+

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/widgets/app_logo.dart';
 import '../providers/auth_provider.dart';
 import '../../domain/models/auth_state.dart';
 
@@ -71,6 +72,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Center(child: AppLogo(height: 88, withCard: true)),
+                  const SizedBox(height: 16),
                   if (errorMessage != null)
                     Container(
                       padding: const EdgeInsets.all(12),

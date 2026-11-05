@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tapittrip/core/config/app_config.dart';
 import 'package:tapittrip/core/theme/app_colors.dart';
 import 'package:tapittrip/core/theme/app_theme.dart';
+import 'package:tapittrip/core/widgets/app_logo.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/planning_mode_selector.dart';
@@ -122,6 +123,42 @@ void main() {
 
       await tester.tap(find.byTooltip('Delete trip'));
       expect(deleted, isTrue);
+    });
+  });
+
+  group('AppLogo Widget', () {
+    testWidgets('renders full variant with accessibility label', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(body: Center(child: AppLogo(height: 96))),
+        ),
+      );
+
+      expect(find.byType(AppLogo), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
+    });
+
+    testWidgets('renders iconOnly variant with card container', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(
+            body: Center(
+              child: AppLogo(
+                height: 40,
+                variant: AppLogoVariant.iconOnly,
+                withCard: true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(AppLogo), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
     });
   });
 }
