@@ -6,6 +6,8 @@ import '../../features/auth/domain/models/auth_state.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/itinerary/presentation/pages/trip_itinerary_page.dart';
+import '../../features/trips/domain/models/trip.dart';
 import '../../features/trips/presentation/pages/trip_create_page.dart';
 import '../../features/trips/presentation/pages/trip_list_page.dart';
 
@@ -45,6 +47,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'new',
             builder: (context, state) => const TripCreatePage(),
+          ),
+          GoRoute(
+            path: ':tripId/itinerary',
+            builder: (context, state) {
+              final tripId = state.pathParameters['tripId']!;
+              final trip = state.extra as Trip?;
+              return TripItineraryPage(tripId: tripId, initialTrip: trip);
+            },
           ),
         ],
       ),

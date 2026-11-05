@@ -74,3 +74,4 @@ Documented in [`docs/api/openapi.yaml`](../api/openapi.yaml):
   - `cd api && bash bin/test-postgres` — **passed** (42 tests, 214 assertions).
   - `cd api && ./vendor/bin/sail pint --test` — **passed**.
   - `cd api && ./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**.
+

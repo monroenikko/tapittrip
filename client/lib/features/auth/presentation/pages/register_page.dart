@@ -74,12 +74,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 children: [
                   const Center(child: AppLogo(height: 88, withCard: true)),
                   const SizedBox(height: 16),
-                  const Center(
-                    child: AppLogo(
-                      height: 88,
-                      withCard: true,
-                    ),
-                  ),
+                  const Center(child: AppLogo(height: 88, withCard: true)),
                   const SizedBox(height: 16),
                   if (errorMessage != null)
                     Container(

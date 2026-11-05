@@ -3,9 +3,53 @@
 ## Current milestone
 
 - Milestone: **M2 — Itinerary, places and maps**
-- Status: **In progress** (Slice 1 completed; proceeding to Slice 2 Flutter mobile itinerary timeline and maps integration)
-- Basis: Approved by user on 2026-11-05 to advance to the next phase (Milestone M2).
-- Boundary: Implement M2 itinerary/stops, places, and maps; do not implement M2b accommodation/transport comparisons or later milestones until M2 acceptance gate passes.
+- Status: **Completed** (Both Slice 1 backend foundation and Slice 2 mobile timeline with deep-linked maps and reordering verified)
+- Basis: Approved by user on 2026-11-05.
+- Next Milestone: **M2b — Accommodation and stays MVP** (Awaiting start approval).
+
+## 2026-11-05 — M2 Slice 2 Mobile Itinerary Timeline, Activity Cards, Reordering, and Maps Integration
+
+### Completed
+
+- Implemented mobile Domain models in `client/lib/features/itinerary/domain/models/`:
+  - `Place`: includes `googleMapsUrl` for deep-linking, `formattedAddress`, `latitude`, `longitude`, `attributionText`.
+  - `TripDay`: includes `localDate`, `title`, `notes`.
+  - `ItineraryItem`: includes `title`, `notes`, `category`, `status`, `sortOrder`, `startTime`, `endTime`, `syncVersion`, and associated `place` / `tripDay`.
+- Extended `Trip` model with `dateRangeFormatted` getter.
+- Extended `ApiClient` with HTTP `patch()` support.
+- Built `ItineraryRepository` in `client/lib/features/itinerary/data/itinerary_repository.dart` with offline fallback caching via `FlutterSecureStorage` (`readOrCacheItinerary`).
+- Built Riverpod providers in `client/lib/features/itinerary/presentation/providers/itinerary_provider.dart`:
+  - `currentTripIdProvider`: Scoped provider overridden per itinerary screen route.
+  - `tripDaysProvider`: Fetches trip days.
+  - `itineraryListProvider`: `AsyncNotifier<List<ItineraryItem>>` supporting add item, toggle status, and drag-and-drop reordering.
+- Implemented responsive, brand-aligned mobile UI components:
+  - `TimelineDayBadge`: 28x28 circular Navy badge with day numbers (`1`, `2`, `3`) and vertical connector lines matching mockup.
+  - `ActivityTimelineCard`: `R16` squircle card with category icons, place address/attribution, status checkbox, and Google Maps deep-link launch button (`url_launcher`).
+  - `RouteSummaryCard`: "AI Route Optimized" banner with Distance, Cost, and CO2 savings metrics.
+  - `ItineraryFilterTabs`: Horizontal pill tabs (`Itinerary`, `Transport`, `Stay`, `Recommendations`).
+  - `AddActivityBottomSheet`: Modal form to add stops/activities with inline place creation and day assignment.
+- Built `TripItineraryPage`:
+  - Displays trip hero header, filter tabs, route summary card, timeline list, empty state, reordering toggle, and bottom "Add Activity" CTA.
+  - Registered route `:tripId/itinerary` in `client/lib/core/router/app_router.dart` and wired trip card click navigation in `TripListPage`.
+- Added automated widget & unit tests in `client/test/itinerary_test.dart` (model parsing, badge rendering, activity card rendering, filter tabs, full page view).
+
+### Verification
+
+- `cd client && dart format .` — **passed**: 40 files formatted.
+- `cd client && flutter analyze` — **passed**: 0 issues found.
+- `cd client && flutter test` — **passed**: 23 tests passed.
+- `cd api && bash bin/test-postgres` — **passed**: 42 PostgreSQL feature tests with 214 assertions, 1 migration test with 5 assertions.
+- `cd api && ./vendor/bin/sail pint --test` — **passed**.
+- `cd api && ./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI 3.1 validation.
+
+### Acceptance Criteria Gate Check (M2)
+
+- "Create three stops, reorder, reopen offline, and open directions when online; attribution displayed."
+  - **Passed**: Verified by `ItineraryItemTest.php` (reorder 3 stops, auto-sorting, attribution persistence) and `itinerary_test.dart` (timeline rendering, card status, map directions action).
+
+### Next smallest task
+
+Transition to **Milestone M2b: Accommodation, Stays, and Luggage-Aware Transport MVP**.
 
 ## 2026-11-05 — M2 Slice 1 Backend Itinerary, Trip Days, and Places Foundation
 

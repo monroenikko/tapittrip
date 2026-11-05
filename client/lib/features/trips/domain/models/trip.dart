@@ -35,6 +35,12 @@ class Trip {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  String? get dateRangeFormatted {
+    if (startDate == null) return null;
+    if (endDate == null) return startDate;
+    return '$startDate – $endDate';
+  }
+
   factory Trip.fromJson(Map<String, dynamic> json) {
     return Trip(
       id: json['id'] as String,

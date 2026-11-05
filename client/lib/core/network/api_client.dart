@@ -71,6 +71,16 @@ class ApiClient {
     );
   }
 
+  Future<dynamic> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    return _send(
+      () => _dio.patch(path, data: data, queryParameters: queryParameters),
+    );
+  }
+
   Future<dynamic> delete(
     String path, {
     Map<String, dynamic>? queryParameters,

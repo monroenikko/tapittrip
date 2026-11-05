@@ -309,7 +309,10 @@ class _TripListPageState extends ConsumerState<TripListPage> {
                   children: trips.map((trip) {
                     return TripCard(
                       trip: trip,
-                      onTap: () {},
+                      onTap: () => context.push(
+                        '/trips/${trip.id}/itinerary',
+                        extra: trip,
+                      ),
                       onDelete: () async {
                         final confirm = await showDialog<bool>(
                           context: context,
