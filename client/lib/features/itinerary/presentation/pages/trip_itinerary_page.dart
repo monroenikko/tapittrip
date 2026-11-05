@@ -123,37 +123,44 @@ class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
       ),
       body: itemsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.error_outline_rounded,
-                  size: 48,
-                  color: colorScheme.error,
+        error: (_, _) => CustomScrollView(
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: colorScheme.error,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Error loading itinerary',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Check your connection and try again.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.tonal(
+                        onPressed: () =>
+                            ref.read(itineraryListProvider.notifier).refresh(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Error loading itinerary',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  err.toString(),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall,
-                ),
-                const SizedBox(height: 16),
-                FilledButton.tonal(
-                  onPressed: () =>
-                      ref.read(itineraryListProvider.notifier).refresh(),
-                  child: const Text('Retry'),
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
         data: (items) {
           return RefreshIndicator(

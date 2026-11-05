@@ -731,6 +731,236 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /trips/{trip}/stays:
+    get:
+      operationId: listTripStays
+      summary: List all stays for a trip
+      tags:
+        - Stays
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Stays list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StayListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view stays for this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: storeStay
+      summary: Create an accommodation or stay for a trip
+      tags:
+        - Stays
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreStayRequest"
+      responses:
+        "201":
+          description: Stay created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StayResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stays/{stay}:
+    get:
+      operationId: getStay
+      summary: Get details of a stay
+      tags:
+        - Stays
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: stay
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Stay details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StayResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this stay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Stay not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateStay
+      summary: Update a stay
+      tags:
+        - Stays
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: stay
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStayRequest"
+      responses:
+        "200":
+          description: Updated stay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StayResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this stay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Stay not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteStay
+      summary: Delete a stay without orphaning itinerary items
+      tags:
+        - Stays
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: stay
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Stay deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to delete this stay.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Stay not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stays/{stay}/transport-options:
+    post:
+      operationId: compareStayTransport
+      summary: Compare luggage-aware airport/origin to stay transport options
+      tags:
+        - Stays
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: stay
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompareStayTransportRequest"
+      responses:
+        "200":
+          description: Transport options comparison.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransportComparisonResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Stay not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1368,5 +1598,364 @@ components:
           items:
             type: string
             format: uuid
+
+    Stay:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - name
+        - stay_type
+        - timezone
+        - version
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        place_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        stay_type:
+          type: string
+          enum: [hotel, hostel, rental, friends_family]
+        address:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        check_in_at:
+          type: string
+          format: date-time
+          nullable: true
+        check_out_at:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        booking_reference:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        luggage_profile:
+          type: object
+          nullable: true
+          properties:
+            party_size:
+              type: integer
+            backpacks:
+              type: integer
+            carry_ons:
+              type: integer
+            checked_bags:
+              type: integer
+            oversized:
+              type: integer
+            stroller:
+              type: boolean
+        version:
+          type: integer
+        google_maps_url:
+          type: string
+        google_maps_directions_url:
+          type: string
+        place:
+          $ref: "#/components/schemas/Place"
+        itinerary_items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItineraryItem"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    StayResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/Stay"
+
+    StayListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Stay"
+
+    StoreStayRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        stay_type:
+          type: string
+          enum: [hotel, hostel, rental, friends_family]
+        address:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        check_in_at:
+          type: string
+          format: date-time
+          nullable: true
+        check_out_at:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        booking_reference:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        luggage_profile:
+          type: object
+          properties:
+            party_size:
+              type: integer
+            backpacks:
+              type: integer
+            carry_ons:
+              type: integer
+            checked_bags:
+              type: integer
+            oversized:
+              type: integer
+            stroller:
+              type: boolean
+        place_id:
+          type: string
+          format: uuid
+          nullable: true
+        place:
+          $ref: "#/components/schemas/StorePlaceRequest"
+        create_itinerary_events:
+          type: boolean
+
+    UpdateStayRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        stay_type:
+          type: string
+          enum: [hotel, hostel, rental, friends_family]
+        address:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        check_in_at:
+          type: string
+          format: date-time
+          nullable: true
+        check_out_at:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        booking_reference:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        luggage_profile:
+          type: object
+          properties:
+            party_size:
+              type: integer
+            backpacks:
+              type: integer
+            carry_ons:
+              type: integer
+            checked_bags:
+              type: integer
+            oversized:
+              type: integer
+            stroller:
+              type: boolean
+        place_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    CompareStayTransportRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        origin_name:
+          type: string
+          nullable: true
+        origin_latitude:
+          type: number
+          nullable: true
+        origin_longitude:
+          type: number
+          nullable: true
+        party_size:
+          type: integer
+        luggage_preset:
+          type: string
+          enum: [light, standard, heavy, custom]
+        backpacks:
+          type: integer
+        carry_ons:
+          type: integer
+        checked_bags:
+          type: integer
+        oversized:
+          type: integer
+        stroller:
+          type: boolean
+
+    TransportOption:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - mode
+        - title
+        - provider
+        - estimated_duration_minutes
+        - estimated_cost_minor
+        - currency
+        - transfers
+        - walking_meters
+        - luggage_capacity
+        - accessibility_notes
+        - is_most_convenient
+        - is_fastest
+        - is_cheapest
+        - explanation
+      properties:
+        id:
+          type: string
+        mode:
+          type: string
+          enum: [private_transfer, express_rail, public_transit, rideshare]
+        title:
+          type: string
+        provider:
+          type: string
+        estimated_duration_minutes:
+          type: integer
+        estimated_cost_minor:
+          type: integer
+        currency:
+          type: string
+        transfers:
+          type: integer
+        walking_meters:
+          type: integer
+        luggage_capacity:
+          type: string
+        accessibility_notes:
+          type: string
+        convenience_score:
+          type: integer
+        is_most_convenient:
+          type: boolean
+        is_fastest:
+          type: boolean
+        is_cheapest:
+          type: boolean
+        explanation:
+          type: string
+
+    TransportComparisonResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - verified
+            - status
+            - message
+            - google_maps_directions_url
+            - options
+            - provider_attribution
+            - last_refreshed_at
+          properties:
+            verified:
+              type: boolean
+            status:
+              type: string
+            message:
+              type: string
+            origin:
+              type: string
+              nullable: true
+            destination:
+              type: string
+            google_maps_directions_url:
+              type: string
+            luggage_preset:
+              type: string
+            party_size:
+              type: integer
+            options:
+              type: array
+              items:
+                $ref: "#/components/schemas/TransportOption"
+            provider_attribution:
+              type: string
+            last_refreshed_at:
+              type: string
+              format: date-time
+
 
 

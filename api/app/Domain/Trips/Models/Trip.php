@@ -6,6 +6,7 @@ namespace App\Domain\Trips\Models;
 
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
+use App\Domain\Stays\Models\Stay;
 use App\Models\User;
 use Database\Factories\TripFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -132,6 +133,18 @@ final class Trip extends Model
         return $this->hasMany(ItineraryItem::class)
             ->orderBy('sort_order')
             ->orderBy('starts_at_utc')
+            ->orderBy('created_at');
+    }
+
+    /**
+     * All accommodations and stays saved for this trip.
+     *
+     * @return HasMany<Stay, $this>
+     */
+    public function stays(): HasMany
+    {
+        return $this->hasMany(Stay::class)
+            ->orderBy('check_in_at')
             ->orderBy('created_at');
     }
 }

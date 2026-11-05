@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ItineraryItemController;
 use App\Http\Controllers\Api\V1\PlaceController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\StayController;
+use App\Http\Controllers\Api\V1\StayTransportController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
 use Illuminate\Support\Facades\Route;
@@ -36,5 +38,12 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/places/search', [PlaceController::class, 'search'])->name('places.search');
         Route::post('/places', [PlaceController::class, 'store'])->name('places.store');
         Route::get('/places/{place}', [PlaceController::class, 'show'])->name('places.show');
+
+        Route::get('/trips/{trip}/stays', [StayController::class, 'index'])->name('trips.stays.index');
+        Route::post('/trips/{trip}/stays', [StayController::class, 'store'])->name('trips.stays.store');
+        Route::get('/stays/{stay}', [StayController::class, 'show'])->name('stays.show');
+        Route::patch('/stays/{stay}', [StayController::class, 'update'])->name('stays.update');
+        Route::delete('/stays/{stay}', [StayController::class, 'destroy'])->name('stays.destroy');
+        Route::post('/stays/{stay}/transport-options', [StayTransportController::class, 'compare'])->name('stays.transport-options.compare');
     });
 });

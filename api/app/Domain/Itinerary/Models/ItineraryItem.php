@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Itinerary\Models;
 
+use App\Domain\Stays\Models\Stay;
 use App\Domain\Trips\Models\Trip;
 use Database\Factories\ItineraryItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'trip_id',
     'trip_day_id',
     'place_id',
+    'stay_id',
     'kind',
     'title',
     'notes',
@@ -83,5 +85,15 @@ final class ItineraryItem extends Model
     public function place(): BelongsTo
     {
         return $this->belongsTo(Place::class);
+    }
+
+    /**
+     * The stay this item is associated with (e.g. check-in / check-out, optional).
+     *
+     * @return BelongsTo<Stay, $this>
+     */
+    public function stay(): BelongsTo
+    {
+        return $this->belongsTo(Stay::class);
     }
 }

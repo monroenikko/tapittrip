@@ -2,10 +2,68 @@
 
 ## Current milestone
 
-- Milestone: **M2 — Itinerary, places and maps**
-- Status: **Completed** (Both Slice 1 backend foundation and Slice 2 mobile timeline with deep-linked maps and reordering verified)
-- Basis: Approved by user on 2026-11-05.
-- Next Milestone: **M2b — Accommodation and stays MVP** (Awaiting start approval).
+- Milestone: **M2b — Accommodation and stays (MVP)**
+- Status: **In progress** (Slice 1 backend foundation completed; proceeding to Slice 2 Flutter mobile stays & luggage transport UI)
+- Basis: User approved proceeding to the next step.
+- Boundary: Implement M2b accommodation CRUD, protected booking details, and luggage-aware transport comparison MVP; do not implement M3 Today Dashboard until M2b acceptance gate passes.
+
+## 2026-11-05 — M2b Slice 1 Backend Stays, Encrypted Booking Details, and Luggage-Aware Transport Comparison Foundation
+
+### Completed
+
+- Implemented database migrations:
+  - `stays` table with UUIDs, trip FK, place FK (nullable), stay type (`hotel`, `hostel`, `rental`, `friends_family`), address, coordinates, check-in and check-out timestamps, IANA timezone, phone, encrypted booking reference, notes, luggage profile JSON, sync version, timestamps, and soft deletes.
+  - Augmented `itinerary_items` with nullable `stay_id` foreign key (`onDelete('set null')`) to safely link check-in/out activities without risk of orphaning user items if a stay is changed or deleted.
+- Implemented Eloquent Domain models:
+  - `App\Domain\Stays\Models\Stay` with `'booking_reference' => 'encrypted'`, array casts for `luggage_profile`, and computed `google_maps_url` and `google_maps_directions_url`.
+  - Linked `stays()` relationship on `Trip` and `stay()` relationship on `ItineraryItem`.
+- Implemented Application Services (`App\Application\Stays\Services`):
+  - `CreateStayService`: Validates check-in/out timing, manages place resolution, and optionally creates linked check-in and check-out itinerary activities.
+  - `UpdateStayService`: Updates stay attributes, increments sync version, and synchronizes titles and times of linked check-in/out activities.
+  - `DeleteStayService`: Decouples linked itinerary items (`stay_id = null`) and soft deletes the stay.
+  - `CompareStayTransportService`: Deterministic luggage-weighted scoring algorithm evaluating private transfers, airport express rail, and city transit options against party size, bag counts, and stroller requirements. Transparently outputs unverified status with Google Maps directions handoff when origin or route data is unavailable.
+- Implemented API Boundary:
+  - Form Requests: `StoreStayRequest`, `UpdateStayRequest`, `CompareStayTransportRequest`.
+  - Resources: `StayResource`.
+  - Controllers: `StayController`, `StayTransportController`.
+  - Registered 6 new REST routes in `routes/api.php` under `auth:sanctum`.
+- Updated OpenAPI specification in `docs/api/openapi.yaml` with all new paths and schemas.
+- Documented feature architecture in `docs/features/stays-and-luggage-transport.md` and updated `docs/features/README.md`.
+- Added model factories and feature tests in `tests/Feature/StayTest.php` and `tests/Feature/StayTransportComparisonTest.php` covering multiple stays across cities, at-rest encryption of booking references, check-in/out activity generation, non-destructive deletion, membership isolation, and luggage-based transport rankings.
+
+### Verification
+
+- `cd api && bash bin/test-postgres` — **passed**: 51 PostgreSQL feature tests with 274 assertions, 1 migration test with 5 assertions.
+- `cd api && ./vendor/bin/sail pint --test` — **passed**.
+- `cd api && ./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI 3.1 validation.
+
+### Next smallest task
+
+Proceed to M2b Slice 2: Flutter mobile client stays management, squircle stay cards matching travel design mockup, luggage profile presets modal (`Travel light`, `1–2 suitcases`, `Heavy luggage / stroller`), and explainable transport comparison bottom sheet with Google Maps handoff.
+
+## 2026-11-05 — M2 Mobile Itinerary Error-State Overflow Regression Fix
+
+### Completed
+
+- Replaced the raw exception dump on `TripItineraryPage` with a concise, user-safe connection message.
+- Made the itinerary error state vertically scrollable so it remains usable on small screens and at large text scales.
+- Added a widget regression test covering a 320x568 viewport, 200% text scaling, and an intentionally large provider exception without exposing its payload.
+
+### Verification
+
+- `cd client && dart format lib/features/itinerary/presentation/pages/trip_itinerary_page.dart test/itinerary_test.dart` — **passed**: 2 files formatted.
+- `cd client && flutter test test/itinerary_test.dart` — **passed**: 9 tests.
+- `cd client && flutter analyze` — **passed**: 0 issues found.
+- `cd client && flutter test` — **passed**: 24 tests.
+
+### Security and offline notes
+
+- Provider and server exception details are no longer rendered in the mobile UI.
+- Existing cached-itinerary fallback and retry behavior are unchanged.
+
+### Next smallest task
+
+Proceed to M2b only after its milestone start is explicitly approved.
 
 ## 2026-11-05 — M2 Slice 2 Mobile Itinerary Timeline, Activity Cards, Reordering, and Maps Integration
 

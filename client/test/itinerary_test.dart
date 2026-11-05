@@ -217,6 +217,46 @@ void main() {
       expect(find.text('Directions'), findsOneWidget);
       expect(find.text('Add Activity'), findsWidgets);
     });
+
+    testWidgets('keeps a large error responsive without exposing it', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            itineraryListProvider.overrideWith(
+              _FailingItineraryListNotifier.new,
+            ),
+            tripDaysProvider.overrideWith((ref) => Future.value([])),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: const TripItineraryPage(
+              tripId: 'trip-1',
+              initialTrip: sampleTrip,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Error loading itinerary'), findsOneWidget);
+      expect(find.text('Check your connection and try again.'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.textContaining('private provider payload'), findsNothing);
+    });
   });
 }
 
@@ -224,5 +264,12 @@ class _FakeItineraryListNotifier extends ItineraryListNotifier {
   @override
   Future<List<ItineraryItem>> build() async {
     return [sampleItem];
+  }
+}
+
+class _FailingItineraryListNotifier extends ItineraryListNotifier {
+  @override
+  Future<List<ItineraryItem>> build() async {
+    throw Exception(List.filled(1000, 'private provider payload').join('\n'));
   }
 }
