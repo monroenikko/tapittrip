@@ -10,33 +10,30 @@ final itineraryRepositoryProvider = Provider<ItineraryRepository>((ref) {
   return ItineraryRepository(apiClient: apiClient);
 });
 
-/// Scoped provider for the active trip ID on itinerary screens.
-final currentTripIdProvider = Provider<String>((ref) {
-  throw UnimplementedError(
-    'currentTripIdProvider must be provided via ProviderScope',
-  );
-});
-
-final tripDaysProvider = FutureProvider<List<TripDay>>((ref) async {
-  final tripId = ref.watch(currentTripIdProvider);
+/// Trip days provider parametrized by tripId.
+final tripDaysProvider = FutureProvider.family<List<TripDay>, String>((
+  ref,
+  tripId,
+) async {
   final repository = ref.watch(itineraryRepositoryProvider);
   return repository.fetchDays(tripId);
 });
 
 class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
+  ItineraryListNotifier(this.tripId);
+
+  final String tripId;
   late final ItineraryRepository _repository;
-  late final String _tripId;
 
   @override
   Future<List<ItineraryItem>> build() async {
     _repository = ref.watch(itineraryRepositoryProvider);
-    _tripId = ref.watch(currentTripIdProvider);
-    return _repository.fetchItems(_tripId);
+    return _repository.fetchItems(tripId);
   }
 
   Future<void> refresh() async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _repository.fetchItems(_tripId));
+    state = await AsyncValue.guard(() => _repository.fetchItems(tripId));
   }
 
   Future<void> addItem({
@@ -50,7 +47,7 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
     String? endsAtUtc,
   }) async {
     await _repository.createItem(
-      _tripId,
+      tripId,
       title: title,
       kind: kind,
       tripDayId: tripDayId,
@@ -107,7 +104,7 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
     final orderedIds = items.map((e) => e.id).toList();
 
     try {
-      final updated = await _repository.reorderItems(_tripId, orderedIds);
+      final updated = await _repository.reorderItems(tripId, orderedIds);
       state = AsyncValue.data(updated);
     } catch (_) {
       // Revert if network failed
@@ -116,7 +113,10 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
   }
 }
 
+/// Itinerary items provider parametrized by tripId.
 final itineraryListProvider =
-    AsyncNotifierProvider<ItineraryListNotifier, List<ItineraryItem>>(
-      ItineraryListNotifier.new,
-    );
+    AsyncNotifierProvider.family<
+      ItineraryListNotifier,
+      List<ItineraryItem>,
+      String
+    >((tripId) => ItineraryListNotifier(tripId));

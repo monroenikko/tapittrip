@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,32 +11,17 @@ import 'package:tapittrip/features/itinerary/presentation/widgets/timeline_day_b
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
 
-class TripItineraryPage extends StatelessWidget {
+class TripItineraryPage extends ConsumerStatefulWidget {
   const TripItineraryPage({super.key, required this.tripId, this.initialTrip});
 
   final String tripId;
   final Trip? initialTrip;
 
   @override
-  Widget build(BuildContext context) {
-    return ProviderScope(
-      overrides: [currentTripIdProvider.overrideWithValue(tripId)],
-      child: _TripItineraryView(tripId: tripId, initialTrip: initialTrip),
-    );
-  }
+  ConsumerState<TripItineraryPage> createState() => _TripItineraryPageState();
 }
 
-class _TripItineraryView extends ConsumerStatefulWidget {
-  const _TripItineraryView({required this.tripId, this.initialTrip});
-
-  final String tripId;
-  final Trip? initialTrip;
-
-  @override
-  ConsumerState<_TripItineraryView> createState() => _TripItineraryViewState();
-}
-
-class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
+class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
   int _selectedTabIndex = 0;
   bool _isReordering = false;
 
@@ -50,7 +36,7 @@ class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
   }
 
   void _openAddActivitySheet() {
-    final days = ref.read(tripDaysProvider).asData?.value ?? [];
+    final days = ref.read(tripDaysProvider(widget.tripId)).asData?.value ?? [];
 
     showModalBottomSheet<void>(
       context: context,
@@ -70,7 +56,7 @@ class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
               String? notes,
             }) async {
               await ref
-                  .read(itineraryListProvider.notifier)
+                  .read(itineraryListProvider(widget.tripId).notifier)
                   .addItem(
                     title: title,
                     kind: kind,
@@ -88,7 +74,7 @@ class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final trip = _resolveTrip();
-    final itemsAsync = ref.watch(itineraryListProvider);
+    final itemsAsync = ref.watch(itineraryListProvider(widget.tripId));
 
     return Scaffold(
       appBar: AppBar(
@@ -116,55 +102,65 @@ class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh',
             onPressed: () {
-              ref.read(itineraryListProvider.notifier).refresh();
+              ref.read(itineraryListProvider(widget.tripId).notifier).refresh();
             },
           ),
         ],
       ),
       body: itemsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => CustomScrollView(
-          slivers: [
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        size: 48,
-                        color: colorScheme.error,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Error loading itinerary',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Check your connection and try again.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.tonal(
-                        onPressed: () =>
-                            ref.read(itineraryListProvider.notifier).refresh(),
-                        child: const Text('Retry'),
-                      ),
-                    ],
+        error: (err, _) {
+          if (kDebugMode) {
+            debugPrint('Error loading itinerary for ${widget.tripId}: $err');
+          }
+          return CustomScrollView(
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.error_outline_rounded,
+                          size: 48,
+                          color: colorScheme.error,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Error loading itinerary',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Check your connection and try again.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.tonal(
+                          onPressed: () => ref
+                              .read(
+                                itineraryListProvider(widget.tripId).notifier,
+                              )
+                              .refresh(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
         data: (items) {
           return RefreshIndicator(
-            onRefresh: () => ref.read(itineraryListProvider.notifier).refresh(),
+            onRefresh: () => ref
+                .read(itineraryListProvider(widget.tripId).notifier)
+                .refresh(),
             child: ListView(
               padding: const EdgeInsets.only(
                 left: 16,
@@ -202,20 +198,14 @@ class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
+                        width: 72,
+                        height: 52,
                         decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          trip.destinationCountry ?? 'TRIP',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary,
+                          color: colorScheme.primaryContainer,
+                          image: const DecorationImage(
+                            image: AssetImage('assets/images/logo_icon.png'),
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
@@ -224,61 +214,50 @@ class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
                   const SizedBox(height: 16),
                 ],
 
-                // Route summary card from mockup
-                const RouteSummaryCard(),
+                // Route summary banner
+                const RouteSummaryCard(
+                  distance: '142 km',
+                  estimatedCost: '\$1,240',
+                  co2Saved: '18 kg',
+                ),
                 const SizedBox(height: 16),
 
-                // Pill filter tabs
+                // Filter tabs
                 ItineraryFilterTabs(
                   selectedIndex: _selectedTabIndex,
-                  onTabSelected: (idx) =>
-                      setState(() => _selectedTabIndex = idx),
+                  onTabSelected: (index) {
+                    setState(() => _selectedTabIndex = index);
+                  },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // Timeline activities
+                // Empty state or Timeline list
                 if (items.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(32),
-                    margin: const EdgeInsets.symmetric(vertical: 20),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(
-                          alpha: 0.5,
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 48,
+                            color: colorScheme.outline,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No activities planned yet',
+                            style: theme.textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tap "Add Activity" below to plan your first stop.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.alt_route_rounded,
-                          size: 48,
-                          color: colorScheme.primary.withValues(alpha: 0.6),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No stops scheduled yet',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Tap the button below to add your first attraction, food stop, or transport activity.',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        FilledButton.icon(
-                          onPressed: _openAddActivitySheet,
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Add First Stop'),
-                        ),
-                      ],
                     ),
                   )
                 else if (_isReordering)
@@ -289,121 +268,95 @@ class _TripItineraryViewState extends ConsumerState<_TripItineraryView> {
                     // ignore: deprecated_member_use
                     onReorder: (oldIndex, newIndex) {
                       ref
-                          .read(itineraryListProvider.notifier)
+                          .read(itineraryListProvider(widget.tripId).notifier)
                           .reorder(oldIndex, newIndex);
                     },
                     itemBuilder: (context, index) {
                       final item = items[index];
-                      return Padding(
+                      return ListTile(
                         key: ValueKey(item.id),
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: ListTile(
-                          tileColor: colorScheme.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: colorScheme.outlineVariant),
-                          ),
-                          leading: CircleAvatar(
-                            backgroundColor: colorScheme.primary,
-                            radius: 14,
-                            child: Text(
-                              '${index + 1}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                        leading: CircleAvatar(
+                          radius: 14,
+                          backgroundColor: colorScheme.primary,
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          title: Text(
-                            item.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(item.place?.name ?? item.kind),
-                          trailing: const Icon(Icons.drag_handle_rounded),
                         ),
+                        title: Text(item.title),
+                        subtitle: item.place != null
+                            ? Text(item.place!.name)
+                            : null,
+                        trailing: const Icon(Icons.drag_handle_rounded),
                       );
                     },
                   )
                 else
-                  Column(
-                    children: List.generate(items.length, (index) {
-                      final item = items[index];
-                      final isFirst = index == 0;
-                      final isLast = index == items.length - 1;
+                  ...List.generate(items.length, (index) {
+                    final item = items[index];
+                    final isLast = index == items.length - 1;
 
-                      return IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Timeline day circle badge and connector
-                            TimelineDayBadge(
-                              dayNumber: index + 1,
-                              isFirst: isFirst,
-                              isLast: isLast,
-                            ),
-                            const SizedBox(width: 14),
-                            // Activity Card
-                            Expanded(
+                    return IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Timeline indicator
+                          TimelineDayBadge(
+                            dayNumber: index + 1,
+                            isLast: isLast,
+                          ),
+                          const SizedBox(width: 12),
+                          // Activity card
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
                               child: ActivityTimelineCard(
                                 item: item,
                                 onToggleVisited: () {
                                   ref
-                                      .read(itineraryListProvider.notifier)
+                                      .read(
+                                        itineraryListProvider(widget.tripId)
+                                            .notifier,
+                                      )
                                       .toggleVisited(item);
                                 },
                                 onDelete: () {
                                   ref
-                                      .read(itineraryListProvider.notifier)
+                                      .read(
+                                        itineraryListProvider(widget.tripId)
+                                            .notifier,
+                                      )
                                       .deleteItem(item.id);
                                 },
                               ),
                             ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ),
-
-                if (items.isNotEmpty && !_isReordering) ...[
-                  const SizedBox(height: 12),
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: _openAddActivitySheet,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Add Activity'),
-                    ),
-                  ),
-                ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
               ],
             ),
           );
         },
       ),
-      // Bottom Stadium CTA matching mockup ("✨ Optimize with AI" / "Add Activity")
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.shadow.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: double.infinity,
+          height: 52,
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: colorScheme.primary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(28),
               ),
             ),
             onPressed: _openAddActivitySheet,
-            icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+            icon: const Icon(Icons.add_rounded),
             label: const Text(
               'Add Activity',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),

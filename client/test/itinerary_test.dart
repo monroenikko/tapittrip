@@ -195,9 +195,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentTripIdProvider.overrideWithValue('trip-1'),
-            itineraryListProvider.overrideWith(_FakeItineraryListNotifier.new),
-            tripDaysProvider.overrideWith((ref) => Future.value([])),
+            itineraryListProvider('trip-1')
+                .overrideWith(() => _FakeItineraryListNotifier('trip-1')),
+            tripDaysProvider('trip-1').overrideWith((ref) => Future.value([])),
           ],
           child: MaterialApp(
             theme: AppTheme.light(),
@@ -229,10 +229,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            itineraryListProvider.overrideWith(
-              _FailingItineraryListNotifier.new,
-            ),
-            tripDaysProvider.overrideWith((ref) => Future.value([])),
+            itineraryListProvider('trip-1')
+                .overrideWith(() => _FailingItineraryListNotifier('trip-1')),
+            tripDaysProvider('trip-1').overrideWith((ref) => Future.value([])),
           ],
           child: MaterialApp(
             theme: AppTheme.light(),
@@ -261,6 +260,8 @@ void main() {
 }
 
 class _FakeItineraryListNotifier extends ItineraryListNotifier {
+  _FakeItineraryListNotifier(super.tripId);
+
   @override
   Future<List<ItineraryItem>> build() async {
     return [sampleItem];
@@ -268,6 +269,8 @@ class _FakeItineraryListNotifier extends ItineraryListNotifier {
 }
 
 class _FailingItineraryListNotifier extends ItineraryListNotifier {
+  _FailingItineraryListNotifier(super.tripId);
+
   @override
   Future<List<ItineraryItem>> build() async {
     throw Exception(List.filled(1000, 'private provider payload').join('\n'));
