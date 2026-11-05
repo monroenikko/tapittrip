@@ -23,7 +23,7 @@ bash bin/bootstrap
 ./vendor/bin/sail --profile tools run --rm --no-deps migrate
 ```
 
-Open `http://127.0.0.1:8000/api/v1/health`. The expected response is:
+Open `http://127.0.0.1:8088/api/v1/health`. The expected response is:
 
    ```json
    {"data":{"status":"ok"}}

@@ -7,6 +7,25 @@
 - Basis: M0 acceptance gate completed and M1 approved by project owner on 2026-11-05.
 - Boundary: Implement M1 features only; do not implement M2 itinerary/places or later features until M1 is verified and approved.
 
+## 2026-11-05 — Reconfigured Sail application host port to 8088
+
+### Completed
+
+- Reconfigured Sail web container port mapping from `8000` to `8088` (`127.0.0.1:8088->80/tcp`) in `api/.env`, `api/.env.example`, `api/compose.yaml`, and `README.md` to prevent local port collisions with existing developer containers.
+- Added `127.0.0.1:8088` to Sanctum stateful domains in `api/config/sanctum.php`.
+- Recreated Sail containers with `./vendor/bin/sail up -d` and confirmed `GET http://127.0.0.1:8088/api/v1/health` returns HTTP 200 `{"data":{"status":"ok"}}`.
+
+### Verification
+
+- `curl -i http://127.0.0.1:8088/api/v1/health` — **passed**: HTTP 200 `{"data":{"status":"ok"}}`.
+- `bash bin/test-postgres` — **passed**: 26 PostgreSQL feature tests with 120 assertions, plus 1 migration test with 5 assertions.
+- `./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**: OpenAPI semantic validation and live health response.
+- `./vendor/bin/sail pint --test` — **passed**.
+
+### Next smallest task
+
+Proceed to M1 Slice 3: Flutter mobile integration for authentication and trip management across all four planning modes (`diy`, `existing`, `guided`, `simple`).
+
 ## 2026-11-05 — M1 API service and response implementation refactor
 
 ### Completed
