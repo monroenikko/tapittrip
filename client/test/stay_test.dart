@@ -15,6 +15,7 @@ import 'package:tapittrip/features/stays/data/stay_repository.dart';
 import 'package:tapittrip/features/stays/domain/models/luggage_profile.dart';
 import 'package:tapittrip/features/stays/domain/models/stay.dart';
 import 'package:tapittrip/features/stays/domain/models/transport_option.dart';
+import 'package:tapittrip/features/stays/domain/services/booking_confirmation_parser.dart';
 import 'package:tapittrip/features/stays/presentation/providers/stay_provider.dart';
 import 'package:tapittrip/features/stays/presentation/widgets/luggage_preset_selector.dart';
 import 'package:tapittrip/features/stays/presentation/widgets/stay_card.dart';
@@ -217,6 +218,29 @@ void main() {
       expect(bus.formattedCost, '\$8');
       expect(bus.isCheapest, isTrue);
     });
+
+    test('BookingConfirmationParser extracts hotel, dates, and reference', () {
+      const emailText = '''
+Booking Confirmation #KAYON-9921
+Property: Hotel Kayon Resort Ubud
+Address: Banjar Bresela, Payangan, Ubud, Bali
+Check-in: May 12, 2026
+Check-out: May 18, 2026
+Phone: +62 361 479 2553
+''';
+      const parser = BookingConfirmationParser();
+      final extracted = parser.parse(emailText);
+
+      expect(extracted.hasContent, isTrue);
+      expect(extracted.name, 'Hotel Kayon Resort Ubud');
+      expect(extracted.bookingReference, 'KAYON-9921');
+      expect(extracted.address, 'Banjar Bresela, Payangan, Ubud, Bali');
+      expect(extracted.phone, '+62 361 479 2553');
+      expect(extracted.checkInAt?.month, 5);
+      expect(extracted.checkInAt?.day, 12);
+      expect(extracted.checkOutAt?.month, 5);
+      expect(extracted.checkOutAt?.day, 18);
+    });
   });
 
   group('StayRepository', () {
@@ -273,10 +297,10 @@ void main() {
   });
 
   group('Stay Widgets', () {
-    testWidgets('LuggagePresetSelector renders presets and switches chip', (
+    testWidgets('LuggagePresetSelector multi-select and others input', (
       tester,
     ) async {
-      String selected = 'standard';
+      LuggageProfile profile = LuggageProfile.fromPreset('standard');
 
       await tester.pumpWidget(
         MaterialApp(
@@ -284,9 +308,9 @@ void main() {
             body: StatefulBuilder(
               builder: (context, setState) {
                 return LuggagePresetSelector(
-                  selectedPreset: selected,
-                  onPresetChanged: (profile) {
-                    setState(() => selected = profile.preset);
+                  profile: profile,
+                  onProfileChanged: (newProfile) {
+                    setState(() => profile = newProfile);
                   },
                 );
               },
@@ -295,14 +319,24 @@ void main() {
         ),
       );
 
-      expect(find.text('Travel Light'), findsOneWidget);
-      expect(find.text('1–2 Suitcases'), findsOneWidget);
-      expect(find.text('Heavy / Stroller'), findsOneWidget);
+      expect(find.text('Backpack / Daypack'), findsOneWidget);
+      expect(find.text('Carry-on Suitcase'), findsOneWidget);
+      expect(find.text('Checked Bag'), findsOneWidget);
+      expect(find.text('Stroller / Baby Gear'), findsOneWidget);
+      expect(find.text('Others'), findsOneWidget);
 
-      await tester.tap(find.text('Heavy / Stroller'));
+      // Tap Stroller to add it to multi-selection
+      await tester.tap(find.text('Stroller / Baby Gear'));
       await tester.pumpAndSettle();
 
-      expect(selected, 'heavy');
+      expect(profile.stroller, isTrue);
+      expect(profile.preset, 'heavy');
+
+      // Tap Others to reveal custom input
+      await tester.tap(find.text('Others'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Specify Other Luggage'), findsOneWidget);
     });
 
     testWidgets('StayCard renders stay details and action buttons', (

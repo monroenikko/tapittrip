@@ -81,8 +81,11 @@ class Stay {
   int? get durationNights {
     if (checkInAt == null || checkOutAt == null) return null;
     final inDate = DateTime(checkInAt!.year, checkInAt!.month, checkInAt!.day);
-    final outDate =
-        DateTime(checkOutAt!.year, checkOutAt!.month, checkOutAt!.day);
+    final outDate = DateTime(
+      checkOutAt!.year,
+      checkOutAt!.month,
+      checkOutAt!.day,
+    );
     final diff = outDate.difference(inDate).inDays;
     return diff > 0 ? diff : 1;
   }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models/luggage_profile.dart';
+import '../../domain/services/booking_confirmation_parser.dart';
 import '../providers/stay_provider.dart';
 import 'luggage_preset_selector.dart';
 
@@ -29,6 +31,7 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
   final _addressController = TextEditingController();
   final _bookingRefController = TextEditingController();
   final _notesController = TextEditingController();
+  final _phoneController = TextEditingController();
 
   String _stayType = 'hotel';
   DateTime? _checkInAt;
@@ -42,6 +45,7 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
     _addressController.dispose();
     _bookingRefController.dispose();
     _notesController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -78,6 +82,115 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
     }
   }
 
+  Future<void> _openSmartImportDialog() async {
+    final textController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.auto_awesome_rounded,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            const Text('Auto-Fill from Booking'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Paste your confirmation email text or receipt from Agoda, Booking.com, Airbnb, Expedia, or hotel.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: textController,
+                maxLines: 6,
+                decoration: InputDecoration(
+                  hintText: 'e.g.\nBooking Confirmation #KAYON-9921\nHotel: Kayon Resort Ubud\nCheck-in: May 12, 2026\nCheck-out: May 18, 2026',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () async {
+                  final clipData = await Clipboard.getData(
+                    Clipboard.kTextPlain,
+                  );
+                  if (clipData?.text != null) {
+                    textController.text = clipData!.text!;
+                  }
+                },
+                icon: const Icon(Icons.content_paste_rounded, size: 16),
+                label: const Text('Paste from Clipboard'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final text = textController.text.trim();
+              if (text.isEmpty) return;
+
+              const parser = BookingConfirmationParser();
+              final extracted = parser.parse(text);
+
+              setState(() {
+                if (extracted.name != null) {
+                  _nameController.text = extracted.name!;
+                }
+                if (extracted.address != null) {
+                  _addressController.text = extracted.address!;
+                }
+                if (extracted.bookingReference != null) {
+                  _bookingRefController.text = extracted.bookingReference!;
+                }
+                if (extracted.phone != null) {
+                  _phoneController.text = extracted.phone!;
+                }
+                if (extracted.checkInAt != null) {
+                  _checkInAt = extracted.checkInAt;
+                }
+                if (extracted.checkOutAt != null) {
+                  _checkOutAt = extracted.checkOutAt;
+                }
+                if (extracted.stayType.isNotEmpty) {
+                  _stayType = extracted.stayType;
+                }
+              });
+
+              Navigator.of(ctx).pop();
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    extracted.hasContent
+                        ? 'Details extracted! Review and adjust any field below.'
+                        : 'No recognizable booking fields found. You can still type manually.',
+                  ),
+                ),
+              );
+            },
+            child: const Text('Auto-Fill'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveStay() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -94,6 +207,9 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                 : null,
             checkInAt: _checkInAt,
             checkOutAt: _checkOutAt,
+            phone: _phoneController.text.trim().isNotEmpty
+                ? _phoneController.text.trim()
+                : null,
             bookingReference: _bookingRefController.text.trim().isNotEmpty
                 ? _bookingRefController.text.trim()
                 : null,
@@ -175,9 +291,62 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+
+                // Smart Auto-Fill Banner
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Have a booking confirmation?',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Paste email or receipt to auto-fill details',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _openSmartImportDialog,
+                        child: const Text('Auto-Fill'),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 16),
 
-                // Stay Name
+                // Stay Name (Manual Input)
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
@@ -249,7 +418,7 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                 ),
                 const SizedBox(height: 16),
 
-                // Address
+                // Address (Manual Input)
                 TextFormField(
                   controller: _addressController,
                   decoration: InputDecoration(
@@ -264,7 +433,7 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                 ),
                 const SizedBox(height: 16),
 
-                // Dates: Check-in & Check-out
+                // Dates: Check-in & Check-out (Manual Pickers)
                 Row(
                   children: [
                     Expanded(
@@ -342,18 +511,25 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                 ),
                 const SizedBox(height: 16),
 
-                // Luggage Preset
+                // Luggage Profile Multi-Select with Others
                 Text(
-                  'Arrival Luggage Profile',
+                  'Luggage Profile (Multi-select)',
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'Select all luggage types you are bringing:',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.outline,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 LuggagePresetSelector(
-                  selectedPreset: _luggageProfile.preset,
-                  onPresetChanged: (profile) {
+                  profile: _luggageProfile,
+                  onProfileChanged: (profile) {
                     setState(() => _luggageProfile = profile);
                   },
                 ),

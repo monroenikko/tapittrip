@@ -7,6 +7,8 @@ class LuggageProfile {
     this.checkedBags = 0,
     this.oversized = 0,
     this.stroller = false,
+    this.selectedCategories = const {'carry_on', 'backpack'},
+    this.otherDescription,
   });
 
   final String preset;
@@ -16,6 +18,10 @@ class LuggageProfile {
   final int checkedBags;
   final int oversized;
   final bool stroller;
+  final Set<String> selectedCategories;
+  final String? otherDescription;
+
+  bool hasCategory(String category) => selectedCategories.contains(category);
 
   factory LuggageProfile.fromPreset(String preset, {int partySize = 1}) {
     switch (preset.toLowerCase()) {
@@ -28,6 +34,7 @@ class LuggageProfile {
           checkedBags: 0,
           oversized: 0,
           stroller: false,
+          selectedCategories: const {'backpack'},
         );
       case 'heavy':
         return LuggageProfile(
@@ -38,6 +45,12 @@ class LuggageProfile {
           checkedBags: 3,
           oversized: 1,
           stroller: true,
+          selectedCategories: const {
+            'backpack',
+            'carry_on',
+            'checked_bag',
+            'stroller',
+          },
         );
       case 'standard':
       default:
@@ -49,11 +62,69 @@ class LuggageProfile {
           checkedBags: 1,
           oversized: 0,
           stroller: false,
+          selectedCategories: const {'backpack', 'carry_on', 'checked_bag'},
         );
     }
   }
 
+  factory LuggageProfile.fromCategories(
+    Set<String> categories, {
+    int partySize = 1,
+    String? otherDescription,
+  }) {
+    final hasBackpack = categories.contains('backpack');
+    final hasCarryOn = categories.contains('carry_on');
+    final hasChecked = categories.contains('checked_bag');
+    final hasStroller = categories.contains('stroller');
+    final hasOversized = categories.contains('oversized');
+
+    String calculatedPreset = 'standard';
+    if (hasStroller || hasChecked || hasOversized) {
+      calculatedPreset = 'heavy';
+    } else if (hasCarryOn) {
+      calculatedPreset = 'standard';
+    } else if (hasBackpack) {
+      calculatedPreset = 'light';
+    }
+
+    return LuggageProfile(
+      preset: calculatedPreset,
+      partySize: partySize,
+      backpacks: hasBackpack ? 1 : 0,
+      carryOns: hasCarryOn ? 1 : 0,
+      checkedBags: hasChecked ? 2 : 0,
+      oversized: hasOversized ? 1 : 0,
+      stroller: hasStroller,
+      selectedCategories: categories,
+      otherDescription: otherDescription,
+    );
+  }
+
   factory LuggageProfile.fromJson(Map<String, dynamic> json) {
+    final rawCategories = json['selected_categories'];
+    Set<String> categories = const {'backpack', 'carry_on'};
+    if (rawCategories is List) {
+      categories = rawCategories.map((e) => e.toString()).toSet();
+    } else {
+      // Deduce from counts if not present
+      final set = <String>{};
+      if (((json['backpacks'] as num?)?.toInt() ?? 0) > 0) {
+        set.add('backpack');
+      }
+      if (((json['carry_ons'] as num?)?.toInt() ?? 0) > 0) {
+        set.add('carry_on');
+      }
+      if (((json['checked_bags'] as num?)?.toInt() ?? 0) > 0) {
+        set.add('checked_bag');
+      }
+      if (json['stroller'] == true) set.add('stroller');
+      if (((json['oversized'] as num?)?.toInt() ?? 0) > 0) {
+        set.add('oversized');
+      }
+      if (json['other_description'] != null) set.add('other');
+      if (set.isNotEmpty) categories = set;
+    }
+
     return LuggageProfile(
       preset: json['preset'] as String? ?? 'standard',
       partySize: (json['party_size'] as num?)?.toInt() ?? 1,
@@ -62,6 +133,8 @@ class LuggageProfile {
       checkedBags: (json['checked_bags'] as num?)?.toInt() ?? 0,
       oversized: (json['oversized'] as num?)?.toInt() ?? 0,
       stroller: json['stroller'] as bool? ?? false,
+      selectedCategories: categories,
+      otherDescription: json['other_description'] as String?,
     );
   }
 
@@ -74,6 +147,8 @@ class LuggageProfile {
       'checked_bags': checkedBags,
       'oversized': oversized,
       'stroller': stroller,
+      'selected_categories': selectedCategories.toList(),
+      if (otherDescription != null) 'other_description': otherDescription,
     };
   }
 
@@ -85,6 +160,8 @@ class LuggageProfile {
     int? checkedBags,
     int? oversized,
     bool? stroller,
+    Set<String>? selectedCategories,
+    String? otherDescription,
   }) {
     return LuggageProfile(
       preset: preset ?? this.preset,
@@ -94,6 +171,8 @@ class LuggageProfile {
       checkedBags: checkedBags ?? this.checkedBags,
       oversized: oversized ?? this.oversized,
       stroller: stroller ?? this.stroller,
+      selectedCategories: selectedCategories ?? this.selectedCategories,
+      otherDescription: otherDescription ?? this.otherDescription,
     );
   }
 }

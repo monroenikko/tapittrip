@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../domain/models/luggage_profile.dart';
 import '../../domain/models/stay.dart';
 import '../../domain/models/transport_option.dart';
 import '../providers/stay_provider.dart';
@@ -28,12 +29,13 @@ class TransportComparisonSheet extends ConsumerStatefulWidget {
 
 class _TransportComparisonSheetState
     extends ConsumerState<TransportComparisonSheet> {
-  late String _selectedPreset;
+  late LuggageProfile _currentProfile;
 
   @override
   void initState() {
     super.initState();
-    _selectedPreset = widget.stay.luggageProfile?.preset ?? 'standard';
+    _currentProfile =
+        widget.stay.luggageProfile ?? LuggageProfile.fromPreset('standard');
   }
 
   Future<void> _launchDirections(String url) async {
@@ -67,7 +69,10 @@ class _TransportComparisonSheetState
 
     final comparisonAsync = ref.watch(
       transportComparisonProvider(
-        TransportQueryParams(stayId: widget.stay.id, preset: _selectedPreset),
+        TransportQueryParams(
+          stayId: widget.stay.id,
+          preset: _currentProfile.preset,
+        ),
       ),
     );
 
@@ -155,10 +160,10 @@ class _TransportComparisonSheetState
                     ),
                     const SizedBox(height: 8),
                     LuggagePresetSelector(
-                      selectedPreset: _selectedPreset,
-                      onPresetChanged: (profile) {
+                      profile: _currentProfile,
+                      onProfileChanged: (profile) {
                         setState(() {
-                          _selectedPreset = profile.preset;
+                          _currentProfile = profile;
                         });
                       },
                     ),
