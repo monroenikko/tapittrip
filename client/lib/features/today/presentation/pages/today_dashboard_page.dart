@@ -128,9 +128,9 @@ class _TodayDashboardPageState extends ConsumerState<TodayDashboardPage> {
     final tripsAsync = ref.watch(tripListProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: colorScheme.surface,
         elevation: 0,
         scrolledUnderElevation: 1,
         titleSpacing: 16,
@@ -358,9 +358,10 @@ class _TodayDashboardPageState extends ConsumerState<TodayDashboardPage> {
 
                 return ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 32),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                   children: [
                     TodayHeroCard(summary: summary),
+                    const SizedBox(height: 16),
                     QuickActionsGrid(
                       summary: summary,
                       onViewItinerary: () => context.push(
@@ -375,13 +376,16 @@ class _TodayDashboardPageState extends ConsumerState<TodayDashboardPage> {
                         ref.invalidate(todaySummaryProvider(selectedTripId));
                       },
                     ),
+                    const SizedBox(height: 16),
                     TripProgressCard(summary: summary),
+                    const SizedBox(height: 16),
                     NextStopCard(
                       summary: summary,
                       onActivityAdded: () {
                         ref.invalidate(todaySummaryProvider(selectedTripId));
                       },
                     ),
+                    const SizedBox(height: 16),
                     CurrentStayBanner(summary: summary),
                   ],
                 );

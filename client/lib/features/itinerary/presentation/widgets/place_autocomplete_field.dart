@@ -150,7 +150,6 @@ class _PlaceAutocompleteFieldState
           Container(
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
-              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: colorScheme.primary.withValues(alpha: 0.25),
@@ -163,8 +162,10 @@ class _PlaceAutocompleteFieldState
                 ),
               ],
             ),
-            child: ClipRRect(
+            child: Material(
+              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
               child: ListView.separated(
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,

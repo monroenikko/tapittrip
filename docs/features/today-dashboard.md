@@ -18,7 +18,7 @@
    - Prominently showcases the traveler's next unvisited activity for today with category icon, place name, address, and scheduled time.
    - One-tap "Directions" button launches turn-by-turn navigation via `MapLauncher`.
    - "Visited" button marks the activity complete, recalculating progress in real time.
-   - Completed / free-day state: when all activities are done or 0 activities are planned, provides an encouraging message ("No stops scheduled today — enjoy free exploration!") and a quick "+ Add Activity" button.
+   - Completed / free-day state: when all activities are done or 0 activities are planned, provides an encouraging message ("No stops scheduled today — enjoy free exploration!") and a quick "Add Activity" button.
 5. **Today's Stay Banner (`CurrentStayBanner`)**:
    - Highlights today's accommodation with check-in/out badges, address, navigation shortcut, and Arrival Transport comparison.
 6. **Quick Actions Grid (`QuickActionsGrid`)**:
@@ -41,3 +41,11 @@
 - Mobile tests: `client/test/today_test.dart` (12 test cases, 48 suite total) passed.
 - Static analysis & linting: Pint and `flutter analyze` passed with 0 warnings/errors.
 
+
+## Dashboard and activity sheet layout — 2026-11-06
+
+- Dashboard sections share 16 dp side margins and vertical gaps. Cards use consistent 16 dp corner radii; the hero and next-stop cards use 16 dp content padding.
+- Quick actions use theme colors and visible Material ink feedback. They switch to two columns for narrow widths or larger text. Stat cards align in a row when space permits and stack otherwise; action buttons and stay metadata wrap rather than overflow.
+- The shared activity add/edit sheet paints its own opaque, rounded Material surface, including when opened by a transparent modal route. Safe-area padding, keyboard insets, and scrolling keep the form and submit action usable.
+- Verification: `test/activity_sheet_test.dart` covers light/dark surfaces, a 320 dp phone, 200% text and a 280 dp keyboard inset; `test/today_test.dart` verifies dashboard margins/gaps and 100%/200% text on a 390 dp phone. `flutter analyze` passes; all 57 Flutter tests pass.
+- No API, authorization, stored data, or offline behavior changes. Physical iPhone visual verification remains outstanding.

@@ -352,7 +352,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('No stops scheduled today'), findsOneWidget);
-        expect(find.text('+ Add Activity'), findsOneWidget);
+        expect(find.text('Add Activity'), findsOneWidget);
       },
     );
 
@@ -382,6 +382,55 @@ void main() {
       expect(find.text('+ Stop'), findsOneWidget);
       expect(find.text('Directions'), findsOneWidget);
     });
+
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'dashboard aligns cards and fits phone at text scale $scale',
+        (tester) async {
+          tester.view.physicalSize = const Size(390, 844);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(
+            _buildTestApp(
+              MediaQuery(
+                data: MediaQueryData(
+                  size: const Size(390, 844),
+                  textScaler: TextScaler.linear(scale),
+                ),
+                child: const TodayDashboardPage(initialTripId: 'trip-101'),
+              ),
+              overrides: [
+                tripRepositoryProvider.overrideWithValue(
+                  _FakeTripRepository([testTrip]),
+                ),
+                todaySummaryProvider('trip-101')
+                    .overrideWith((ref) async => testSummary),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          final hero = tester.getRect(find.byType(TodayHeroCard));
+          final actions = tester.getRect(find.byType(QuickActionsGrid));
+          expect(hero.left, 16);
+          expect(hero.right, 374);
+          expect(actions.left, hero.left);
+          expect(actions.right, hero.right);
+          expect(actions.top - hero.bottom, 16);
+          await tester.scrollUntilVisible(
+            find.byType(CurrentStayBanner),
+            150,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(find.byType(CurrentStayBanner)).left,
+            hero.left,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
 
     testWidgets('TodayDashboardPage renders full dashboard when trips exist', (
       tester,

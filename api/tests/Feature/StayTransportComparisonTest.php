@@ -146,4 +146,42 @@ final class StayTransportComparisonTest extends TestCase
         $this->assertNotEmpty($response->json('data.google_maps_directions_url'));
         $this->assertStringContainsString('No verified transit routes', $response->json('data.message'));
     }
+
+    public function test_auto_detects_nearest_transit_station_and_primary_airport_when_origin_not_provided(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+
+        /** @var Stay $stay */
+        $stay = Stay::factory()->create([
+            'trip_id' => $trip->id,
+            'name' => 'Hotel Gracery Shinjuku',
+            'address' => '1-19-1 Kabukicho, Shinjuku City, Tokyo',
+            'latitude' => 35.6953,
+            'longitude' => 139.7022,
+        ]);
+
+        $payload = [
+            'party_size' => 2,
+            'luggage_preset' => 'standard',
+        ];
+
+        $response = $this->postJson("/api/v1/stays/{$stay->id}/transport-options", $payload);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.verified', true)
+            ->assertJsonPath('data.nearest_transit.station_name', 'Shinjuku Station (South Exit)')
+            ->assertJsonPath('data.nearest_transit.nearest_airport_code', 'HND');
+
+        $options = $response->json('data.options');
+        $this->assertNotEmpty($options);
+        $rail = collect($options)->firstWhere('mode', 'express_rail');
+        $this->assertNotNull($rail);
+        $this->assertEquals('Shinjuku Station (South Exit)', $rail['dropoff_location']);
+        $this->assertGreaterThan(0, $rail['last_mile_walk_meters']);
+    }
 }

@@ -75,3 +75,11 @@ Documented in [`docs/api/openapi.yaml`](../api/openapi.yaml):
   - `cd api && ./vendor/bin/sail pint --test` — **passed**.
   - `cd api && ./vendor/bin/sail --profile tools run --rm --no-deps contracts` — **passed**.
 
+
+### Mobile compile verification — 2026-11-06
+
+Removed a duplicate activity-card `onEdit` argument while retaining the existing edit flow. `dart format lib/features/itinerary/presentation/pages/trip_itinerary_page.dart`, `flutter analyze`, and `flutter test` passed (51 tests). No API or offline contract changed. Device rendering and the reported Metal drawable error remain unverified; see the [milestone log](../milestone-log.md).
+
+### Autocomplete suggestion surface — 2026-11-06
+
+Shared place suggestions use a clipped Material surface so ListTile backgrounds and ink feedback remain visible inside the rounded container. This applies to activity, stay/address, and trip destination fields. `client/test/place_autocomplete_test.dart` exercises name/address search and selection with a fake repository; both cases reproduced the assertion before the fix. Analysis and all 53 Flutter tests pass; device rendering remains unverified. API and offline behavior are unchanged.

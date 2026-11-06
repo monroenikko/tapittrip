@@ -164,59 +164,83 @@ class _TransportComparisonSheetState
                       ],
                     ),
                     const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          ChoiceChip(
-                            label: const Text('✈️ Airport / Terminal'),
-                            selected:
-                                _selectedOrigin == 'Airport Terminal' &&
-                                !_isEditingCustomOrigin,
-                            onSelected: (selected) {
-                              setState(() {
-                                _isEditingCustomOrigin = false;
-                                _selectedOrigin = selected
-                                    ? 'Airport Terminal'
-                                    : null;
-                              });
-                            },
+                    Builder(
+                      builder: (context) {
+                        final defaultAirportLabel =
+                            widget.stay.nearestTransit?.nearestAirportName !=
+                                null
+                            ? '✈️ ${widget.stay.nearestTransit!.nearestAirportName}${widget.stay.nearestTransit!.nearestAirportCode != null ? " (${widget.stay.nearestTransit!.nearestAirportCode})" : ""}'
+                            : '✈️ Airport / Terminal';
+                        final defaultAirportValue =
+                            widget.stay.nearestTransit?.nearestAirportName !=
+                                null
+                            ? '${widget.stay.nearestTransit!.nearestAirportName}${widget.stay.nearestTransit!.nearestAirportCode != null ? " (${widget.stay.nearestTransit!.nearestAirportCode})" : ""}'
+                            : 'Airport Terminal';
+
+                        final defaultStationLabel =
+                            widget.stay.nearestTransit?.stationName != null
+                            ? '🚆 ${widget.stay.nearestTransit!.stationName}'
+                            : '🚆 Train Station';
+                        final defaultStationValue =
+                            widget.stay.nearestTransit?.stationName ??
+                            'Central Train Station';
+
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              ChoiceChip(
+                                label: Text(defaultAirportLabel),
+                                selected:
+                                    _selectedOrigin == defaultAirportValue &&
+                                    !_isEditingCustomOrigin,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _isEditingCustomOrigin = false;
+                                    _selectedOrigin = selected
+                                        ? defaultAirportValue
+                                        : null;
+                                  });
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: Text(defaultStationLabel),
+                                selected:
+                                    _selectedOrigin == defaultStationValue &&
+                                    !_isEditingCustomOrigin,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _isEditingCustomOrigin = false;
+                                    _selectedOrigin = selected
+                                        ? defaultStationValue
+                                        : null;
+                                  });
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('✏️ Custom Terminal'),
+                                selected: _isEditingCustomOrigin,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _isEditingCustomOrigin = selected;
+                                    if (!selected) {
+                                      _selectedOrigin = null;
+                                    } else if (_customOriginController.text
+                                        .trim()
+                                        .isNotEmpty) {
+                                      _selectedOrigin = _customOriginController
+                                          .text
+                                          .trim();
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            label: const Text('🚆 Train Station'),
-                            selected:
-                                _selectedOrigin == 'Central Train Station' &&
-                                !_isEditingCustomOrigin,
-                            onSelected: (selected) {
-                              setState(() {
-                                _isEditingCustomOrigin = false;
-                                _selectedOrigin = selected
-                                    ? 'Central Train Station'
-                                    : null;
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          ChoiceChip(
-                            label: const Text('✏️ Custom Terminal'),
-                            selected: _isEditingCustomOrigin,
-                            onSelected: (selected) {
-                              setState(() {
-                                _isEditingCustomOrigin = selected;
-                                if (!selected) {
-                                  _selectedOrigin = null;
-                                } else if (_customOriginController.text
-                                    .trim()
-                                    .isNotEmpty) {
-                                  _selectedOrigin = _customOriginController.text
-                                      .trim();
-                                }
-                              });
-                            },
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                     if (_isEditingCustomOrigin) ...[
                       const SizedBox(height: 8),
@@ -733,6 +757,126 @@ class _TransportComparisonSheetState
                     ),
                   ),
                 ],
+              ),
+            ],
+
+            // Boarding, Drop-off & Last-Mile Walk guidance
+            if (option.boardingLocation != null ||
+                option.dropoffLocation != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.35,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (option.boardingLocation != null) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.trip_origin_rounded,
+                            size: 14,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Board: ${option.boardingLocation}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    if (option.dropoffLocation != null) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 14,
+                            color: colorScheme.secondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Drop off: ${option.dropoffLocation}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (option.dropoffAddress != null &&
+                                    option.dropoffAddress !=
+                                        option.dropoffLocation)
+                                  Text(
+                                    option.dropoffAddress!,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (option.lastMileWalkMeters != null &&
+                        option.lastMileWalkMeters! > 30) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.directions_walk_rounded,
+                            size: 14,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${option.lastMileWalkMeters}m walk from station to stay (~${option.lastMileWalkMinutes ?? 4} min)',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          if (option.lastMileDirectionsUrl != null)
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              onPressed: () => _launchDirections(
+                                option.lastMileDirectionsUrl!,
+                              ),
+                              child: const Text(
+                                'Walk Map',
+                                style: TextStyle(fontSize: 11),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
 

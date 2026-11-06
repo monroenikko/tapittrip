@@ -105,6 +105,15 @@ final sampleStay = Stay(
   phone: '+62 361 479 2553',
   bookingReference: 'KAYON-9921',
   luggageProfile: LuggageProfile.fromPreset('heavy'),
+  nearestTransit: const NearestTransitInfo(
+    stationName: 'Ubud Central Shuttle Terminal',
+    stationAddress: 'Jl. Raya Ubud, Bali',
+    walkingDistanceMeters: 420,
+    walkingMinutes: 5,
+    nearestAirportName: 'Ngurah Rai International Airport',
+    nearestAirportCode: 'DPS',
+    airportDistanceKm: 36.5,
+  ),
   googleMapsUrl: 'https://maps.google.com/?q=-8.4552,115.2678',
   googleMapsDirectionsUrl:
       'https://www.google.com/maps/dir/?api=1&destination=-8.4552,115.2678',
@@ -360,6 +369,15 @@ Phone: +62 361 479 2553
       expect(find.text('Hotel'), findsOneWidget);
       expect(find.textContaining('Banjar Bresela'), findsOneWidget);
       expect(find.text('Booking Ref: KAYON-9921'), findsOneWidget);
+      expect(
+        find.textContaining('Ubud Central Shuttle Terminal'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('420m (~5 min walk)'), findsOneWidget);
+      expect(
+        find.textContaining('Ngurah Rai International Airport (DPS)'),
+        findsOneWidget,
+      );
       expect(find.text('Directions'), findsOneWidget);
       expect(find.text('Arrival Transport'), findsOneWidget);
     });

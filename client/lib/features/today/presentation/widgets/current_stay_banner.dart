@@ -30,7 +30,7 @@ class CurrentStayBanner extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
@@ -82,7 +82,7 @@ class CurrentStayBanner extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
@@ -120,7 +120,9 @@ class CurrentStayBanner extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
                           Text(
                             summary.isPreTrip
@@ -132,7 +134,6 @@ class CurrentStayBanner extends StatelessWidget {
                               letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(width: 6),
                           Text(
                             '• ${stay.stayTypeTitle}',
                             style: theme.textTheme.labelSmall?.copyWith(
@@ -195,48 +196,42 @@ class CurrentStayBanner extends StatelessWidget {
           // Actions
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
+            child: OverflowBar(
+              spacing: 8,
+              overflowSpacing: 8,
+              alignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (stay.googleMapsDirectionsUrl != null ||
                     stay.googleMapsUrl != null) ...[
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        side: BorderSide(color: colorScheme.outlineVariant),
-                      ),
-                      onPressed: () => _openGoogleMaps(
-                        context,
-                        stay.googleMapsDirectionsUrl ?? stay.googleMapsUrl!,
-                      ),
-                      icon: const Icon(Icons.navigation_outlined, size: 16),
-                      label: const Text(
-                        'Directions',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    style: FilledButton.styleFrom(
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      side: BorderSide(color: colorScheme.outlineVariant),
                     ),
-                    onPressed: () =>
-                        TransportComparisonSheet.show(context, stay),
-                    icon: const Icon(Icons.airport_shuttle_outlined, size: 16),
+                    onPressed: () => _openGoogleMaps(
+                      context,
+                      stay.googleMapsDirectionsUrl ?? stay.googleMapsUrl!,
+                    ),
+                    icon: const Icon(Icons.navigation_outlined, size: 16),
                     label: const Text(
-                      'Arrival Transport',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Directions',
+                      style: TextStyle(fontSize: 13),
                     ),
+                  ),
+                ],
+                FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => TransportComparisonSheet.show(context, stay),
+                  icon: const Icon(Icons.airport_shuttle_outlined, size: 16),
+                  label: const Text(
+                    'Arrival Transport',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],

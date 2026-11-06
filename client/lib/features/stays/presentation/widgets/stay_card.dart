@@ -199,6 +199,79 @@ class StayCard extends ConsumerWidget {
               ),
             ),
 
+          // Nearby Transit summary badge
+          if (stay.nearestTransit != null) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.4,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.directions_subway_filled_rounded,
+                          size: 15,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${stay.nearestTransit!.stationName} • ${stay.nearestTransit!.walkingDistanceMeters}m (~${stay.nearestTransit!.walkingMinutes} min walk)',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (stay.nearestTransit!.nearestAirportName != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.flight_takeoff_rounded,
+                            size: 14,
+                            color: colorScheme.secondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${stay.nearestTransit!.nearestAirportName}${stay.nearestTransit!.nearestAirportCode != null ? " (${stay.nearestTransit!.nearestAirportCode})" : ""} • ${stay.nearestTransit!.airportDistanceKm?.toStringAsFixed(1) ?? "20"} km away',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+
           // Booking reference badge (sensitive, securely displayed)
           if (stay.bookingReference != null &&
               stay.bookingReference!.isNotEmpty) ...[

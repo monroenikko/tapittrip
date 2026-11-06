@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'stay.dart';
+
 class TransportOption {
   const TransportOption({
     required this.id,
@@ -13,6 +15,12 @@ class TransportOption {
     required this.walkingMeters,
     required this.luggageCapacity,
     required this.accessibilityNotes,
+    this.boardingLocation,
+    this.dropoffLocation,
+    this.dropoffAddress,
+    this.lastMileWalkMeters,
+    this.lastMileWalkMinutes,
+    this.lastMileDirectionsUrl,
     this.convenienceScore = 0,
     this.isMostConvenient = false,
     this.isFastest = false,
@@ -32,6 +40,12 @@ class TransportOption {
   final int walkingMeters;
   final String luggageCapacity;
   final String accessibilityNotes;
+  final String? boardingLocation;
+  final String? dropoffLocation;
+  final String? dropoffAddress;
+  final int? lastMileWalkMeters;
+  final int? lastMileWalkMinutes;
+  final String? lastMileDirectionsUrl;
   final int convenienceScore;
   final bool isMostConvenient;
   final bool isFastest;
@@ -87,6 +101,12 @@ class TransportOption {
       walkingMeters: (json['walking_meters'] as num?)?.toInt() ?? 0,
       luggageCapacity: json['luggage_capacity'] as String? ?? '',
       accessibilityNotes: json['accessibility_notes'] as String? ?? '',
+      boardingLocation: json['boarding_location'] as String?,
+      dropoffLocation: json['dropoff_location'] as String?,
+      dropoffAddress: json['dropoff_address'] as String?,
+      lastMileWalkMeters: (json['last_mile_walk_meters'] as num?)?.toInt(),
+      lastMileWalkMinutes: (json['last_mile_walk_minutes'] as num?)?.toInt(),
+      lastMileDirectionsUrl: json['last_mile_directions_url'] as String?,
       convenienceScore: (json['convenience_score'] as num?)?.toInt() ?? 0,
       isMostConvenient: json['is_most_convenient'] as bool? ?? false,
       isFastest: json['is_fastest'] as bool? ?? false,
@@ -108,6 +128,12 @@ class TransportOption {
       'walking_meters': walkingMeters,
       'luggage_capacity': luggageCapacity,
       'accessibility_notes': accessibilityNotes,
+      'boarding_location': boardingLocation,
+      'dropoff_location': dropoffLocation,
+      'dropoff_address': dropoffAddress,
+      'last_mile_walk_meters': lastMileWalkMeters,
+      'last_mile_walk_minutes': lastMileWalkMinutes,
+      'last_mile_directions_url': lastMileDirectionsUrl,
       'convenience_score': convenienceScore,
       'is_most_convenient': isMostConvenient,
       'is_fastest': isFastest,
@@ -125,6 +151,7 @@ class TransportComparisonResult {
     this.origin,
     required this.destination,
     required this.googleMapsDirectionsUrl,
+    this.nearestTransit,
     required this.luggagePreset,
     this.partySize = 1,
     this.options = const [],
@@ -138,6 +165,7 @@ class TransportComparisonResult {
   final String? origin;
   final String destination;
   final String googleMapsDirectionsUrl;
+  final NearestTransitInfo? nearestTransit;
   final String luggagePreset;
   final int partySize;
   final List<TransportOption> options;
@@ -154,6 +182,11 @@ class TransportComparisonResult {
       destination: json['destination'] as String? ?? '',
       googleMapsDirectionsUrl:
           json['google_maps_directions_url'] as String? ?? '',
+      nearestTransit: json['nearest_transit'] != null
+          ? NearestTransitInfo.fromJson(
+              json['nearest_transit'] as Map<String, dynamic>,
+            )
+          : null,
       luggagePreset: json['luggage_preset'] as String? ?? 'standard',
       partySize: (json['party_size'] as num?)?.toInt() ?? 1,
       options: rawOptions
@@ -174,6 +207,7 @@ class TransportComparisonResult {
       'origin': origin,
       'destination': destination,
       'google_maps_directions_url': googleMapsDirectionsUrl,
+      'nearest_transit': nearestTransit?.toJson(),
       'luggage_preset': luggagePreset,
       'party_size': partySize,
       'options': options.map((opt) => opt.toJson()).toList(),

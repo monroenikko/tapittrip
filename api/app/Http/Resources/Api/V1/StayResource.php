@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Application\Stays\Services\StayTransitService;
 use App\Domain\Stays\Models\Stay;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -39,6 +40,7 @@ final class StayResource extends JsonResource
             'version' => $this->version,
             'google_maps_url' => $this->google_maps_url,
             'google_maps_directions_url' => $this->google_maps_directions_url,
+            'nearest_transit' => (new StayTransitService)->resolve($this->resource),
             'place' => new PlaceResource($this->whenLoaded('place')),
             'itinerary_items' => ItineraryItemResource::collection($this->whenLoaded('itineraryItems')),
             'created_at' => $this->created_at?->toIso8601String(),

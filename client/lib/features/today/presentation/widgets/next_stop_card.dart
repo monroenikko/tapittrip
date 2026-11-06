@@ -53,11 +53,10 @@ class NextStopCard extends ConsumerWidget {
       // Empty or completed state
       final hasTodayItems = summary.todayItems.isNotEmpty;
       return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
@@ -154,12 +153,12 @@ class NextStopCard extends ConsumerWidget {
                 },
                 style: OutlinedButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('+ Add Activity'),
+                label: const Text('Add Activity'),
               ),
             ),
           ],
@@ -172,11 +171,10 @@ class NextStopCard extends ConsumerWidget {
     final address = place?.formattedAddress;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: colorScheme.primary.withValues(alpha: 0.15),
           width: 1.5,
@@ -299,24 +297,24 @@ class NextStopCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
+          OverflowBar(
+            spacing: 12,
+            overflowSpacing: 8,
+            alignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () => _openDirections(context, nextItem),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colorScheme.primary,
-                    foregroundColor: colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+              FilledButton.icon(
+                onPressed: () => _openDirections(context, nextItem),
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  icon: const Icon(Icons.directions_rounded, size: 18),
-                  label: const Text('Directions'),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
+                icon: const Icon(Icons.directions_rounded, size: 18),
+                label: const Text('Directions'),
               ),
-              const SizedBox(width: 10),
               OutlinedButton.icon(
                 onPressed: () async {
                   await ref
@@ -326,7 +324,7 @@ class NextStopCard extends ConsumerWidget {
                 },
                 style: OutlinedButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,

@@ -139,172 +139,184 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
     final colorScheme = theme.colorScheme;
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        left: 20,
-        right: 20,
-        top: 20,
-      ),
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                widget.initialItem != null
-                    ? 'Edit Activity or Stop'
-                    : 'Add Activity or Stop',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Activity Title
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Activity title *',
-                  hintText: 'e.g., Uluwatu Temple Sunset',
-                  prefixIcon: Icon(Icons.edit_calendar_rounded),
-                ),
-                textCapitalization: TextCapitalization.sentences,
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Please enter a title for this activity';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 14),
-              // Category / Kind Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _kinds.map((k) {
-                    final isSelected = _selectedKind == k.$1;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        avatar: Icon(
-                          k.$3,
-                          size: 16,
-                          color: isSelected
-                              ? Colors.white
-                              : colorScheme.primary,
-                        ),
-                        label: Text(k.$2),
-                        selected: isSelected,
-                        onSelected: (_) => setState(() => _selectedKind = k.$1),
-                        selectedColor: colorScheme.primary,
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : colorScheme.onSurface,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 12,
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Material(
+        key: const ValueKey('activity-sheet-surface'),
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        clipBehavior: Clip.antiAlias,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colorScheme.outlineVariant,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 14),
-              // Place Name & Address (with Real-Time Autocomplete)
-              PlaceAutocompleteField(
-                controller: _placeNameController,
-                labelText: 'Location / Place name',
-                hintText: 'e.g., Uluwatu Temple, Shibuya Crossing',
-                prefixIcon: Icons.place_rounded,
-                onPlaceSelected: (place) {
-                  setState(() {
-                    _placeNameController.text = place.name;
-                    if (place.formattedAddress != null &&
-                        place.formattedAddress!.isNotEmpty) {
-                      _placeAddressController.text = place.formattedAddress!;
-                    }
-                    _latitude = place.latitude;
-                    _longitude = place.longitude;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              PlaceAutocompleteField(
-                controller: _placeAddressController,
-                labelText: 'Address or landmark (for map directions)',
-                hintText: 'e.g., Pecatu, South Kuta, Badung',
-                prefixIcon: Icons.map_outlined,
-                isAddressField: true,
-                onPlaceSelected: (place) {
-                  setState(() {
-                    _placeAddressController.text =
-                        place.formattedAddress ?? place.name;
-                    _latitude = place.latitude ?? _latitude;
-                    _longitude = place.longitude ?? _longitude;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              // Notes
-              TextFormField(
-                controller: _notesController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Notes or highlights',
-                  hintText: 'e.g., Buy tickets online, sunset starts at 6pm',
-                  prefixIcon: Icon(Icons.notes_rounded),
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Submit button
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                onPressed: _isSubmitting ? null : _submit,
-                icon: _isSubmitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Icon(
-                        widget.initialItem != null
-                            ? Icons.check_rounded
-                            : Icons.add_rounded,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      widget.initialItem != null
+                          ? 'Edit Activity or Stop'
+                          : 'Add Activity or Stop',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
                       ),
-                label: Text(
-                  _isSubmitting
-                      ? (widget.initialItem != null ? 'Saving...' : 'Adding...')
-                      : (widget.initialItem != null
-                            ? 'Save Changes'
-                            : 'Add Activity'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    // Activity Title
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Activity title *',
+                        hintText: 'e.g., Uluwatu Temple Sunset',
+                        prefixIcon: Icon(Icons.edit_calendar_rounded),
+                      ),
+                      textCapitalization: TextCapitalization.sentences,
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return 'Please enter a title for this activity';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Category / Kind Chips
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _kinds.map((k) {
+                          final isSelected = _selectedKind == k.$1;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              avatar: Icon(
+                                k.$3,
+                                size: 16,
+                                color: isSelected
+                                    ? Colors.white
+                                    : colorScheme.primary,
+                              ),
+                              label: Text(k.$2),
+                              selected: isSelected,
+                              onSelected: (_) =>
+                                  setState(() => _selectedKind = k.$1),
+                              selectedColor: colorScheme.primary,
+                              labelStyle: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : colorScheme.onSurface,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontSize: 12,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Place Name & Address (with Real-Time Autocomplete)
+                    PlaceAutocompleteField(
+                      controller: _placeNameController,
+                      labelText: 'Location / Place name',
+                      hintText: 'e.g., Uluwatu Temple, Shibuya Crossing',
+                      prefixIcon: Icons.place_rounded,
+                      onPlaceSelected: (place) {
+                        setState(() {
+                          _placeNameController.text = place.name;
+                          if (place.formattedAddress != null &&
+                              place.formattedAddress!.isNotEmpty) {
+                            _placeAddressController.text =
+                                place.formattedAddress!;
+                          }
+                          _latitude = place.latitude;
+                          _longitude = place.longitude;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    PlaceAutocompleteField(
+                      controller: _placeAddressController,
+                      labelText: 'Address or landmark (for map directions)',
+                      hintText: 'e.g., Pecatu, South Kuta, Badung',
+                      prefixIcon: Icons.map_outlined,
+                      isAddressField: true,
+                      onPlaceSelected: (place) {
+                        setState(() {
+                          _placeAddressController.text =
+                              place.formattedAddress ?? place.name;
+                          _latitude = place.latitude ?? _latitude;
+                          _longitude = place.longitude ?? _longitude;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // Notes
+                    TextFormField(
+                      controller: _notesController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes or highlights',
+                        hintText:
+                            'e.g., Buy tickets online, sunset starts at 6pm',
+                        prefixIcon: Icon(Icons.notes_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Submit button
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                      ),
+                      onPressed: _isSubmitting ? null : _submit,
+                      icon: _isSubmitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Icon(
+                              widget.initialItem != null
+                                  ? Icons.check_rounded
+                                  : Icons.add_rounded,
+                            ),
+                      label: Text(
+                        _isSubmitting
+                            ? (widget.initialItem != null
+                                  ? 'Saving...'
+                                  : 'Adding...')
+                            : (widget.initialItem != null
+                                  ? 'Save Changes'
+                                  : 'Add Activity'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

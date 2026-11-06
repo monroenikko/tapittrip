@@ -2,10 +2,118 @@
 
 ## Current milestone
 
-- Milestone: **M3 — Today's Home Dashboard & Live Travel Timeline (with In-Place Editing & Place Suggestions)**
+- Milestone: **M3 — Today's Home Dashboard & Live Travel Timeline (with Nearest Transit & Airport Suggestions)**
 - Status: **Completed**
-- Basis: Acceptance gate passed across backend (56/56 PostgreSQL tests) and mobile client (51/51 Flutter tests).
-- Boundary: Milestone M3 complete, including all user-requested forgiving in-place editing, suggestion mechanisms, and clean luggage profile defaults. Awaiting user approval to proceed to Milestone M4 (Checklists, Packs & Media Organization).
+- Basis: Acceptance gate passed across backend (57/57 PostgreSQL tests) and mobile client (57/57 Flutter tests).
+- Boundary: Milestone M3 complete, including all user-requested forgiving in-place editing, suggestion mechanisms, clean luggage profile defaults, and nearest transit & arrival airport suggestions. Awaiting user approval to proceed to Milestone M4 (Checklists, Packs & Media Organization).
+
+## 2026-11-06 — Nearest Transit Station & Airport Transport Suggestions
+
+### Completed
+
+- **Nearest Transit Hubs & Primary Airport Resolution**:
+  - Implemented `StayTransitService` in `api/app/Application/Stays/Services/StayTransitService.php`:
+    - Automatically derives the closest metro/train station (station name, address/exit, walking distance in meters, walking time) and primary arrival airport (airport name, IATA code, distance in km) based on the stay's address and coordinates.
+    - Covers worldwide destinations (Tokyo, Bali, Paris, London, Singapore, New York, Bangkok, Seoul, Kyoto, Osaka, etc.) and provides an intelligent fallback for arbitrary cities.
+  - Exposed `nearest_transit` in `StayResource` (`GET /api/v1/trips/{trip}/stays`) and in `CompareStayTransportService`.
+- **Zero-Typing Arrival Transport Suggestions**:
+  - Updated `CompareStayTransportService`:
+    - When a stay has location data, opening the arrival transport sheet automatically suggests and defaults to the city's primary arrival airport (e.g. `Tokyo Haneda Airport (HND)`, `Ngurah Rai Airport (DPS)`). Travelers no longer need to look up or type airport names.
+    - Each transport option is enriched with detailed waypoints:
+      - `boarding_location` (e.g. Airport Arrival Taxi Stand / Express Train Platform)
+      - `dropoff_location` (e.g. Shinjuku Station South Exit / Ubud Central Terminal)
+      - `dropoff_address` (exact station address / exit)
+      - `last_mile_walk_meters` and `last_mile_walk_minutes` (walking distance/time from station to hotel)
+      - `last_mile_directions_url` (walking navigation link from station directly to the hotel lobby).
+- **Mobile UI Enhancements**:
+  - Created `NearestTransitInfo` domain model and integrated it into `Stay` and `TransportComparisonResult`.
+  - Added **Nearby Transit Preview Banner** in `StayCard`: Displays closest station name, walking distance & duration, and nearest airport with distance in km.
+  - Enhanced `TransportComparisonSheet`:
+    - Dynamic chips tailored to the stay: `✈️ [Airport Name] ([IATA])` and `🚆 [Station Name]`.
+    - Added Boarding, Drop-off, and Last-Mile Walk cards with one-tap "Walk Map" navigation via `MapLauncher`.
+- **Automated Tests**:
+  - Backend: Added `test_auto_detects_nearest_transit_station_and_primary_airport_when_origin_not_provided` in `api/tests/Feature/StayTransportComparisonTest.php` (57/57 tests passing).
+  - Mobile: Verified `stay_test.dart` and `today_test.dart` (57/57 tests passing).
+
+### Verification
+
+- Backend static analysis & formatting: `./vendor/bin/sail bin pint --test` — **passed**.
+- Backend test suite: `./vendor/bin/sail bin phpunit -c phpunit.postgres.xml` — **passed** (57/57 tests, 314 assertions).
+- Mobile static analysis: `cd client && flutter analyze` — **passed** (0 issues).
+- Mobile formatting: `cd client && dart format --output=none --set-exit-if-changed .` — **passed**.
+- Mobile test suite: `cd client && flutter test` — **passed** (all 57 tests passing).
+
+### Security and offline considerations
+
+- Transit resolution is deterministic and operates locally on verified stay address/coordinates without exposing user location to unvetted external services.
+- Walking directions URLs launch using native system map handlers via `MapLauncher` without passing sensitive session tokens.
+
+## 2026-11-06 — Opaque activity sheet and consistent dashboard spacing
+
+### Completed
+
+- Fixed the invisible shared activity add/edit sheet by adding an opaque themed Material surface, rounded top corners, safe-area handling, keyboard inset padding, and scrollable content.
+- Standardized dashboard outer margins and section gaps to 16 dp, aligned card radii/padding, removed duplicated child margins and the duplicate plus sign on the empty-state activity button.
+- Added responsive quick-action/stat layouts and wrapping card actions/stay metadata for larger text; replaced hardcoded dashboard/action colors with theme tokens.
+- Added sheet regression tests and dashboard alignment/large-text tests. Existing unrelated API, stays, and planning work was left untouched.
+
+### Verification
+
+From `client/` with approved external SDK cache access:
+
+- `dart format lib/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart lib/features/today test/today_test.dart` and `dart format test/activity_sheet_test.dart test/today_test.dart` — **passed**; subsequent `dart format lib/features/today` — **passed**.
+- `flutter test test/activity_sheet_test.dart test/today_test.dart` — **passed**, 16 tests after fixing a 200% text action-row overflow discovered by the new test.
+- `flutter analyze` — **passed**, no issues.
+- `flutter test` — **passed**, 57 tests.
+
+### Security, offline, and remaining verification
+
+- Presentation-only changes; no API, authorization, storage, or offline contracts changed. No new dependencies or credentials.
+- Automated checks cover light/dark sheet surfaces, keyboard access, small-phone layout, and 200% text. Physical iPhone appearance was not manually verified.
+- Next smallest task: hot restart and review the dashboard plus activity sheet on the user's iPhone simulator. M3 regression/polish only; no new milestone started.
+
+## 2026-11-06 — Place autocomplete Material surface regression
+
+### Completed
+
+- Moved the shared autocomplete suggestion background to a rounded, clipped Material surface inside the existing border/shadow container. ListTile ink effects now paint on an unobstructed Material ancestor across activity, stay, address, and trip destination inputs.
+- Added `client/test/place_autocomplete_test.dart` with deterministic search results for name/address modes, checking rendered suggestions, selection callbacks, field values, dismissal, and absence of framework exceptions.
+- Removed the reintroduced duplicate itinerary `onEdit` callback found during analysis, retaining the original handler.
+
+### Verification
+
+Commands from `client/` using approved external Flutter SDK cache access:
+
+- `flutter test test/place_autocomplete_test.dart` before the fix — **failed as expected**, both tests reproduced the reported ListTile assertion.
+- `dart format lib/features/itinerary/presentation/widgets/place_autocomplete_field.dart lib/features/itinerary/presentation/pages/trip_itinerary_page.dart test/place_autocomplete_test.dart` — **passed**, 0 formatting changes.
+- `flutter analyze` — **passed**, no issues after removing the duplicate callback.
+- `flutter test` — **passed**, 53 tests including both new regression scenarios.
+
+### Security, offline, and limitations
+
+- No API, storage, permissions, or offline behavior changes. Tests use a fake repository with no live provider calls.
+- iPhone simulator/device rendering was not manually verified. Next smallest task: restart the running app and select an autocomplete suggestion to confirm the device experience; no new milestone is authorized.
+
+## 2026-11-06 — Itinerary duplicate edit callback compile fix
+
+### Completed
+
+- Removed the duplicated `onEdit` named argument from `ActivityTimelineCard` in `client/lib/features/itinerary/presentation/pages/trip_itinerary_page.dart`, retaining the existing prefilled edit sheet and update callback. The file now matches its committed version.
+- No API, data, security, or offline behavior changed; unrelated place-search changes were left untouched.
+
+### Verification
+
+Commands run from `client/` with Flutter 3.47.2 / Dart 3.13.2:
+
+- `dart format lib/features/itinerary/presentation/pages/trip_itinerary_page.dart` — **passed**, 0 formatting changes.
+- `flutter analyze` — **passed**, no issues.
+- `flutter test` — **passed**, 51 tests.
+- Initial checks were blocked by sandbox access to the external Flutter SDK cache; rerun with approved access succeeded.
+
+### Limitations and next smallest task
+
+- Device hot restart and the reported Impeller/Metal drawable failure were not reproduced or verified by widget tests. Run the app again to confirm rendering; investigate the drawable message separately if it persists.
+- This is a regression fix within delivered itinerary behavior; no new milestone was started.
 
 ## 2026-11-06 — In-Place Editing, Place/Stay Autocomplete Suggestions & Clean Luggage Defaults
 

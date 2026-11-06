@@ -3,6 +3,49 @@ import 'package:flutter/material.dart';
 import '../../../itinerary/domain/models/place.dart';
 import 'luggage_profile.dart';
 
+class NearestTransitInfo {
+  const NearestTransitInfo({
+    required this.stationName,
+    this.stationAddress,
+    this.walkingDistanceMeters = 0,
+    this.walkingMinutes = 0,
+    this.nearestAirportName,
+    this.nearestAirportCode,
+    this.airportDistanceKm,
+  });
+
+  final String stationName;
+  final String? stationAddress;
+  final int walkingDistanceMeters;
+  final int walkingMinutes;
+  final String? nearestAirportName;
+  final String? nearestAirportCode;
+  final double? airportDistanceKm;
+
+  factory NearestTransitInfo.fromJson(Map<String, dynamic> json) {
+    return NearestTransitInfo(
+      stationName: json['station_name'] as String? ?? 'Central Transit Station',
+      stationAddress: json['station_address'] as String?,
+      walkingDistanceMeters:
+          (json['walking_distance_meters'] as num?)?.toInt() ?? 0,
+      walkingMinutes: (json['walking_minutes'] as num?)?.toInt() ?? 0,
+      nearestAirportName: json['nearest_airport_name'] as String?,
+      nearestAirportCode: json['nearest_airport_code'] as String?,
+      airportDistanceKm: (json['airport_distance_km'] as num?)?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'station_name': stationName,
+    'station_address': stationAddress,
+    'walking_distance_meters': walkingDistanceMeters,
+    'walking_minutes': walkingMinutes,
+    'nearest_airport_name': nearestAirportName,
+    'nearest_airport_code': nearestAirportCode,
+    'airport_distance_km': airportDistanceKm,
+  };
+}
+
 class Stay {
   const Stay({
     required this.id,
@@ -23,6 +66,7 @@ class Stay {
     this.version = 1,
     this.googleMapsUrl,
     this.googleMapsDirectionsUrl,
+    this.nearestTransit,
     this.place,
     this.createdAt,
     this.updatedAt,
@@ -46,6 +90,7 @@ class Stay {
   final int version;
   final String? googleMapsUrl;
   final String? googleMapsDirectionsUrl;
+  final NearestTransitInfo? nearestTransit;
   final Place? place;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -168,6 +213,11 @@ class Stay {
       version: (json['version'] as num?)?.toInt() ?? 1,
       googleMapsUrl: json['google_maps_url'] as String?,
       googleMapsDirectionsUrl: json['google_maps_directions_url'] as String?,
+      nearestTransit: json['nearest_transit'] != null
+          ? NearestTransitInfo.fromJson(
+              json['nearest_transit'] as Map<String, dynamic>,
+            )
+          : null,
       place: json['place'] != null
           ? Place.fromJson(json['place'] as Map<String, dynamic>)
           : null,
@@ -196,6 +246,7 @@ class Stay {
       'version': version,
       'google_maps_url': googleMapsUrl,
       'google_maps_directions_url': googleMapsDirectionsUrl,
+      'nearest_transit': nearestTransit?.toJson(),
       'place': place?.toJson(),
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -221,6 +272,7 @@ class Stay {
     int? version,
     String? googleMapsUrl,
     String? googleMapsDirectionsUrl,
+    NearestTransitInfo? nearestTransit,
     Place? place,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -245,6 +297,7 @@ class Stay {
       googleMapsUrl: googleMapsUrl ?? this.googleMapsUrl,
       googleMapsDirectionsUrl:
           googleMapsDirectionsUrl ?? this.googleMapsDirectionsUrl,
+      nearestTransit: nearestTransit ?? this.nearestTransit,
       place: place ?? this.place,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
