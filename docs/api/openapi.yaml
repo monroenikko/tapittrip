@@ -338,6 +338,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /trips/{trip}/today:
+    get:
+      operationId: getTripTodaySummary
+      summary: Get live Today dashboard summary for a trip
+      tags:
+        - Trips
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Today dashboard summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodaySummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Trip not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /trips/{trip}/days:
     get:
       operationId: listTripDays
@@ -1956,6 +1993,77 @@ components:
             last_refreshed_at:
               type: string
               format: date-time
+
+    TodaySummaryResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/TodaySummary"
+
+    TodaySummary:
+      type: object
+      additionalProperties: false
+      required:
+        - trip
+        - trip_status
+        - today_items
+        - metrics
+        - timezone
+        - local_time
+      properties:
+        trip:
+          $ref: "#/components/schemas/Trip"
+        trip_status:
+          type: string
+          enum: [pre_trip, active, post_trip]
+        days_until_start:
+          type: integer
+          nullable: true
+        active_day:
+          type: object
+          nullable: true
+          properties:
+            day_number:
+              type: integer
+            total_days:
+              type: integer
+            date:
+              type: string
+              format: date
+            notes:
+              type: string
+              nullable: true
+        today_items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItineraryItem"
+        next_upcoming_item:
+          $ref: "#/components/schemas/ItineraryItem"
+          nullable: true
+        current_stay:
+          $ref: "#/components/schemas/Stay"
+          nullable: true
+        metrics:
+          type: object
+          required:
+            - total_activities
+            - completed_activities
+            - progress_percentage
+          properties:
+            total_activities:
+              type: integer
+            completed_activities:
+              type: integer
+            progress_percentage:
+              type: integer
+        timezone:
+          type: string
+        local_time:
+          type: string
+          format: date-time
 
 
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/utils/map_launcher.dart';
 import '../../domain/models/itinerary_item.dart';
 
 class ActivityTimelineCard extends StatelessWidget {
@@ -35,39 +35,16 @@ class ActivityTimelineCard extends StatelessWidget {
 
   Future<void> _openGoogleMaps(BuildContext context) async {
     final place = item.place;
-    final destination = (place?.latitude != null && place?.longitude != null)
-        ? '${place!.latitude},${place.longitude}'
-        : (place?.formattedAddress ?? place?.name ?? item.title);
+    final success = await MapLauncher.launchDirections(
+      latitude: place?.latitude,
+      longitude: place?.longitude,
+      query: place?.formattedAddress ?? place?.name ?? item.title,
+    );
 
-    final url =
-        'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(destination)}';
-    final uri = Uri.parse(url);
-
-    try {
-      // 1. Try launching in external application (e.g. Google Maps app or native map handler)
-      bool launched = false;
-      try {
-        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } catch (_) {
-        launched = false;
-      }
-
-      // 2. Fallback to platform default (browser or in-app Safari/Chrome) if external app failed or is unavailable (e.g. Simulator)
-      if (!launched) {
-        launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-
-      if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open maps navigation.')),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to launch maps navigation.')),
-        );
-      }
+    if (!success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to launch maps navigation.')),
+      );
     }
   }
 

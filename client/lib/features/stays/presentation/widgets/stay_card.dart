@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/utils/map_launcher.dart';
 import '../../domain/models/stay.dart';
 import '../providers/stay_provider.dart';
 import 'transport_comparison_sheet.dart';
@@ -21,35 +21,17 @@ class StayCard extends ConsumerWidget {
   final bool isDeleting;
 
   Future<void> _openGoogleMaps(BuildContext context) async {
-    final url = stay.googleMapsDirectionsUrl ?? stay.googleMapsUrl;
-    if (url == null || url.isEmpty) {
+    final success = await MapLauncher.launchDirections(
+      latitude: stay.latitude,
+      longitude: stay.longitude,
+      query: stay.address ?? stay.name,
+      rawUrl: stay.googleMapsDirectionsUrl ?? stay.googleMapsUrl,
+    );
+
+    if (!success && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No location coordinates for this stay.')),
+        const SnackBar(content: Text('Unable to launch maps navigation.')),
       );
-      return;
-    }
-
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-
-    try {
-      final launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!launched) {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-    } catch (_) {
-      try {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      } catch (_) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Unable to launch maps navigation.')),
-          );
-        }
-      }
     }
   }
 

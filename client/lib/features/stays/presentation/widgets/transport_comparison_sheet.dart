@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/utils/map_launcher.dart';
 import '../../domain/models/luggage_profile.dart';
 import '../../domain/models/stay.dart';
 import '../../domain/models/transport_option.dart';
@@ -39,26 +39,11 @@ class _TransportComparisonSheetState
   }
 
   Future<void> _launchDirections(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    try {
-      final launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
+    final success = await MapLauncher.launchDirections(rawUrl: url);
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to launch maps navigation.')),
       );
-      if (!launched) {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      }
-    } catch (_) {
-      try {
-        await launchUrl(uri, mode: LaunchMode.platformDefault);
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Unable to launch maps navigation.')),
-          );
-        }
-      }
     }
   }
 

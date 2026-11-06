@@ -2,10 +2,65 @@
 
 ## Current milestone
 
-- Milestone: **M2b — Accommodation and stays (MVP)**
-- Status: **Completed** (Slice 1 backend foundation completed; Slice 2 Flutter mobile stays & luggage transport UI completed)
-- Basis: Acceptance gate passed across backend and mobile client.
-- Boundary: Milestone M2b complete. Awaiting user approval to proceed to Milestone M3 (Today's Dashboard).
+- Milestone: **M3 — Today's Home Dashboard & Live Travel Timeline**
+- Status: **Completed** (Slice 1 backend foundation completed; Slice 2 Flutter mobile dashboard and cross-platform navigation completed)
+- Basis: Acceptance gate passed across backend (55/55 PostgreSQL tests) and mobile client (48/48 Flutter tests).
+- Boundary: Milestone M3 complete. Awaiting user approval to proceed to Milestone M4 (Checklists, Packs & Media Organization).
+
+## 2026-11-06 — M3 Today's Home Dashboard & Live Travel Timeline
+
+### Completed
+
+- Implemented **Slice 1 (Backend Today Summary API)**:
+  - Application Service `GetTodaySummaryService` in `api/app/Application/Trips/Services/GetTodaySummaryService.php`:
+    - Timezone-safe date computations with `CarbonImmutable` preventing midnight offset day miscalculations.
+    - Computes `trip_status` (`pre_trip`, `active`, `post_trip`), `days_until_start`, active day info (`day_number`, `total_days`, `date`, `notes`), `today_items`, `next_upcoming_item` (first unvisited stop), `current_stay` (stay spanning today), and completion metrics (`total_activities`, `completed_activities`, `progress_percentage`).
+  - Controller `TripTodayController` and API resource `TodaySummaryResource` mapped under `GET /api/v1/trips/{trip}/today`.
+  - Scoped with `TripPolicy@view`.
+  - Documented in OpenAPI specification (`docs/api/openapi.yaml`).
+  - Feature test suite in `api/tests/Feature/TripTodayTest.php` passing all 4 cases.
+- Implemented **Slice 2 (Flutter Mobile Today Dashboard & Cross-Platform Navigation)**:
+  - Unified cross-platform `MapLauncher` in `client/lib/core/utils/map_launcher.dart`:
+    - Handles coordinates, place queries, and raw directions URLs without fragile in-app web views.
+    - Native Apple Maps (`https://maps.apple.com/?daddr=...` & `maps://`) on iOS / iOS Simulator, Google Maps app (`comgooglemaps://`), Android intents (`google.navigation:q=...`), and external browser fallbacks.
+    - Replaced all ad-hoc `launchUrl` implementations in `ActivityTimelineCard`, `StayCard`, `TransportComparisonSheet`, and `CurrentStayBanner`.
+  - Mobile domain models in `client/lib/features/today/domain/models/today_dashboard_summary.dart`:
+    - `ActiveDayInfo`, `DashboardMetrics`, `TodayDashboardSummary`.
+  - Data repository `TodayRepository` in `client/lib/features/today/data/today_repository.dart` with offline-first hydration via `FlutterSecureStorage` (`cached_today_$tripId`).
+  - Riverpod providers in `client/lib/features/today/presentation/providers/today_provider.dart`:
+    - `todayRepositoryProvider`, `todaySummaryProvider(tripId)`, `activeDashboardTripIdProvider`.
+  - Presentation components in `client/lib/features/today/presentation/widgets/`:
+    - `TodayHeroCard`: Destination title, formatted dates, weather context, dynamic status badges (`Day X of Y`, `Starts in X days`, `Trip Completed`).
+    - `TripProgressCard`: 2-column layout with destination context and animated circular progress ring.
+    - `NextStopCard`: Prominent next stop card with category icon, place details, "Directions" button via `MapLauncher`, and "Visited" toggle; friendly empty state for free days.
+    - `CurrentStayBanner`: Today's accommodation banner with address, directions, and Arrival Transport modal.
+    - `QuickActionsGrid`: 4 quick squircle actions ("Itinerary", "Stays", "+ Stop", "Directions").
+  - `TodayDashboardPage` in `client/lib/features/today/presentation/pages/today_dashboard_page.dart`:
+    - Multi-trip switcher bottom sheet for travelers with multiple journeys.
+    - Pull-to-refresh pulling latest summary and trip list.
+    - Low-friction onboarding state for new users with 0 trips.
+    - Registered route `/dashboard` in `app_router.dart` and shortcut action in `TripListPage`.
+  - Feature documentation created at `docs/features/today-dashboard.md`.
+  - Automated test suite in `client/test/today_test.dart` (12 test cases covering `MapLauncher`, model serialization, and widgets).
+
+### Verification
+
+- Backend static analysis & formatting: `./vendor/bin/sail bin pint --test` — **passed**.
+- Backend test suite: `./vendor/bin/sail bin phpunit -c phpunit.postgres.xml` — **passed** (55/55 tests, 302 assertions).
+- Mobile static analysis: `cd client && flutter analyze` — **passed** (0 issues).
+- Mobile formatting: `cd client && dart format --output=none --set-exit-if-changed .` — **passed**.
+- Mobile test suite: `cd client && flutter test` — **passed** (all 48 tests passing).
+
+### Security and offline considerations
+
+- Membership authorization enforced on backend summary route via `TripPolicy@view`.
+- Offline storage using `FlutterSecureStorage` for resilient timeline access without internet connectivity.
+- Navigation launches safely without exposing private session tokens or query leaks.
+
+### Known limitations and next smallest task
+
+- Milestone M3 is fully complete and verified.
+- Stop at the milestone boundary: Request user approval before proceeding to Milestone M4 (Checklists, Packs & Media Organization).
 
 ## 2026-11-06 — M2b Slice 2 Flutter Mobile Stays Management & Luggage-Aware Arrival Transport UI
 

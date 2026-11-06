@@ -10,6 +10,7 @@
             <file>tests/Feature/PlaceTest.php</file>
             <file>tests/Feature/StayTest.php</file>
             <file>tests/Feature/StayTransportComparisonTest.php</file>
+            <file>tests/Feature/TripTodayTest.php</file>
         </testsuite>
     </testsuites>
     <php>

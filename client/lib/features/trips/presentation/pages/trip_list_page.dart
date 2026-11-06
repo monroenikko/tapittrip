@@ -65,6 +65,11 @@ class _TripListPageState extends ConsumerState<TripListPage> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.today_rounded),
+            tooltip: 'Today Dashboard',
+            onPressed: () => context.push('/dashboard'),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             tooltip: 'Account menu',

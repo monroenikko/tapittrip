@@ -7,6 +7,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/itinerary/presentation/pages/trip_itinerary_page.dart';
+import '../../features/today/presentation/pages/today_dashboard_page.dart';
 import '../../features/trips/domain/models/trip.dart';
 import '../../features/trips/presentation/pages/trip_create_page.dart';
 import '../../features/trips/presentation/pages/trip_list_page.dart';
@@ -39,6 +40,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        builder: (context, state) {
+          final tripId = state.extra as String?;
+          return TodayDashboardPage(initialTripId: tripId);
+        },
       ),
       GoRoute(
         path: '/trips',

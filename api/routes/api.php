@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\StayController;
 use App\Http\Controllers\Api\V1\StayTransportController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
+use App\Http\Controllers\Api\V1\TripTodayController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -24,6 +25,7 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/me', [ProfileController::class, 'destroy'])->name('me.destroy');
 
         Route::apiResource('trips', TripController::class);
+        Route::get('/trips/{trip}/today', [TripTodayController::class, 'show'])->name('trips.today.show');
 
         Route::get('/trips/{trip}/days', [TripDayController::class, 'index'])->name('trips.days.index');
         Route::post('/trips/{trip}/days', [TripDayController::class, 'store'])->name('trips.days.store');
