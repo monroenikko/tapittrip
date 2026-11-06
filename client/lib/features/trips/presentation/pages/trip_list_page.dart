@@ -7,6 +7,7 @@ import 'package:tapittrip/core/widgets/app_logo.dart';
 import 'package:tapittrip/features/auth/domain/models/auth_state.dart';
 import 'package:tapittrip/features/auth/presentation/providers/auth_provider.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
+import 'package:tapittrip/features/trips/presentation/widgets/edit_trip_bottom_sheet.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/quick_actions_row.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/search_pill_bar.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/trip_card.dart';
@@ -318,6 +319,7 @@ class _TripListPageState extends ConsumerState<TripListPage> {
                         '/trips/${trip.id}/itinerary',
                         extra: trip,
                       ),
+                      onEdit: () => EditTripBottomSheet.show(context, trip),
                       onDelete: () async {
                         final confirm = await showDialog<bool>(
                           context: context,

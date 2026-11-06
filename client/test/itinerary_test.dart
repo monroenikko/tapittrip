@@ -9,6 +9,7 @@ import 'package:tapittrip/features/itinerary/presentation/pages/trip_itinerary_p
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/activity_timeline_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/itinerary_filter_tabs.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/place_autocomplete_field.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/route_summary_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/timeline_day_badge.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
@@ -104,10 +105,11 @@ void main() {
     });
 
     testWidgets(
-      'ActivityTimelineCard renders activity information and directions button',
+      'ActivityTimelineCard renders activity information and edit / directions buttons',
       (tester) async {
         bool toggleCalled = false;
         bool deleteCalled = false;
+        bool editCalled = false;
 
         await tester.pumpWidget(
           MaterialApp(
@@ -116,6 +118,7 @@ void main() {
               body: ActivityTimelineCard(
                 item: sampleItem,
                 onToggleVisited: () => toggleCalled = true,
+                onEdit: () => editCalled = true,
                 onDelete: () => deleteCalled = true,
               ),
             ),
@@ -126,14 +129,45 @@ void main() {
         expect(find.text('Senso-ji Temple'), findsOneWidget);
         expect(find.text('Directions'), findsOneWidget);
         expect(find.byIcon(Icons.navigation_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
 
         await tester.tap(find.byTooltip('Mark as visited'));
         expect(toggleCalled, isTrue);
+
+        await tester.tap(find.byTooltip('Edit activity'));
+        expect(editCalled, isTrue);
 
         await tester.tap(find.byTooltip('Delete stop'));
         expect(deleteCalled, isTrue);
       },
     );
+
+    testWidgets('PlaceAutocompleteField renders label and text input', (
+      tester,
+    ) async {
+      final controller = TextEditingController();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: PlaceAutocompleteField(
+                controller: controller,
+                labelText: 'Stay or Hotel Name',
+                prefixIcon: Icons.hotel_rounded,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Stay or Hotel Name'), findsOneWidget);
+      expect(find.byIcon(Icons.hotel_rounded), findsOneWidget);
+
+      await tester.enterText(find.byType(TextFormField), 'Hilton');
+      expect(controller.text, 'Hilton');
+    });
 
     testWidgets('RouteSummaryCard renders distance, cost, and CO2 metrics', (
       tester,

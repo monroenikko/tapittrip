@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../itinerary/presentation/widgets/place_autocomplete_field.dart';
 import '../../domain/models/luggage_profile.dart';
 import '../../domain/services/booking_confirmation_parser.dart';
 import '../providers/stay_provider.dart';
@@ -36,7 +37,9 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
   String _stayType = 'hotel';
   DateTime? _checkInAt;
   DateTime? _checkOutAt;
-  LuggageProfile _luggageProfile = LuggageProfile.fromPreset('standard');
+  LuggageProfile _luggageProfile = LuggageProfile.empty();
+  double? _latitude;
+  double? _longitude;
   bool _isLoading = false;
 
   @override
@@ -205,6 +208,8 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
             address: _addressController.text.trim().isNotEmpty
                 ? _addressController.text.trim()
                 : null,
+            latitude: _latitude,
+            longitude: _longitude,
             checkInAt: _checkInAt,
             checkOutAt: _checkOutAt,
             phone: _phoneController.text.trim().isNotEmpty
@@ -347,16 +352,22 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                 const SizedBox(height: 16),
 
                 // Stay Name (Manual Input)
-                TextFormField(
+                PlaceAutocompleteField(
                   controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Hotel / Stay Name *',
-                    hintText: 'e.g. Kayon Resort Ubud',
-                    prefixIcon: const Icon(Icons.hotel_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+                  labelText: 'Hotel / Stay Name *',
+                  hintText: 'e.g. Kayon Resort Ubud, Hilton, Marriott',
+                  prefixIcon: Icons.hotel_rounded,
+                  onPlaceSelected: (place) {
+                    setState(() {
+                      _nameController.text = place.name;
+                      if (place.formattedAddress != null &&
+                          place.formattedAddress!.isNotEmpty) {
+                        _addressController.text = place.formattedAddress!;
+                      }
+                      _latitude = place.latitude;
+                      _longitude = place.longitude;
+                    });
+                  },
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
                       return 'Please enter accommodation name';
@@ -418,18 +429,21 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                 ),
                 const SizedBox(height: 16),
 
-                // Address (Manual Input)
-                TextFormField(
+                // Address (with Real-Time Suggestions)
+                PlaceAutocompleteField(
                   controller: _addressController,
-                  decoration: InputDecoration(
-                    labelText: 'Address',
-                    hintText:
-                        'e.g. Banjar Bresela, Desa Bresela, Payangan, Ubud',
-                    prefixIcon: const Icon(Icons.location_on_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
+                  labelText: 'Address',
+                  hintText: 'e.g. Banjar Bresela, Desa Bresela, Payangan, Ubud',
+                  prefixIcon: Icons.location_on_outlined,
+                  isAddressField: true,
+                  onPlaceSelected: (place) {
+                    setState(() {
+                      _addressController.text =
+                          place.formattedAddress ?? place.name;
+                      _latitude = place.latitude ?? _latitude;
+                      _longitude = place.longitude ?? _longitude;
+                    });
+                  },
                 ),
                 const SizedBox(height: 16),
 

@@ -178,6 +178,13 @@ const sampleTripForStay = Trip(
 void main() {
   group('Stay & Luggage Models', () {
     test('LuggageProfile presets configure correct baggage counts', () {
+      final empty = LuggageProfile.empty();
+      expect(empty.backpacks, 0);
+      expect(empty.carryOns, 0);
+      expect(empty.checkedBags, 0);
+      expect(empty.stroller, isFalse);
+      expect(empty.selectedCategories, isEmpty);
+
       final light = LuggageProfile.fromPreset('light');
       expect(light.preset, 'light');
       expect(light.backpacks, 1);

@@ -64,6 +64,9 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
     String itemId, {
     String? title,
     String? kind,
+    String? tripDayId,
+    String? placeId,
+    Map<String, dynamic>? inlinePlace,
     String? status,
     String? notes,
   }) async {
@@ -71,6 +74,9 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
       itemId,
       title: title,
       kind: kind,
+      tripDayId: tripDayId,
+      placeId: placeId,
+      inlinePlace: inlinePlace,
       status: status,
       notes: notes,
     );

@@ -3,10 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 
 class TripCard extends StatelessWidget {
-  const TripCard({super.key, required this.trip, this.onTap, this.onDelete});
+  const TripCard({
+    super.key,
+    required this.trip,
+    this.onTap,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final Trip trip;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   String _formatDates() {
@@ -101,6 +108,15 @@ class TripCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (onEdit != null)
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        color: colorScheme.onSurfaceVariant,
+                        tooltip: 'Edit trip',
+                        onPressed: onEdit,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        constraints: const BoxConstraints(),
+                      ),
                     if (onDelete != null)
                       IconButton(
                         icon: const Icon(Icons.delete_outline, size: 20),

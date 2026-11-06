@@ -9,12 +9,14 @@ class ActivityTimelineCard extends StatelessWidget {
     required this.item,
     this.onTap,
     this.onToggleVisited,
+    this.onEdit,
     this.onDelete,
   });
 
   final ItineraryItem item;
   final VoidCallback? onTap;
   final VoidCallback? onToggleVisited;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   IconData _iconForKind(String kind) {
@@ -229,6 +231,16 @@ class ActivityTimelineCard extends StatelessWidget {
                           : colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  if (onEdit != null)
+                    IconButton(
+                      iconSize: 18,
+                      tooltip: 'Edit activity',
+                      onPressed: onEdit,
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   if (onDelete != null)
                     IconButton(
                       iconSize: 18,

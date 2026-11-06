@@ -49,6 +49,43 @@ class TripListNotifier extends AsyncNotifier<List<Trip>> {
     }
   }
 
+  Future<Trip?> updateTrip(
+    String id, {
+    String? title,
+    String? startDate,
+    String? endDate,
+    String? primaryTimezone,
+    String? originCountry,
+    String? destinationCountry,
+    String? tripType,
+    PlanningMode? planningMode,
+    String? status,
+  }) async {
+    try {
+      final updated = await _repository.updateTrip(
+        id,
+        title: title,
+        startDate: startDate,
+        endDate: endDate,
+        primaryTimezone: primaryTimezone,
+        originCountry: originCountry,
+        destinationCountry: destinationCountry,
+        tripType: tripType,
+        planningMode: planningMode,
+        status: status,
+      );
+
+      final current = state.value ?? [];
+      state = AsyncValue.data(
+        current.map((t) => t.id == id ? updated : t).toList(),
+      );
+      return updated;
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      return null;
+    }
+  }
+
   Future<bool> deleteTrip(String id) async {
     try {
       await _repository.deleteTrip(id);

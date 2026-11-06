@@ -31,7 +31,7 @@ class _LuggagePresetSelectorState extends State<LuggagePresetSelector> {
         widget.profile ??
         (widget.selectedPreset != null
             ? LuggageProfile.fromPreset(widget.selectedPreset!)
-            : LuggageProfile.fromPreset('standard'));
+            : LuggageProfile.empty());
 
     _selectedCategories = Set.from(initialProfile.selectedCategories);
     _otherController = TextEditingController(

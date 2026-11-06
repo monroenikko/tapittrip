@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Application\Itinerary\Data\CreatePlaceData;
 use App\Application\Itinerary\Services\CreatePlaceService;
+use App\Application\Itinerary\Services\PlaceSearchService;
 use App\Domain\Itinerary\Models\Place;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Itinerary\StorePlaceRequest;
@@ -17,19 +18,13 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 final class PlaceController extends Controller
 {
     /**
-     * Search places by query string.
+     * Search places by query string with 3rd-party provider fallback.
      */
-    public function search(Request $request): AnonymousResourceCollection
+    public function search(Request $request, PlaceSearchService $searchService): AnonymousResourceCollection
     {
         $query = (string) $request->query('q', '');
 
-        $places = Place::query()
-            ->when($query !== '', function ($q) use ($query) {
-                $q->where('name', 'ilike', "%{$query}%")
-                    ->orWhere('formatted_address', 'ilike', "%{$query}%");
-            })
-            ->limit(20)
-            ->get();
+        $places = $searchService->search($query);
 
         return PlaceResource::collection($places);
     }

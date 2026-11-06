@@ -162,6 +162,9 @@ class ItineraryRepository {
     String itemId, {
     String? title,
     String? kind,
+    String? tripDayId,
+    String? placeId,
+    Map<String, dynamic>? inlinePlace,
     String? status,
     String? notes,
     int? sortOrder,
@@ -169,6 +172,9 @@ class ItineraryRepository {
     final payload = <String, dynamic>{
       if (title != null) 'title': title,
       if (kind != null) 'kind': kind,
+      if (tripDayId != null) 'trip_day_id': tripDayId,
+      if (placeId != null) 'place_id': placeId,
+      if (inlinePlace != null) 'place': inlinePlace,
       if (status != null) 'status': status,
       if (notes != null) 'notes': notes,
       if (sortOrder != null) 'sort_order': sortOrder,

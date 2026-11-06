@@ -1,9 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tapittrip/core/theme/app_theme.dart';
 import 'package:tapittrip/features/trips/data/trip_repository.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
+import 'package:tapittrip/features/trips/presentation/widgets/trip_card.dart';
 
 class FakeTripRepository implements TripRepository {
   final List<Trip> trips = [];
@@ -143,6 +146,70 @@ void main() {
       final remainingTrips = container.read(tripListProvider).value!;
       expect(remainingTrips.length, 3);
       expect(remainingTrips.any((t) => t.id == diyTrip.id), isFalse);
+    });
+
+    test('updates trip details in-place via updateTrip', () async {
+      final fakeRepo = FakeTripRepository();
+      final container = ProviderContainer(
+        overrides: [tripRepositoryProvider.overrideWithValue(fakeRepo)],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(tripListProvider.notifier);
+      final trip = await notifier.createTrip(
+        title: 'Original Title',
+        destinationCountry: 'JP',
+        planningMode: PlanningMode.diy,
+      );
+      expect(trip, isNotNull);
+
+      final updated = await notifier.updateTrip(
+        trip!.id,
+        title: 'Updated Title',
+        destinationCountry: 'Tokyo, Japan',
+        startDate: '2026-06-01',
+        endDate: '2026-06-10',
+        planningMode: PlanningMode.existing,
+      );
+
+      expect(updated, isNotNull);
+      expect(updated!.title, 'Updated Title');
+      expect(updated.destinationCountry, 'Tokyo, Japan');
+      expect(updated.startDate, '2026-06-01');
+      expect(updated.endDate, '2026-06-10');
+      expect(updated.planningMode, PlanningMode.existing);
+
+      final tripsInState = container.read(tripListProvider).value!;
+      expect(tripsInState.first.title, 'Updated Title');
+      expect(tripsInState.first.destinationCountry, 'Tokyo, Japan');
+    });
+
+    testWidgets('TripCard renders edit button and triggers onEdit', (
+      tester,
+    ) async {
+      bool editTapped = false;
+      const trip = Trip(
+        id: 'trip-1',
+        ownerId: 'user-1',
+        title: 'Osaka & Kyoto',
+        destinationCountry: 'Japan',
+        planningMode: PlanningMode.diy,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: TripCard(trip: trip, onEdit: () => editTapped = true),
+          ),
+        ),
+      );
+
+      expect(find.text('Osaka & Kyoto'), findsOneWidget);
+      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      expect(editTapped, isTrue);
     });
   });
 }

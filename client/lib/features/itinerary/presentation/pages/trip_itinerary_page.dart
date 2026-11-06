@@ -543,6 +543,46 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                           .read(itineraryListProvider(widget.tripId).notifier)
                           .toggleVisited(item);
                     },
+                    onEdit: () {
+                      final days =
+                          ref
+                              .read(tripDaysProvider(widget.tripId))
+                              .asData
+                              ?.value ??
+                          [];
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (ctx) => AddActivityBottomSheet(
+                          tripId: widget.tripId,
+                          days: days,
+                          initialItem: item,
+                          onSubmit:
+                              ({
+                                required title,
+                                required kind,
+                                tripDayId,
+                                inlinePlace,
+                                notes,
+                              }) async {
+                                await ref
+                                    .read(
+                                      itineraryListProvider(widget.tripId)
+                                          .notifier,
+                                    )
+                                    .updateItem(
+                                      item.id,
+                                      title: title,
+                                      kind: kind,
+                                      tripDayId: tripDayId,
+                                      inlinePlace: inlinePlace,
+                                      notes: notes,
+                                    );
+                              },
+                        ),
+                      );
+                    },
                     onDelete: () {
                       ref
                           .read(itineraryListProvider(widget.tripId).notifier)

@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Domain\Itinerary\Models\Place;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -52,6 +53,10 @@ final class PlaceTest extends TestCase
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
+        Http::fake([
+            'https://nominatim.openstreetmap.org/*' => Http::response([], 200),
+        ]);
+
         Place::factory()->create(['name' => 'Kinkaku-ji Golden Pavilion']);
         Place::factory()->create(['name' => 'Ginkaku-ji Silver Pavilion']);
         Place::factory()->create(['name' => 'Tokyo Tower']);
@@ -61,5 +66,32 @@ final class PlaceTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonCount(2, 'data');
+    }
+
+    public function test_search_places_queries_external_geocoding_provider(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        Http::fake([
+            'https://nominatim.openstreetmap.org/*' => Http::response([
+                [
+                    'place_id' => 99991234,
+                    'name' => 'Grand Hyatt Tokyo',
+                    'display_name' => 'Grand Hyatt Tokyo, Roppongi, Minato, Tokyo, Japan',
+                    'lat' => '35.6596',
+                    'lon' => '139.7291',
+                    'address' => ['country_code' => 'jp'],
+                ],
+            ], 200),
+        ]);
+
+        $response = $this->getJson('/api/v1/places/search?q=Grand+Hyatt+Tokyo');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'Grand Hyatt Tokyo')
+            ->assertJsonPath('data.0.latitude', 35.6596)
+            ->assertJsonPath('data.0.longitude', 139.7291);
     }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import 'package:tapittrip/features/itinerary/presentation/widgets/place_autocomplete_field.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/planning_mode_selector.dart';
@@ -136,14 +137,18 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              PlaceAutocompleteField(
                 controller: _destinationController,
-                decoration: const InputDecoration(
-                  labelText: 'Destination (optional)',
-                  hintText: 'e.g. Tokyo, JP',
-                  prefixIcon: Icon(Icons.place_outlined),
-                ),
-                textInputAction: TextInputAction.next,
+                labelText: 'Destination (optional)',
+                hintText: 'e.g. Tokyo, Japan',
+                prefixIcon: Icons.place_outlined,
+                onPlaceSelected: (place) {
+                  setState(() {
+                    _destinationController.text = place.name.isNotEmpty
+                        ? place.name
+                        : (place.formattedAddress ?? '');
+                  });
+                },
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(

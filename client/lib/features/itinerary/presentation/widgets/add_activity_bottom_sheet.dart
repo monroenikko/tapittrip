@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/models/itinerary_item.dart';
 import '../../domain/models/trip_day.dart';
+import 'place_autocomplete_field.dart';
 
 class AddActivityBottomSheet extends StatefulWidget {
   const AddActivityBottomSheet({
@@ -8,12 +10,14 @@ class AddActivityBottomSheet extends StatefulWidget {
     required this.tripId,
     this.days = const [],
     this.selectedDayId,
+    this.initialItem,
     required this.onSubmit,
   });
 
   final String tripId;
   final List<TripDay> days;
   final String? selectedDayId;
+  final ItineraryItem? initialItem;
   final Future<void> Function({
     required String title,
     required String kind,
@@ -29,13 +33,16 @@ class AddActivityBottomSheet extends StatefulWidget {
 
 class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _placeNameController = TextEditingController();
-  final _placeAddressController = TextEditingController();
-  final _notesController = TextEditingController();
 
-  String _selectedKind = 'attraction';
+  late final TextEditingController _titleController;
+  late final TextEditingController _placeNameController;
+  late final TextEditingController _placeAddressController;
+  late final TextEditingController _notesController;
+
+  late String _selectedKind;
   String? _chosenDayId;
+  double? _latitude;
+  double? _longitude;
   bool _isSubmitting = false;
 
   final _kinds = const [
@@ -49,7 +56,19 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
   @override
   void initState() {
     super.initState();
+    final item = widget.initialItem;
+    _titleController = TextEditingController(text: item?.title ?? '');
+    _placeNameController = TextEditingController(text: item?.place?.name ?? '');
+    _placeAddressController = TextEditingController(
+      text: item?.place?.formattedAddress ?? '',
+    );
+    _notesController = TextEditingController(text: item?.notes ?? '');
+
+    _selectedKind = item?.kind ?? 'attraction';
+    _latitude = item?.place?.latitude;
+    _longitude = item?.place?.longitude;
     _chosenDayId =
+        item?.tripDayId ??
         widget.selectedDayId ??
         (widget.days.isNotEmpty ? widget.days.first.id : null);
   }
@@ -75,6 +94,8 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
           'name': _placeNameController.text.trim(),
           if (_placeAddressController.text.trim().isNotEmpty)
             'formatted_address': _placeAddressController.text.trim(),
+          if (_latitude != null) 'latitude': _latitude,
+          if (_longitude != null) 'longitude': _longitude,
           'provider': 'manual',
           'attribution': 'TapItTrip',
         };
@@ -95,8 +116,15 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error adding activity: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.initialItem != null
+                  ? 'Error updating activity: $e'
+                  : 'Error adding activity: $e',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -136,7 +164,9 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Add Activity or Stop',
+                widget.initialItem != null
+                    ? 'Edit Activity or Stop'
+                    : 'Add Activity or Stop',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
@@ -195,23 +225,39 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
                 ),
               ),
               const SizedBox(height: 14),
-              // Place Name & Address
-              TextFormField(
+              // Place Name & Address (with Real-Time Autocomplete)
+              PlaceAutocompleteField(
                 controller: _placeNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Location / Place name',
-                  hintText: 'e.g., Uluwatu Temple',
-                  prefixIcon: Icon(Icons.place_rounded),
-                ),
+                labelText: 'Location / Place name',
+                hintText: 'e.g., Uluwatu Temple, Shibuya Crossing',
+                prefixIcon: Icons.place_rounded,
+                onPlaceSelected: (place) {
+                  setState(() {
+                    _placeNameController.text = place.name;
+                    if (place.formattedAddress != null &&
+                        place.formattedAddress!.isNotEmpty) {
+                      _placeAddressController.text = place.formattedAddress!;
+                    }
+                    _latitude = place.latitude;
+                    _longitude = place.longitude;
+                  });
+                },
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              PlaceAutocompleteField(
                 controller: _placeAddressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address or landmark (for map directions)',
-                  hintText: 'e.g., Pecatu, South Kuta, Badung',
-                  prefixIcon: Icon(Icons.map_outlined),
-                ),
+                labelText: 'Address or landmark (for map directions)',
+                hintText: 'e.g., Pecatu, South Kuta, Badung',
+                prefixIcon: Icons.map_outlined,
+                isAddressField: true,
+                onPlaceSelected: (place) {
+                  setState(() {
+                    _placeAddressController.text =
+                        place.formattedAddress ?? place.name;
+                    _latitude = place.latitude ?? _latitude;
+                    _longitude = place.longitude ?? _longitude;
+                  });
+                },
               ),
               const SizedBox(height: 12),
               // Notes
@@ -244,9 +290,17 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.add_rounded),
+                    : Icon(
+                        widget.initialItem != null
+                            ? Icons.check_rounded
+                            : Icons.add_rounded,
+                      ),
                 label: Text(
-                  _isSubmitting ? 'Adding...' : 'Add Activity',
+                  _isSubmitting
+                      ? (widget.initialItem != null ? 'Saving...' : 'Adding...')
+                      : (widget.initialItem != null
+                            ? 'Save Changes'
+                            : 'Add Activity'),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),

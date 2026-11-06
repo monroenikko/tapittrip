@@ -2,10 +2,69 @@
 
 ## Current milestone
 
-- Milestone: **M3 — Today's Home Dashboard & Live Travel Timeline**
-- Status: **Completed** (Slice 1 backend foundation completed; Slice 2 Flutter mobile dashboard and cross-platform navigation completed)
-- Basis: Acceptance gate passed across backend (55/55 PostgreSQL tests) and mobile client (48/48 Flutter tests).
-- Boundary: Milestone M3 complete. Awaiting user approval to proceed to Milestone M4 (Checklists, Packs & Media Organization).
+- Milestone: **M3 — Today's Home Dashboard & Live Travel Timeline (with In-Place Editing & Place Suggestions)**
+- Status: **Completed**
+- Basis: Acceptance gate passed across backend (56/56 PostgreSQL tests) and mobile client (51/51 Flutter tests).
+- Boundary: Milestone M3 complete, including all user-requested forgiving in-place editing, suggestion mechanisms, and clean luggage profile defaults. Awaiting user approval to proceed to Milestone M4 (Checklists, Packs & Media Organization).
+
+## 2026-11-06 — In-Place Editing, Place/Stay Autocomplete Suggestions & Clean Luggage Defaults
+
+### Completed
+
+- **Third-Party Place, Stay & Address Autocomplete Suggestions**:
+  - Implemented `PlaceSearchService` in `api/app/Application/Itinerary/Services/PlaceSearchService.php`:
+    - Queries OpenStreetMap / Nominatim search API (`https://nominatim.openstreetmap.org/search`) with strict timeout shielding (3 seconds) and customizable `TapItTrip/1.0` user-agent header.
+    - Fallback to Google Places API when `GOOGLE_MAPS_API_KEY` is present.
+    - Graceful error shielding that falls back to local database place search if external network calls fail or time out.
+  - Updated `PlaceController@search` (`GET /api/v1/places/search?q=...`) to combine local and external place suggestions with deduplication.
+  - Feature test suite in `api/tests/Feature/PlaceTest.php` passing all cases.
+  - Implemented reusable `PlaceAutocompleteField` in `client/lib/features/itinerary/presentation/widgets/place_autocomplete_field.dart`:
+    - 350ms debouncer preventing excessive queries.
+    - Animated suggestion dropdown showing place name and formatted address with squircle category icons.
+    - Auto-population callbacks for coordinates and address fields.
+  - Integrated `PlaceAutocompleteField` across:
+    - Accommodation Hotel / Stay Name & Address in `AddStayBottomSheet`.
+    - Activity Location / Place Name & Address in `AddActivityBottomSheet`.
+    - Trip Destination in `TripCreatePage` and `EditTripBottomSheet`.
+- **In-Place Trip & Activity Editing**:
+  - Added `updateTrip` to `TripListNotifier` in `client/lib/features/trips/presentation/providers/trip_list_provider.dart`.
+  - Created `EditTripBottomSheet` in `client/lib/features/trips/presentation/widgets/edit_trip_bottom_sheet.dart` enabling editing of title, destination (via autocomplete), dates, trip style, primary timezone, and planning mode.
+  - Added `onEdit` callback and edit icon button to `TripCard` in `client/lib/features/trips/presentation/widgets/trip_card.dart`.
+  - Connected `onEdit` in `TripListPage` to open `EditTripBottomSheet`.
+  - Added `onEdit` callback and edit icon button to `ActivityTimelineCard` in `client/lib/features/itinerary/presentation/widgets/activity_timeline_card.dart`.
+  - Connected in-place activity editing in `TripItineraryPage` to launch `AddActivityBottomSheet(initialItem: item)`.
+  - Updated `ItineraryRepository.updateItem` and `ItineraryListNotifier.updateItem` to support full field updates (including places and notes).
+- **Luggage Profile Clean Starting State**:
+  - Added `LuggageProfile.empty()` in `client/lib/features/stays/domain/models/luggage_profile.dart`.
+  - Initialized `LuggagePresetSelector` with unselected profile rather than activating presets by default, eliminating traveler confusion.
+- **Arrival Origin & Departure Terminal Selector**:
+  - Enhanced `TransportComparisonSheet` with arrival origin chips (`✈️ Airport / Terminal`, `🚆 Train Station`, `✏️ Custom Terminal`) and custom terminal input, allowing travelers to compute arrival transport even when departure terminals are not pre-entered.
+- **Master Plan Baseline v1.6**:
+  - Updated `MASTER_PLAN.md` with:
+    - Principle 7: Forgiving by default / In-place editability.
+    - Principle 8: Smart suggestions over typing.
+    - Section 14A: Accommodation suggestions and clean luggage profile starting state.
+    - Section 14D: In-Place Editing Mechanisms (Trips & Activities) and Location/Stay Suggestion System.
+
+### Verification
+
+- Backend static analysis & formatting: `./vendor/bin/sail bin pint --test` — **passed**.
+- Backend test suite: `./vendor/bin/sail bin phpunit -c phpunit.postgres.xml` — **passed** (56/56 tests, 306 assertions).
+- Mobile static analysis: `cd client && flutter analyze` — **passed** (0 issues).
+- Mobile formatting: `cd client && dart format --output=none --set-exit-if-changed .` — **passed**.
+- Mobile test suite: `cd client && flutter test` — **passed** (all 51 tests passing).
+
+### Security and offline considerations
+
+- Third-party place queries employ 3-second timeouts and fallback to local cached places so the UI never freezes offline.
+- No API keys are required for Nominatim geocoding, while Google Places API remains an optional drop-in configuration.
+- Trip editing adheres to trip ownership policies (`TripPolicy@update`) and activity editing adheres to `TripPolicy@update`.
+
+### Known limitations and next smallest task
+
+- Milestone M3 and user enhancement requests are fully verified.
+- Next recommended milestone: Milestone M4 (Checklists, Packs & Media Organization).
+
 
 ## 2026-11-06 — M3 Today's Home Dashboard & Live Travel Timeline
 

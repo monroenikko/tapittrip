@@ -23,6 +23,19 @@ class LuggageProfile {
 
   bool hasCategory(String category) => selectedCategories.contains(category);
 
+  factory LuggageProfile.empty({int partySize = 1}) {
+    return LuggageProfile(
+      preset: 'light',
+      partySize: partySize,
+      backpacks: 0,
+      carryOns: 0,
+      checkedBags: 0,
+      oversized: 0,
+      stroller: false,
+      selectedCategories: const {},
+    );
+  }
+
   factory LuggageProfile.fromPreset(String preset, {int partySize = 1}) {
     switch (preset.toLowerCase()) {
       case 'light':

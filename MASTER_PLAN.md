@@ -1,6 +1,6 @@
 # TapItTrip — Master Product & Engineering Plan
 
-Status: Planning baseline v1.5 (2026-11-06). This is a living specification, not authorization to implement all features simultaneously.
+Status: Planning baseline v1.6 (2026-11-06). Incorporates in-place Trip and Activity editing mechanisms, location/hotel/address suggestions, and clean unselected luggage profile UX. This is a living specification, not authorization to implement all features simultaneously.
 
 ## Product identity and naming
 
@@ -23,6 +23,8 @@ Principles:
 4. **Privacy by design**: location history, passport data, imported emails, and documents require purpose limitation and user controls.
 5. **Incremental delivery**: working vertical slices with tests; no speculative microservices.
 6. **Explain recommendations**: travel times, fares, opening hours, transit, food, and AI suggestions disclose source/freshness/uncertainty.
+7. **Forgiving by default (In-place editability)**: Any inputted trip, activity, stay, or date must be easily editable in-place so travelers never get stuck with wrong inputs or typos.
+8. **Smart suggestions over typing**: Location, hotel/stay name, and address fields must proactively suggest matching places, airports, hotels, and addresses as the traveler types to minimize manual keyboard entry.
 
 ## 1a. Audience, flexible travel modes, and inclusive onboarding (v1.4)
 
@@ -365,6 +367,8 @@ Introduce this contract with the first offline-capable write slice, including an
 ## 14A. Accommodation/stay behavior and privacy
 - Offer **Add Stay** on trip creation and after flight import; it is optional and never blocks trip creation.
 - Low-friction entry: manual address/name or place search in MVP; share-sheet, screenshot/PDF and authorized email parsing in Release 1. Imported fields must be user-reviewed before saving.
+- **Smart suggestions**: Hotel or stay name input proactively suggests verified accommodations; selecting a suggested hotel auto-fills formatted address, coordinates, and contact details. Address field also suggests geocoded addresses as the user types.
+- **Clean luggage profile starting state**: Luggage selection chips start completely empty/unselected by default. Travelers are not confused by unwanted pre-selected baggage and explicitly select only the bags/strollers they are traveling with.
 - Support hotels, hostels, rentals, and staying with friends/family; multiple sequential or overlapping stays; changing cities; early arrival before check-in; late check-out; and overnight flights. Do not infer a hotel booking from a flight ticket.
 - Home dashboard shows the relevant stay for the travel date, with a prominent **Directions to stay** action on arrival day, plus check-in/out reminders and hotel address accessible offline.
 - Store booking references encrypted, do not display them on lock-screen notifications, redact them in logs, and ensure location-sharing/guest permissions do not expose private stay addresses by default.
@@ -553,6 +557,45 @@ All items below are **planned and unchecked**. These steps refine section 14C; t
 - [ ] **TC-G.3:** Implemented behavior, OpenAPI/examples, migrations/rollout notes, feature documentation, and milestone log agree. No planned endpoint is represented as implemented.
 - [ ] **TC-G.4:** Applicable Sail formatter/static analysis/tests and Flutter format/analyze/tests pass, with exact commands/results and platform limitations recorded. Privacy checks cover payloads, caches, logs, notifications, and files.
 - [ ] **TC-G.5:** Owner reviews the working slice and accepts its evidence before the next milestone boundary. Any next step outside approved scope receives explicit approval; unchecked extension steps do not block a narrower accepted release.
+
+## 14D. In-Place Editing Mechanisms and Location/Stay Suggestion System (v1.6)
+
+### 1. In-Place Trip Data Editing Mechanism
+- **Core Principle**: Travelers must never be locked into mistakes. Changing trip dates, correcting destination typos, or altering planning modes must be frictionless without deleting or recreating the trip.
+- **Editable Trip Fields**:
+  - `title`: Trip name (e.g., "Tokyo Autumn Adventure").
+  - `destination_country`: Target country/region with country picker/autocomplete.
+  - `start_date` & `end_date`: Calendar date range pickers. Date shifts preserve all existing activities and recalculate daily buckets.
+  - `primary_timezone`: Timezone selector ensuring proper local-time scheduling.
+  - `planning_mode`: Switchable between DIY, Already Booked, Guided Tour, and Minimal organization without data loss.
+  - `trip_type`: Leisure, business, family, or domestic.
+- **Access Points**: "Edit Trip" accessible from trip settings, trip list card context menu, and dashboard header.
+
+### 2. In-Place Activity & Itinerary Item Editing Mechanism
+- **Core Principle**: If a traveler inputs the wrong time, title, location, or day for a stop, they can edit it immediately in-place.
+- **Editable Activity Fields**:
+  - `title`: Activity name (e.g., "Shibuya Sky Observation").
+  - `kind`: Category selector (`attraction`, `meal`, `transport`, `hotel`, `custom`).
+  - `place`: Name, address, coordinates, and place attribution.
+  - `trip_day_id`: Day reassignment (e.g., moving an activity from Day 1 to Day 2).
+  - `starts_at_utc` & `ends_at_utc`: Scheduled time.
+  - `notes`: Personal notes, tips, and booking codes.
+- **Access Points**: Tapping or selecting "Edit Activity" on any `ActivityTimelineCard` or from `NextStopCard` on the Today dashboard opens the pre-populated edit sheet.
+
+### 3. Location, Hotel, and Address Suggestion Mechanisms
+- **Activity Location Autocomplete**:
+  - Real-time debounced suggestions (300ms) querying `GET /api/v1/places/search?q=...`.
+  - Proactively suggests nearby landmarks, attractions, cafes, and stations based on the trip's destination city/country.
+  - Selecting a suggestion automatically populates place name, formatted address, and geocoded coordinates.
+- **Accommodation & Hotel Suggestions**:
+  - When typing a hotel or stay name (e.g., "Hilton", "Cerulean", "Marriott"), the search suggests matching accommodations with verified names and addresses.
+  - Reduces manual typing and spelling errors on mobile keyboards.
+- **Address Autocomplete**:
+  - Dedicated address suggestion field auto-completing street names, districts, and postal codes with maps handoff coordinates.
+
+### 4. Clean Luggage Profile Initial State
+- **Zero Pre-Selection Rule**: All luggage category chips (`backpack`, `carry_on`, `checked_bag`, `stroller`, `oversized`, `others`) start completely **empty / unselected** by default.
+- **Eliminates Confusion**: Travelers are never confused by pre-checked items they do not carry; they explicitly tap and add only the specific bags they are bringing.
 
 ## 15. Work process for Codex
 
