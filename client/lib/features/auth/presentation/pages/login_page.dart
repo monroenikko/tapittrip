@@ -63,16 +63,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Center(child: AppLogo(height: 120, withCard: true)),
-                  const SizedBox(height: 12),
+                  const Center(child: AppLogo(height: 130)),
+                  const SizedBox(height: 8),
                   Text(
                     'Your trip. One tap away.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 32),
                   if (errorMessage != null)
                     Container(
                       padding: const EdgeInsets.all(12),

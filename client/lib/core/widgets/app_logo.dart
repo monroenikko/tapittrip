@@ -28,7 +28,7 @@ class AppLogo extends StatelessWidget {
   /// Full logo or icon only variant.
   final AppLogoVariant variant;
 
-  /// Corner radius when displayed in a card or clipped.
+  /// Corner radius when displayed in a card.
   final double borderRadius;
 
   /// Wrap the logo in a soft elevated/bordered squircle card.
@@ -40,32 +40,29 @@ class AppLogo extends StatelessWidget {
         ? 'assets/images/logo_icon.png'
         : 'assets/images/logo.png';
 
-    Widget image = ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Image.asset(
-        assetPath,
-        height: height,
-        width: width ?? height,
-        fit: BoxFit.contain,
-        semanticLabel: 'TapItTrip Logo',
-        errorBuilder: (context, error, stackTrace) {
-          // Graceful fallback if asset cannot be loaded (e.g. headless unit tests)
-          final colorScheme = Theme.of(context).colorScheme;
-          return Container(
-            height: height,
-            width: width ?? height,
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(borderRadius),
-            ),
-            child: Icon(
-              Icons.luggage_rounded,
-              size: height * 0.5,
-              color: colorScheme.primary,
-            ),
-          );
-        },
-      ),
+    Widget image = Image.asset(
+      assetPath,
+      height: height,
+      width: width ?? height,
+      fit: BoxFit.contain,
+      semanticLabel: 'TapItTrip Logo',
+      errorBuilder: (context, error, stackTrace) {
+        // Graceful fallback if asset cannot be loaded (e.g. headless unit tests)
+        final colorScheme = Theme.of(context).colorScheme;
+        return Container(
+          height: height,
+          width: width ?? height,
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
+          child: Icon(
+            Icons.luggage_rounded,
+            size: height * 0.5,
+            color: colorScheme.primary,
+          ),
+        );
+      },
     );
 
     if (withCard) {
@@ -83,7 +80,10 @@ class AppLogo extends StatelessWidget {
             ),
           ],
         ),
-        child: image,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: image,
+        ),
       );
     }
 

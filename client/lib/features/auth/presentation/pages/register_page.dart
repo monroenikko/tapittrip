@@ -72,10 +72,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Center(child: AppLogo(height: 88, withCard: true)),
-                  const SizedBox(height: 16),
-                  const Center(child: AppLogo(height: 88, withCard: true)),
-                  const SizedBox(height: 16),
+                  const Center(child: AppLogo(height: 96)),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Your trip. One tap away.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   if (errorMessage != null)
                     Container(
                       padding: const EdgeInsets.all(12),
