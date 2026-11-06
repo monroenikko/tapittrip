@@ -1,9 +1,9 @@
 # Stays and Luggage-Aware Arrival Transport
 
 - Milestone: `M2b`
-- Status: `implemented` (Slice 1 backend foundation)
+- Status: `implemented` (Backend foundation + Flutter mobile UI)
 - Owner: `engineering`
-- Last verified: `2026-11-05`
+- Last verified: `2026-11-06`
 
 ## Purpose and traveler outcome
 
@@ -50,3 +50,4 @@ Documented in [`docs/api/openapi.yaml`](../api/openapi.yaml):
 - `PATCH /api/v1/stays/{stay}` (`updateStay`)
 - `DELETE /api/v1/stays/{stay}` (`deleteStay`)
 - `POST /api/v1/stays/{stay}/transport-options` (`compareStayTransport`)
+

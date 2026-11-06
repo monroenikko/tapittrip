@@ -14,7 +14,7 @@ The product grows outward from that foundation:
 4. Build a local-first today experience that works with sparse trip data.
 5. Add checklists, reminders, and confirmed arrival assistance.
 6. Harden sync and operational readiness before beta.
-7. Add advanced providers, AI, collaboration, and travel utilities only through separately approved slices.
+7. Add advanced providers, AI, collaboration, and travel utilities only through separately approved slices. [Trip Circles](../MASTER_PLAN.md#14c-trip-circles--travel-together) defines planned family/group invitations and a shared trip workspace; moving it before M7+ remains an owner decision.
 
 ## Engineering direction
 

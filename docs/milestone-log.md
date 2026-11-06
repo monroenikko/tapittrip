@@ -3,9 +3,101 @@
 ## Current milestone
 
 - Milestone: **M2b — Accommodation and stays (MVP)**
-- Status: **In progress** (Slice 1 backend foundation completed; proceeding to Slice 2 Flutter mobile stays & luggage transport UI)
-- Basis: User approved proceeding to the next step.
-- Boundary: Implement M2b accommodation CRUD, protected booking details, and luggage-aware transport comparison MVP; do not implement M3 Today Dashboard until M2b acceptance gate passes.
+- Status: **Completed** (Slice 1 backend foundation completed; Slice 2 Flutter mobile stays & luggage transport UI completed)
+- Basis: Acceptance gate passed across backend and mobile client.
+- Boundary: Milestone M2b complete. Awaiting user approval to proceed to Milestone M3 (Today's Dashboard).
+
+## 2026-11-06 — M2b Slice 2 Flutter Mobile Stays Management & Luggage-Aware Arrival Transport UI
+
+### Completed
+
+- Implemented Flutter mobile Stays domain models:
+  - `LuggageProfile`: presets (`light`, `standard`, `heavy`), party size, baggage counts (backpacks, carry-ons, checked bags, oversized bags, stroller).
+  - `TransportOption`: mode, title, provider, duration, cost, transfers, luggage capacity, accessibility notes, rankings (`isMostConvenient`, `isFastest`, `isCheapest`), and human explanation.
+  - `TransportComparisonResult`: status, verified flag, origin, destination, maps navigation URL, options list, provider attribution, and refresh timestamp.
+  - `Stay`: id, tripId, placeId, name, stayType (`hotel`, `hostel`, `rental`, `friends_family`), address, coordinates, checkInAt, checkOutAt, timezone, phone, booking reference, notes, luggage profile, version, maps URLs, formatted duration and date ranges.
+- Implemented `StayRepository` in `client/lib/features/stays/data/stay_repository.dart`:
+  - `fetchStays(tripId)` with offline-first caching via `FlutterSecureStorage` (`cached_stays_$tripId`).
+  - `createStay`, `updateStay`, `deleteStay`, and `compareTransport` API methods.
+- Implemented Riverpod state management in `client/lib/features/stays/presentation/providers/stay_provider.dart`:
+  - `stayRepositoryProvider`.
+  - `stayListProvider`: `AsyncNotifierProvider.family<StayListNotifier, List<Stay>, String>` supporting CRUD operations with optimistic state updates.
+  - `transportComparisonProvider`: `FutureProvider.family<TransportComparisonResult, TransportQueryParams>` for dynamic luggage-aware ranking.
+- Implemented Flutter presentation widgets in `client/lib/features/stays/presentation/widgets/`:
+  - `LuggagePresetSelector`: Choice chips (`Travel Light`, `1–2 Suitcases`, `Heavy / Stroller`) with baggage icons.
+  - `StayCard`: Squircle card adhering to brand theme tokens (`#00376D`, `#F76405`), stay type badges, check-in/out dates, duration summary, address, secure booking reference badge, Google Maps navigation launcher, and Arrival Transport CTA.
+  - `TransportComparisonSheet`: Modal bottom sheet featuring dynamic luggage preset toggling, ranked transport cards with badges (`Most Convenient`, `Fastest`, `Best Value`), duration and cost metrics, luggage capacity notes, provider attribution, and transparent fallback to Google Maps for unverified origins.
+  - `AddStayBottomSheet`: Low-friction modal sheet allowing manual or place-based stay creation with date pickers and luggage presets.
+- Integrated Stays into `TripItineraryPage`:
+  - Wired `ItineraryFilterTabs` "Stay" tab to render `StayCard` collection, loading/error states with retry, empty state ("No accommodation added yet"), and contextual bottom button ("Add Accommodation").
+- Added comprehensive automated test suite in `client/test/stay_test.dart` (11 new tests covering models, offline cache fallback, repository, and widgets).
+
+### Verification
+
+- Mobile static analysis: `cd client && flutter analyze` — **passed** (0 issues).
+- Mobile formatting: `cd client && dart format --output=none --set-exit-if-changed .` — **passed**.
+- Mobile test suite: `cd client && flutter test` — **passed** (all 35 tests passing).
+- Stays acceptance test:
+  - Add accommodations across trips/cities without purchasing through app — verified.
+  - View details offline from cached storage — verified.
+  - Launch maps navigation with fallback — verified.
+  - Set heavy luggage / stroller profile and compare transport — verified.
+  - Transparent fallback for unverified origins — verified.
+  - Membership authorization and safe stay deletion without orphaning itinerary items — verified.
+
+### Security and offline considerations
+
+- Sensitive booking references are displayed within trip membership context and never exposed in unauthenticated views.
+- Secure offline caching of stay details using `FlutterSecureStorage` with graceful network error recovery.
+- Google Maps directions navigation implements safe dual-stage launching (`LaunchMode.externalApplication` falling back to `LaunchMode.platformDefault`).
+
+### Known limitations and next smallest task
+
+- Milestone M2b is fully complete and verified.
+- Stop at the milestone boundary: Request user approval before proceeding to Milestone M3 (Today's Dashboard).
+
+## 2026-11-06 — Trip Circles staged acceptance criteria
+
+### Completed
+
+- Expanded [Trip Circles acceptance](../MASTER_PLAN.md#step-by-step-delivery-and-acceptance-checklist) into steps 0–9 with stable `TC-*` checklist IDs, dependencies, observable outcomes, required test evidence, and a common completion gate.
+- Split the proposed core into viewer-only link invitation/access, direct account invitations, role/ownership management, and safe collaborative editing. Kept notifications, checklists/managed travelers, expenses, memories, and location as separately approved extensions.
+- Required privacy, membership revocation, and offline safety from the first affected slice. All criteria remain unchecked; this is planning work, not a claim of implemented or verified behavior.
+
+### Verification
+
+- `git diff --check -- MASTER_PLAN.md docs/milestone-log.md` — **passed**.
+- Python acceptance checklist audit — **passed**: unique criterion IDs, steps 0–9, common gate, and local Markdown links/anchors.
+- Application formatters/analyzers/tests not run: Markdown planning only; no runtime or API contract changes.
+
+### Limitations and next smallest task
+
+- M2b remains the current approved milestone. When collaboration is scheduled, begin with TC-0 scope/contracts approval, then implement only the approved first invitation slice.
+- Existing unrelated stays work was left untouched. No new credentials or provider setup are required for this documentation update.
+
+## 2026-11-06 — Trip Circles product planning
+
+### Completed
+
+- Updated the master plan to v1.5 with [Trip Circles](../MASTER_PLAN.md#14c-trip-circles--travel-together), incorporating the supplied friends/family collaboration conversation: Messenger/share links, direct account invitations, acceptance, shared workspace, roles, privacy, offline sync, and phased extras.
+- Reused the existing trip/member model in the planned design and linked the direction map to the authoritative specification. No application code, migrations, or OpenAPI behavior changed.
+- Recorded the conversation's MVP/no-separate-paid-add-on recommendation as an open owner decision against the existing Release 2 / M7+ placement; M2b remains the approved implementation scope.
+
+### Verification
+
+- `git diff --check -- MASTER_PLAN.md docs/product-direction.md docs/milestone-log.md` — **passed**. The full-worktree check reports pre-existing trailing blank lines in unrelated stays changes; those files were left untouched.
+- Python local Markdown link/anchor validation for the three changed documents — **passed**.
+- Application formatters, analyzers, and tests were not run because this change only updates planning Markdown.
+
+### Security and offline considerations
+
+- Planned invitations require explicit acceptance, safe previews, expiring/revocable tokens, and server-side membership checks. Personal content remains private unless explicitly shared.
+- Recorded permission-aware offline caching, conflict handling, and revocation cleanup on reconnect without promising immediate erasure from offline devices.
+
+### Known limitations and next smallest task
+
+- Trip Circles is not implemented or authorized as a new milestone. Continue the approved M2b slice; decide collaboration launch timing and invitation/privacy contracts before a collaboration implementation slice.
+- The KOS entry page still carries an older M0 state; the milestone log is authoritative for current M2b scope. This planning update does not change that scope.
 
 ## 2026-11-05 — M2b Slice 1 Backend Stays, Encrypted Booking Details, and Luggage-Aware Transport Comparison Foundation
 

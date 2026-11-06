@@ -1,6 +1,6 @@
 # TapItTrip — Master Product & Engineering Plan
 
-Status: Planning baseline v1.4 (2026-11-03). This is a living specification, not authorization to implement all features simultaneously.
+Status: Planning baseline v1.5 (2026-11-06). This is a living specification, not authorization to implement all features simultaneously.
 
 ## Product identity and naming
 
@@ -81,7 +81,7 @@ Journeys:
 - AI itinerary drafting and adjustments with explicit user approval; AI-generated content is advisory.
 
 ### Release 2 — Collaboration and travel utilities
-- Invite members, roles, shared trip editing, sync conflict handling, collaborative checklists.
+- **Trip Circles — Travel Together:** invite friends and family through Messenger/share links or TapItTrip accounts, accept/decline invitations, and use one permission-controlled shared trip workspace. See [section 14C](#14c-trip-circles--travel-together) for phased scope, privacy, and acceptance criteria.
 - Budgets, multi-currency expenses, exchange rate snapshots, group expense splits.
 - Travel journal, memories, saved photos and optional trip recap.
 - Safety information, user-controlled location sharing, official source links and expiry dates.
@@ -171,6 +171,14 @@ All mutable aggregate records: UUID primary keys, `created_at`, `updated_at`, op
 - `trip_travel_profiles`: trip_id, traveler_count, adult_count, child_count, infant_count, checked_bag_count, carry_on_count, oversized_bag_count, stroller_count, mobility_needs_private_encrypted nullable, walking_tolerance_meters nullable, budget_preference nullable, comfort_preference nullable, version. Treat accessibility and child details as optional, private, editable trip-scoped preferences; do not infer sensitive conditions.
 - `stay_transport_preferences`: stay_id, arrival_origin_type(airport/station/custom), arrival_origin_place_id nullable, arrival_flight_id nullable, preferred_mode nullable, luggage_profile_override_json nullable, arrival_at_utc nullable, version.
 - `transport_option_snapshots`: trip_id, stay_id, origin_place_id nullable, provider, mode, duration_seconds nullable, walking_meters nullable, transfer_count nullable, fare_minor nullable, currency nullable, luggage_policy_summary nullable, step_free_status(verified/unknown/not_available), fetched_at, expires_at nullable, source_url nullable. Snapshots are advisory and can expire; do not treat them as booked transport.
+
+### Trip Circles collaboration (planned; see section 14C)
+Reuse `trips`, `trip_members`, `itinerary_items`, checklists, expenses, attachments, and sync records; a Circle is the shared experience of an existing trip, not a duplicate trip aggregate. Existing membership records do not imply that invitations or collaborative workflows are implemented.
+
+- `trip_invitations`: trip_id, inviter_id, intended recipient where applicable, proposed role, token hash, expiry, lifecycle status, acceptance/revocation timestamps, and usage/approval policy. Define targeted versus share-link redemption and concurrency rules in an ADR before migrations; never persist raw invite tokens or expose recipient identifiers through public lookup.
+- `trip_travelers` (later): trip_id, optional linked member, managing adult, minimal display label, optional traveler category. Managed children/dependents are not authenticated members and gain no account or permission implicitly.
+- `trip_activity_logs` (later): trip_id, actor, event type, entity reference, timestamp, and minimized safe change summary. Keep private journal content, booking references, invite tokens, and document contents out of the shared feed.
+- Extend existing checklist assignment and expense split models only in their approved slices; resolve managed-traveler participation, personal completion state, and record visibility before defining public contracts.
 
 ### Bookings, packing, documents
 - `booking_imports`: trip_id, user_id, source(upload/share/email/link), file_id nullable, extraction_status, extracted_json encrypted, confidence_json, reviewed_at, error_code.
@@ -374,6 +382,178 @@ Introduce this contract with the first offline-capable write slice, including an
 - **Privacy**: do not require detailed personal or disability information; minimize retention of travel profiles, protect booking references, and never expose private stay location in public/shared previews without permission.
 - **Tests**: heavy bags prefer fewer transfers where comparable evidence exists; light bag scenario may prefer transit; multiple passengers compare group totals; unknown lift/capacity remains unknown; late-night routes are not assumed operational; missing provider response produces honest fallback; change of stay/flight invalidates stale recommendation; all trip data remains tenant/member authorized.
 
+## 14C. Trip Circles — Travel Together
+
+**Product intent:** Friends, family members, and group travelers can join the organizer's existing trip and stay on the same page through shared plans and explicitly shared updates/logs. One personal TapItTrip account can belong to multiple Circles. Joining is optional; all four planning modes and trips with no itinerary remain supported. A Circle does not require a global friends list or a separate app.
+
+**Delivery status and scope conflict:** This is planned product direction, not implemented functionality or approval to expand M2b. The supplied conversation recommends an MVP launch and no separate paid add-on; the existing roadmap places collaboration in Release 2 / M7+. Preserve that delivery boundary until the owner explicitly decides whether to bring a narrow collaboration slice forward. Launch timing and pricing remain open decisions (section 16). “Core feature” describes product intent, not an approved release date.
+
+### Invitations and shared workspace
+
+1. The organizer opens **Trip Circle** within an existing trip and chooses **Invite travelers**. Flights, stays, and itinerary activities are not prerequisites.
+2. **Share invite:** use the native share sheet to send a private invitation link through Messenger when available, or copy it into WhatsApp, Viber, SMS, email, or another app. This does not require Messenger API access or automatic message sending. Provide copy-link fallback and require approved/configured link hosts before implementation.
+3. **Invite a TapItTrip account:** send an in-app invitation using an exact, consent-controlled identifier such as a friend code or discoverable username. Email targeting is a candidate only after privacy review; avoid public email search, bulk contact access, account enumeration, and exposing whether an address is registered.
+4. The recipient opens the invitation, signs in or creates an account through a supported flow, reviews a minimal safe invitation summary, and explicitly accepts or declines. Opening a link never grants membership. For shareable links, support expiry, revocation, bounded use, and organizer approval; forwarded links must not silently admit unintended travelers.
+5. After server-confirmed acceptance (and approval when required), the trip appears in **Shared Trips** within the existing Trips navigation. Members see the same trip records according to their permissions; do not create separate itinerary copies. Show pending, expired, revoked, declined, already-joined, and offline states with clear recovery actions.
+
+### Roles and membership lifecycle
+
+- **Organizer** maps to the existing `owner` role; **Editor** and **Viewer** map to `editor` and `viewer`. Keep public role values compatible; this is a user-facing naming choice.
+- The organizer manages invitations and roles, removes members, and can transfer ownership through an explicit confirmed handover. Members can leave; define ownership transfer/account-deletion behavior so no trip is left without an owner.
+- Editors modify permitted shared plans; viewers read permitted content. Personal completion/check-off state must be separate from shared itinerary visit status; being a viewer must not grant shared editing rights.
+- Parents may later manage minimal child/dependent traveler profiles without requiring child accounts. A managed profile never implies consent to share a child's location, documents, or identity details.
+- Enforce accepted membership, role, and object/field visibility server-side on reads, writes, sync, downloads, and future realtime subscriptions. Invitation creation, acceptance, role changes, and ownership transfer require online server confirmation and idempotent handling.
+
+### Visibility and privacy defaults
+
+| Information | Planned default |
+| --- | --- |
+| Shared itinerary, destinations, and group announcements | Accepted members with permission |
+| Shared stay and meeting-point details | Authorized members only; private stay addresses require explicit sharing |
+| Booking references, passport/identity documents, personal notes and expenses | Private; separate explicit sharing controls, never automatically inherited from membership |
+| Personal journal and photos | Private until the author explicitly shares selected content |
+| Shared change/activity feed | Authorized members; safe summaries only |
+| Live location | Off; per-person opt-in, limited audience and duration, easy stop |
+| Managed child/dependent details | Minimal and restricted to authorized managing adults unless explicitly shared |
+
+Invite previews must not reveal the itinerary, dates, private addresses, member identities, or sensitive documents. Use high-entropy expiring tokens stored as hashes, redact them from logs/analytics, rate-limit creation and redemption, and prevent repeat redemption or cross-trip escalation. Add invitation decline/block/report controls to limit unwanted contact. Membership never grants access to another traveler's full personal account.
+
+### Offline collaboration and notifications
+
+- Cache only permitted trip data and render it locally first. Offline edits use the durable outbox, idempotent operations, versions, and material-conflict handling in section 9. Show last-sync and pending-change states; realtime delivery is optional and must not be required for correctness.
+- Recheck current membership on reconnect and reject queued edits after removal or role downgrade. On learning of revoked access, purge affected cached trip content and cancel its scheduled reminders. An offline device may retain previously downloaded data until reconnect; do not promise instant remote erasure or recall of exported copies. Define sensitive-cache retention before implementation.
+- Shared schedule/stay changes and organizer announcements can generate per-member notifications with category controls, quiet hours, deduplication, and safe payloads. Store event instants with IANA timezones, display trip-local context and the member's chosen timezone, and reschedule stale reminders. No booking references or private addresses in push payloads.
+
+### Phased delivery candidates
+
+- **Core Trip Circles capability (steps 1–4 below):** begin with viewer-only private link invitations and safe shared access; then add direct account invitations, role management, and collaborative edits. Each is a separate vertical slice with its own gate. Invitation status works in-app; broader change notices follow in step 5 when notification infrastructure is approved.
+- **Follow-up slices:** assigned family checklists with clear responsibility/completion; organizer announcements and meeting reminders; managed travelers; shared memories and a minimized activity feed; group expenses with equal, selected-traveler, or custom splits. Reuse integer minor units, explicit currencies, and attributed exchange-rate snapshots; do not invent conversion rates or promise payment settlement.
+- **Advanced, separately approved:** time-limited live location sharing, group meeting assistance, and richer realtime collaboration, subject to consent, child privacy, battery, platform, and provider review.
+
+### Step-by-step delivery and acceptance checklist
+
+All items below are **planned and unchecked**. These steps refine section 14C; they do not change milestone order or authorize implementation. Implement one approved vertical slice at a time. Record criterion IDs, test evidence, limitations, and owner acceptance in the milestone log before advancing. Steps 1–4 form the proposed core invitation/shared-trip capability; steps 5–9 are separately approved extensions. Offline and security requirements apply from the first affected slice, not only at the final release gate.
+
+#### Step 0 — Approve scope and contracts
+
+**Outcome:** A small collaboration slice has an agreed place in the roadmap and clear rules before coding.
+
+- [ ] **TC-0.1:** Owner records the target milestone and scope in the milestone log, resolving the M7+ versus pre-beta timing decision. Pricing remains separately decided and does not implicitly gate implementation.
+- [ ] **TC-0.2:** An accepted ADR defines targeted versus share-link invitations, exact expiry/use limits, approval rules, discoverability, lifecycle transitions, role permissions, safe invitation summary fields, and ownership/account-deletion behavior.
+- [ ] **TC-0.3:** Link host and mobile routing are approved; signed-out, app-installed, and app-not-installed paths have explicit behavior. No domain ownership or deferred deep-link support is assumed.
+- [ ] **TC-0.4:** The slice defines sensitive-field visibility, cache retention/revocation, version conflicts, and rollout/migration compatibility against existing trip/member records. Missing registration, sync, or notification prerequisites are identified and scoped explicitly.
+
+**Evidence:** Recorded owner decision, accepted ADR, and reviewed user-flow/permission matrix. Do not add unimplemented endpoints to the committed OpenAPI contract.
+
+#### Step 1 — Invite by private link and join as a viewer
+
+**Depends on:** Step 0. **Outcome:** An organizer can invite one traveler into an existing trip safely, end to end. Viewer-only admission keeps this first slice small.
+
+- [ ] **TC-1.1:** Given an owned trip, the organizer can create, copy, share, inspect status, and revoke a viewer invitation. Nonowners cannot create or revoke invitations, including through direct API requests.
+- [ ] **TC-1.2:** Native sharing can hand the link to Messenger when installed/available; otherwise copy-link remains usable. Cancelling the share sheet changes no membership and is not reported as confirmed delivery.
+- [ ] **TC-1.3:** A signed-out recipient can authenticate through the supported flow and return to the invitation without exposing its token. An app-not-installed recipient sees the approved fallback; no unsupported automatic continuation is promised.
+- [ ] **TC-1.4:** Opening or previewing the link reveals only approved summary fields and grants no trip access. Accepting, plus organizer approval where required, creates one accepted membership; declining grants none. Forwarded links cannot bypass the approved recipient/approval policy.
+- [ ] **TC-1.5:** Expired, revoked, malformed, exhausted, and already-used links show safe actionable states. Concurrent/retried acceptance cannot create duplicate memberships or exceed the approved use limit; existing members retain their role.
+- [ ] **TC-1.6:** After acceptance, the same trip appears in Shared Trips and permitted existing content is readable. Pending/declined users and other-trip members cannot read it; a viewer cannot mutate shared content. Personal documents, notes, booking details, and unshared stay addresses are excluded from responses and caches.
+- [ ] **TC-1.7:** The organizer can remove an accepted member and a nonowner can leave. Subsequent server reads, downloads, and sync requests are denied; reconnection clears affected caches and reminders. Offline devices show freshness honestly, without a promise of immediate remote erasure.
+- [ ] **TC-1.8:** Invite creation/redemption requires server confirmation; offline attempts never appear accepted. Previously authorized cached trip reads survive restart, with last-sync state and account-separated storage. Logging out removes access to that account's private cache.
+- [ ] **TC-1.9:** Tokens are hashed at rest and absent from logs/analytics; creation/redemption limits and decline/block/report controls follow the approved abuse policy. Public link previews expose no dates, itinerary, private addresses, or member identities.
+
+**Evidence:** API lifecycle, authorization, concurrency, redaction, and rate-limit tests; mobile authentication-return, cache/restart, and error-state tests; Android/iOS share and link checks on the supported device matrix. Unverified platform behavior remains a release blocker for that claimed platform.
+
+#### Step 2 — Invite an existing TapItTrip account
+
+**Depends on:** Step 1. **Outcome:** An organizer can invite a specific account without using an external messenger.
+
+- [ ] **TC-2.1:** The organizer can target the approved exact identifier (friend code or opt-in username); the flow does not expose a searchable email directory or unrelated account details.
+- [ ] **TC-2.2:** The intended recipient sees a pending in-app invitation, can accept/decline, and joins the same trip exactly once. Another account cannot redeem a targeted invitation even with its identifier or copied request.
+- [ ] **TC-2.3:** Duplicate sends/retries do not create duplicate pending invitations or repeated notices. Revocation, expiry, blocking, rate limits, and already-member states produce the approved safe response without revealing private account existence.
+- [ ] **TC-2.4:** Invitation inbox loading, empty, failed, and offline states are actionable. Push permission is optional: the inbox works without push delivery. Declined or revoked invitations cannot later grant access.
+
+**Evidence:** Recipient-isolation and lifecycle API tests; inbox widget/integration tests; privacy and abuse scenarios with synthetic accounts.
+
+#### Step 3 — Manage roles and ownership
+
+**Depends on:** Step 2. **Outcome:** Organizers control who can edit and can hand over the trip safely.
+
+- [ ] **TC-3.1:** Only the organizer can grant/revoke Editor access; Editors cannot invite, change roles, remove members, transfer ownership, or delete the trip. Viewer restrictions hold across every affected endpoint and sync operation.
+- [ ] **TC-3.2:** Role changes require online confirmation. Downgrading/removing a member rejects stale queued writes on reconnect without applying them or silently discarding the user's conflict/rejection explanation.
+- [ ] **TC-3.3:** Ownership transfer requires explicit confirmation by the parties specified in the ADR and an accepted eligible recipient. Atomic, retry-safe transfer leaves exactly one owner and applies the documented former-owner role.
+- [ ] **TC-3.4:** The sole owner cannot leave or delete their account in a way that orphans the trip; the approved transfer-or-trip-deletion path is enforced transactionally. Concurrent removal/transfer requests preserve ownership invariants.
+
+**Evidence:** Role matrix, stale authorization, ownership race, and account-deletion API tests; member-management UI tests. Editor access must not be released before Step 4's offline/conflict checks pass.
+
+#### Step 4 — Collaborate on shared plans reliably
+
+**Depends on:** Step 3. **Outcome:** Authorized editors work on one shared trip without losing offline edits.
+
+- [ ] **TC-4.1:** An editor's authorized change appears for another member after refresh/sync without duplicating the trip or itinerary. Realtime infrastructure is not required for this outcome.
+- [ ] **TC-4.2:** An offline edit persists with its outbox operation, survives force-close/restart, and syncs once on reconnect despite retries. The UI distinguishes pending, synced, rejected, and conflicting changes.
+- [ ] **TC-4.3:** Two devices editing the same schedule/order or stay record cannot silently overwrite material changes. The approved conflict flow preserves enough information to resolve them and retries the resolution safely.
+- [ ] **TC-4.4:** Removal/downgrade between download and sync blocks unauthorized edits and removes inaccessible data on reconnect. New permissions never disclose previously private fields implicitly.
+- [ ] **TC-4.5:** One account can switch among at least two shared trips and its own trip without mixing members, records, caches, or outbox operations. All four planning modes and a trip with no itinerary remain usable.
+
+**Evidence:** Two-account/two-device integration scenarios, deterministic conflict tests, offline restart/retry tests, and cross-trip/cache-isolation tests. Steps 1–4 plus the common completion gate define acceptance of the core capability.
+
+#### Step 5 — Announcements and group reminders
+
+**Depends on:** Step 4 and approved notification infrastructure. **Outcome:** Members receive useful, controllable updates.
+
+- [ ] **TC-5.1:** An authorized organizer can post a group announcement; permitted members can read it in-app even if push permission is denied. Changes and retries create no duplicate feed entries or notices.
+- [ ] **TC-5.2:** Each member's category preferences, quiet hours, chosen timezone, and trip-local event context are respected; editing/cancelling an event reschedules/cancels its reminders.
+- [ ] **TC-5.3:** Removed members receive no new authorized delivery after revocation is known; scheduled local reminders are cleared on reconnect. Push payloads contain no booking references, private addresses, documents, or raw invite tokens.
+
+**Evidence:** Deterministic scheduling/deduplication tests and device checks for denied permissions, timezone changes, offline scheduling, and reconnect.
+
+#### Step 6 — Assign family checklists and manage travelers
+
+**Depends on:** Step 4, approved checklist capability, and a managed-traveler privacy decision. **Outcome:** Families can coordinate responsibilities without creating child accounts.
+
+- [ ] **TC-6.1:** An authorized member assigns a task to an eligible member or managed traveler; responsibility and completion are visible only to permitted members. Reassignment/removal leaves no inaccessible or orphaned task owner.
+- [ ] **TC-6.2:** Personal completion actions do not alter group visit status or grant shared editing rights. Offline completion survives restart and resolves simultaneous updates under the approved item-version policy.
+- [ ] **TC-6.3:** Authorized adults can create/edit/delete minimal managed-traveler profiles without a child account or mandatory sensitive details. Other members cannot read restricted fields, manage the profile, or enable location/document sharing on its behalf.
+
+**Evidence:** Assignment/permission matrix, managed-profile lifecycle, and offline task tests. Keep this step split into smaller approved checklist and managed-profile slices if either dependency is unavailable.
+
+#### Step 7 — Record and split group expenses
+
+**Depends on:** Step 4 and an approved budget/currency slice. **Outcome:** Members see accurate shared balances without exposing private spending.
+
+- [ ] **TC-7.1:** Authorized users record a payer and equal, selected-traveler, or custom splits. Integer minor-unit shares sum exactly to the expense total, including rounding; invalid totals and participants are rejected.
+- [ ] **TC-7.2:** Different currencies remain explicit. Conversion uses an attributed dated rate snapshot or shows unavailable; it never invents a rate or silently changes historical balances.
+- [ ] **TC-7.3:** Personal expenses stay private until shared. Retries, offline creation, edits, deletions, and member departure preserve auditable totals under the approved accounting rules; recording balances does not claim money was transferred.
+
+**Evidence:** Split/rounding and currency tests, visibility tests, and offline duplicate/conflict scenarios.
+
+#### Step 8 — Share memories and a safe activity feed
+
+**Depends on:** Step 4 and approved private media/journal infrastructure. **Outcome:** Members share selected memories while personal content stays private.
+
+- [ ] **TC-8.1:** A journal entry/photo is private on creation; the author explicitly selects content and audience before sharing. Unsharing removes server access and cleans permitted caches on reconnect, without promising recall of exported copies.
+- [ ] **TC-8.2:** Shared activity summaries show only permitted changes, actors, and timestamps. They contain no raw private notes, documents, booking references, or tokens; retries do not duplicate events.
+- [ ] **TC-8.3:** Upload interruption/retry creates no duplicate attachment; download URLs expire and require authorization. Removed members cannot obtain new access URLs or read the feed.
+
+**Evidence:** Media authorization/expiry, feed redaction, consent/unsharing, and interrupted-upload tests.
+
+#### Step 9 — Optional temporary location and meeting assistance
+
+**Depends on:** Step 4 and separate platform/provider, consent, retention, and child-privacy approval. **Outcome:** A consenting traveler can share location temporarily with a chosen audience.
+
+- [ ] **TC-9.1:** Sharing is off by default and starts only after explicit per-person consent, audience selection, duration selection, and platform permission. Denying permission leaves normal trip features usable.
+- [ ] **TC-9.2:** Stop, expiry, or member removal ends server-authorized sharing; viewers cannot fetch new positions. Offline/old positions show their timestamp and stale/unavailable state, never a live claim.
+- [ ] **TC-9.3:** Location collection stops under the approved lifecycle rules and retained data is deleted on schedule. Managing a child profile cannot bypass the separately approved consent policy.
+- [ ] **TC-9.4:** Meeting assistance uses verified provider data or an honest maps handoff; no fabricated ETA, route safety, or guaranteed background tracking. Background/terminated-app limitations are verified on supported real devices and disclosed.
+
+**Evidence:** Consent/audience/expiry/retention tests and real-device permission, offline, background, and battery checks before release.
+
+#### Common completion gate — required for every implemented step
+
+- [ ] **TC-G.1:** Applicable acceptance IDs have passing automated evidence; skipped checks are listed as unverified, not passed. Exercise success, validation, unauthenticated, unauthorized, not-found, conflict, rate-limit, and safe unexpected-error responses where relevant.
+- [ ] **TC-G.2:** Relevant Flutter screens cover loading, empty, error, offline, and denied-access states; screen-reader labels, large text, localization, and all applicable trip modes/no-itinerary scenarios pass.
+- [ ] **TC-G.3:** Implemented behavior, OpenAPI/examples, migrations/rollout notes, feature documentation, and milestone log agree. No planned endpoint is represented as implemented.
+- [ ] **TC-G.4:** Applicable Sail formatter/static analysis/tests and Flutter format/analyze/tests pass, with exact commands/results and platform limitations recorded. Privacy checks cover payloads, caches, logs, notifications, and files.
+- [ ] **TC-G.5:** Owner reviews the working slice and accepts its evidence before the next milestone boundary. Any next step outside approved scope receives explicit approval; unchecked extension steps do not block a narrower accepted release.
+
 ## 15. Work process for Codex
 
 - Read `AGENTS.md` and this file before editing.
@@ -394,7 +574,7 @@ Introduce this contract with the first offline-capable write slice, including an
 7. Geofencing permissions and privacy defaults.
 8. Email integration launch scope and provider approval requirements.
 9. Data retention, regional residency and deletion policy.
-10. Whether collaboration and expense splitting ship before public beta.
+10. Trip Circles launch timing: keep Release 2 / M7+ or explicitly approve a narrow pre-beta invitation/shared-trip slice; decide expense-splitting timing separately. Resolve the conversation's proposed no-separate-paid-add-on launch policy alongside monetization. Before implementation, approve invite discovery/privacy, share-link redemption/approval defaults, managed-traveler consent, and ownership handover rules (section 14C).
 11. Monetization & Subscriptions: Free trial duration (store-level ~3 days vs server-managed 2 days), auto-renewing monthly vs 1-month single-trip pass (~₱269), exact premium feature boundaries, and IAP gateway (direct store integration vs RevenueCat). Scheduled for implementation in the final pre-release phase (M6/M7+) so core traveler utility slices in M1–M5 are delivered unblocked.
 
 These decisions are not blockers to M0 unless they affect a concrete implementation step.
