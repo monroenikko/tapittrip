@@ -202,20 +202,24 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
           .addStay(
             name: _nameController.text.trim(),
             stayType: _stayType,
-            address: _addressController.text.trim().isNotEmpty
-                ? _addressController.text.trim()
-                : null,
+            address:
+                _addressController.text.trim().isNotEmpty
+                    ? _addressController.text.trim()
+                    : null,
             checkInAt: _checkInAt,
             checkOutAt: _checkOutAt,
-            phone: _phoneController.text.trim().isNotEmpty
-                ? _phoneController.text.trim()
-                : null,
-            bookingReference: _bookingRefController.text.trim().isNotEmpty
-                ? _bookingRefController.text.trim()
-                : null,
-            notes: _notesController.text.trim().isNotEmpty
-                ? _notesController.text.trim()
-                : null,
+            phone:
+                _phoneController.text.trim().isNotEmpty
+                    ? _phoneController.text.trim()
+                    : null,
+            bookingReference:
+                _bookingRefController.text.trim().isNotEmpty
+                    ? _bookingRefController.text.trim()
+                    : null,
+            notes:
+                _notesController.text.trim().isNotEmpty
+                    ? _notesController.text.trim()
+                    : null,
             luggageProfile: _luggageProfile,
           );
 
@@ -394,20 +398,23 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                           avatar: Icon(
                             type.$3,
                             size: 16,
-                            color: isSelected
-                                ? colorScheme.onPrimary
-                                : colorScheme.onSurfaceVariant,
+                            color:
+                                isSelected
+                                    ? colorScheme.onPrimary
+                                    : colorScheme.onSurfaceVariant,
                           ),
                           label: Text(type.$2),
                           selected: isSelected,
                           selectedColor: colorScheme.primary,
                           labelStyle: TextStyle(
-                            color: isSelected
-                                ? colorScheme.onPrimary
-                                : colorScheme.onSurfaceVariant,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.w500,
+                            color:
+                                isSelected
+                                    ? colorScheme.onPrimary
+                                    : colorScheme.onSurfaceVariant,
+                            fontWeight:
+                                isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
                             fontSize: 12,
                           ),
                           onSelected: (selected) {
@@ -456,9 +463,10 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                                 ? '${_checkInAt!.month}/${_checkInAt!.day}/${_checkInAt!.year}'
                                 : 'Select date',
                             style: TextStyle(
-                              color: _checkInAt != null
-                                  ? colorScheme.onSurface
-                                  : colorScheme.outline,
+                              color:
+                                  _checkInAt != null
+                                      ? colorScheme.onSurface
+                                      : colorScheme.outline,
                             ),
                           ),
                         ),
@@ -485,9 +493,10 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                                 ? '${_checkOutAt!.month}/${_checkOutAt!.day}/${_checkOutAt!.year}'
                                 : 'Select date',
                             style: TextStyle(
-                              color: _checkOutAt != null
-                                  ? colorScheme.onSurface
-                                  : colorScheme.outline,
+                              color:
+                                  _checkOutAt != null
+                                      ? colorScheme.onSurface
+                                      : colorScheme.outline,
                             ),
                           ),
                         ),
@@ -546,22 +555,23 @@ class _AddStayBottomSheetState extends ConsumerState<AddStayBottomSheet> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                    child:
+                        _isLoading
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                            : const Text(
+                              'Save Accommodation',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          )
-                        : const Text(
-                            'Save Accommodation',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
                   ),
                 ),
                 const SizedBox(height: 16),
