@@ -40,3 +40,4 @@
 - Backend tests: `api/tests/Feature/TripTodayTest.php` (4 test cases, 55 suite total) passed.
 - Mobile tests: `client/test/today_test.dart` (12 test cases, 48 suite total) passed.
 - Static analysis & linting: Pint and `flutter analyze` passed with 0 warnings/errors.
+

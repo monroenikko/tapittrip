@@ -30,12 +30,21 @@ class TransportComparisonSheet extends ConsumerStatefulWidget {
 class _TransportComparisonSheetState
     extends ConsumerState<TransportComparisonSheet> {
   late LuggageProfile _currentProfile;
+  String? _selectedOrigin;
+  final TextEditingController _customOriginController = TextEditingController();
+  bool _isEditingCustomOrigin = false;
 
   @override
   void initState() {
     super.initState();
     _currentProfile =
         widget.stay.luggageProfile ?? LuggageProfile.fromPreset('standard');
+  }
+
+  @override
+  void dispose() {
+    _customOriginController.dispose();
+    super.dispose();
   }
 
   Future<void> _launchDirections(String url) async {
@@ -56,6 +65,7 @@ class _TransportComparisonSheetState
       transportComparisonProvider(
         TransportQueryParams(
           stayId: widget.stay.id,
+          origin: _selectedOrigin,
           preset: _currentProfile.preset,
         ),
       ),
@@ -121,6 +131,133 @@ class _TransportComparisonSheetState
                       icon: const Icon(Icons.close_rounded),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // Departure / Arrival Origin Selector
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.flight_land_rounded,
+                          size: 16,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Arrival Origin / Departure Terminal:',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ChoiceChip(
+                            label: const Text('✈️ Airport / Terminal'),
+                            selected:
+                                _selectedOrigin == 'Airport Terminal' &&
+                                !_isEditingCustomOrigin,
+                            onSelected: (selected) {
+                              setState(() {
+                                _isEditingCustomOrigin = false;
+                                _selectedOrigin = selected
+                                    ? 'Airport Terminal'
+                                    : null;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text('🚆 Train Station'),
+                            selected:
+                                _selectedOrigin == 'Central Train Station' &&
+                                !_isEditingCustomOrigin,
+                            onSelected: (selected) {
+                              setState(() {
+                                _isEditingCustomOrigin = false;
+                                _selectedOrigin = selected
+                                    ? 'Central Train Station'
+                                    : null;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ChoiceChip(
+                            label: const Text('✏️ Custom Terminal'),
+                            selected: _isEditingCustomOrigin,
+                            onSelected: (selected) {
+                              setState(() {
+                                _isEditingCustomOrigin = selected;
+                                if (!selected) {
+                                  _selectedOrigin = null;
+                                } else if (_customOriginController.text
+                                    .trim()
+                                    .isNotEmpty) {
+                                  _selectedOrigin = _customOriginController.text
+                                      .trim();
+                                }
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isEditingCustomOrigin) ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _customOriginController,
+                        decoration: InputDecoration(
+                          hintText: 'e.g. Narita Airport Terminal 1, Haneda, Tokyo Station',
+                          isDense: true,
+                          prefixIcon: const Icon(
+                            Icons.place_outlined,
+                            size: 18,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              if (_customOriginController.text
+                                  .trim()
+                                  .isNotEmpty) {
+                                setState(() {
+                                  _selectedOrigin = _customOriginController.text
+                                      .trim();
+                                });
+                              }
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onSubmitted: (val) {
+                          if (val.trim().isNotEmpty) {
+                            setState(() {
+                              _selectedOrigin = val.trim();
+                            });
+                          }
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -270,8 +407,57 @@ class _TransportComparisonSheetState
                                     color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
+                                if (_selectedOrigin == null) ...[
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.info_outline_rounded,
+                                          size: 16,
+                                          color: colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Select an arrival hub above (✈️ Airport or 🚆 Station) to compare routes to ${widget.stay.name}.',
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: colorScheme.primary,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                                 const SizedBox(height: 16),
-                                FilledButton.icon(
+                                if (_selectedOrigin == null) ...[
+                                  FilledButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedOrigin = 'Airport Terminal';
+                                      });
+                                    },
+                                    icon: const Icon(
+                                      Icons.flight_land_rounded,
+                                      size: 18,
+                                    ),
+                                    label: const Text(
+                                      'Compare from Airport / Terminal',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                                OutlinedButton.icon(
                                   onPressed: () => _launchDirections(
                                     result.googleMapsDirectionsUrl,
                                   ),

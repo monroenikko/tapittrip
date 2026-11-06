@@ -19,6 +19,7 @@ final class CompareStayTransportRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'origin' => ['nullable', 'string', 'max:255'],
             'origin_name' => ['nullable', 'string', 'max:255'],
             'origin_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'origin_longitude' => ['nullable', 'numeric', 'between:-180,180'],

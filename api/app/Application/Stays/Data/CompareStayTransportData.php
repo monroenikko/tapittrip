@@ -51,8 +51,11 @@ final readonly class CompareStayTransportData
 
         $stroller = isset($data['stroller']) ? (bool) $data['stroller'] : ($preset === 'heavy');
 
+        $originRaw = $data['origin_name'] ?? $data['origin'] ?? null;
+        $originName = $originRaw !== null && trim((string) $originRaw) !== '' ? trim((string) $originRaw) : null;
+
         return new self(
-            originName: isset($data['origin_name']) ? (string) $data['origin_name'] : null,
+            originName: $originName,
             originLatitude: isset($data['origin_latitude']) && $data['origin_latitude'] !== null ? (float) $data['origin_latitude'] : null,
             originLongitude: isset($data['origin_longitude']) && $data['origin_longitude'] !== null ? (float) $data['origin_longitude'] : null,
             partySize: max(1, (int) ($data['party_size'] ?? 1)),

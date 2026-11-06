@@ -147,7 +147,10 @@ class StayRepository {
     bool? stroller,
   }) async {
     final payload = <String, dynamic>{
-      if (origin != null && origin.isNotEmpty) 'origin': origin,
+      if (origin != null && origin.isNotEmpty) ...{
+        'origin': origin,
+        'origin_name': origin,
+      },
       if (luggagePreset != null) 'luggage_preset': luggagePreset,
       if (partySize != null) 'party_size': partySize,
       if (backpacks != null) 'backpacks': backpacks,
