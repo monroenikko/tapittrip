@@ -998,6 +998,296 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /trips/{trip}/checklists:
+    get:
+      operationId: getTripChecklists
+      summary: List all checklists for a trip
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of checklists with their items.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Checklist"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: createTripChecklist
+      summary: Create a checklist for a trip
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChecklistRequest"
+      responses:
+        "201":
+          description: Checklist created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Checklist"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /trips/{trip}/checklists/apply-template:
+    post:
+      operationId: applyChecklistTemplate
+      summary: Apply a starter packing template to a trip
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyChecklistTemplateRequest"
+      responses:
+        "201":
+          description: Checklist created from template.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Checklist"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /checklists/{checklist}:
+    get:
+      operationId: getChecklist
+      summary: Get details of a checklist
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: checklist
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Checklist details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Checklist"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    delete:
+      operationId: deleteChecklist
+      summary: Delete a checklist and its items
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: checklist
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Checklist deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /checklists/{checklist}/items:
+    post:
+      operationId: createChecklistItem
+      summary: Add an item to a checklist
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: checklist
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChecklistItemRequest"
+      responses:
+        "201":
+          description: Item created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ChecklistItem"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /checklist-items/{item}:
+    patch:
+      operationId: updateChecklistItem
+      summary: Update details of a checklist item
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChecklistItemRequest"
+      responses:
+        "200":
+          description: Item updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ChecklistItem"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    delete:
+      operationId: deleteChecklistItem
+      summary: Delete a checklist item
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Item deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /checklist-items/{item}/toggle:
+    post:
+      operationId: toggleChecklistItem
+      summary: Toggle packed status of a checklist item
+      tags:
+        - Checklists
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Item toggled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ChecklistItem"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2064,6 +2354,181 @@ components:
         local_time:
           type: string
           format: date-time
+
+    Checklist:
+      type: object
+      required:
+        - id
+        - trip_id
+        - title
+        - type
+        - sort_order
+        - total_items_count
+        - packed_items_count
+        - progress_percentage
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        type:
+          type: string
+          enum: [packing, documents, departure, return, custom]
+        description:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+        total_items_count:
+          type: integer
+        packed_items_count:
+          type: integer
+        progress_percentage:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChecklistItem"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChecklistItem:
+      type: object
+      required:
+        - id
+        - checklist_id
+        - trip_id
+        - title
+        - category
+        - is_packed
+        - quantity
+        - sort_order
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        checklist_id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        category:
+          type: string
+          enum: [documents, clothing, electronics, toiletries, health, gear, other]
+        is_packed:
+          type: boolean
+        quantity:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+        packed_at:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateChecklistRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+          enum: [packing, documents, departure, return, custom]
+          default: packing
+        description:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+          default: 0
+
+    ApplyChecklistTemplateRequest:
+      type: object
+      required:
+        - template
+      properties:
+        template:
+          type: string
+          enum:
+            - international_essentials
+            - electronics_gear
+            - clothing_apparel
+            - toiletries_health
+            - all_essentials
+
+    CreateChecklistItemRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        category:
+          type: string
+          enum: [documents, clothing, electronics, toiletries, health, gear, other]
+          default: other
+        quantity:
+          type: integer
+          default: 1
+        notes:
+          type: string
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+          default: 0
+
+    UpdateChecklistItemRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        category:
+          type: string
+          enum: [documents, clothing, electronics, toiletries, health, gear, other]
+        is_packed:
+          type: boolean
+        quantity:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+        photo_url:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+
 
 
 

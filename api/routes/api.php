@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ChecklistController;
+use App\Http\Controllers\Api\V1\ChecklistItemController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ItineraryItemController;
 use App\Http\Controllers\Api\V1\PlaceController;
@@ -47,5 +49,16 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/stays/{stay}', [StayController::class, 'update'])->name('stays.update');
         Route::delete('/stays/{stay}', [StayController::class, 'destroy'])->name('stays.destroy');
         Route::post('/stays/{stay}/transport-options', [StayTransportController::class, 'compare'])->name('stays.transport-options.compare');
+
+        Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');
+        Route::post('/trips/{trip}/checklists', [ChecklistController::class, 'store'])->name('trips.checklists.store');
+        Route::post('/trips/{trip}/checklists/apply-template', [ChecklistController::class, 'applyTemplate'])->name('trips.checklists.apply-template');
+        Route::get('/checklists/{checklist}', [ChecklistController::class, 'show'])->name('checklists.show');
+        Route::delete('/checklists/{checklist}', [ChecklistController::class, 'destroy'])->name('checklists.destroy');
+
+        Route::post('/checklists/{checklist}/items', [ChecklistItemController::class, 'store'])->name('checklists.items.store');
+        Route::patch('/checklist-items/{item}', [ChecklistItemController::class, 'update'])->name('checklist-items.update');
+        Route::post('/checklist-items/{item}/toggle', [ChecklistItemController::class, 'toggle'])->name('checklist-items.toggle');
+        Route::delete('/checklist-items/{item}', [ChecklistItemController::class, 'destroy'])->name('checklist-items.destroy');
     });
 });

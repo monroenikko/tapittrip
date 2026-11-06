@@ -5,7 +5,13 @@ class ItineraryFilterTabs extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onTabSelected,
-    this.tabs = const ['Itinerary', 'Transport', 'Stay', 'Recommendations'],
+    this.tabs = const [
+      'Itinerary',
+      'Transport',
+      'Stay',
+      'Checklists',
+      'Recommendations',
+    ],
   });
 
   final int selectedIndex;

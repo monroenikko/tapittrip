@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Trips\Models;
 
+use App\Domain\Checklists\Models\Checklist;
+use App\Domain\Checklists\Models\ChecklistItem;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
 use App\Domain\Stays\Models\Stay;
@@ -145,6 +147,30 @@ final class Trip extends Model
     {
         return $this->hasMany(Stay::class)
             ->orderBy('check_in_at')
+            ->orderBy('created_at');
+    }
+
+    /**
+     * All checklists created for this trip.
+     *
+     * @return HasMany<Checklist, $this>
+     */
+    public function checklists(): HasMany
+    {
+        return $this->hasMany(Checklist::class)
+            ->orderBy('sort_order')
+            ->orderBy('created_at');
+    }
+
+    /**
+     * All checklist items created for this trip.
+     *
+     * @return HasMany<ChecklistItem, $this>
+     */
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(ChecklistItem::class)
+            ->orderBy('sort_order')
             ->orderBy('created_at');
     }
 }

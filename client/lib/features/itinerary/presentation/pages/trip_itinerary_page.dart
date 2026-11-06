@@ -2,6 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tapittrip/features/checklists/presentation/providers/checklist_provider.dart';
+import 'package:tapittrip/features/checklists/presentation/widgets/add_checklist_item_bottom_sheet.dart';
+import 'package:tapittrip/features/checklists/presentation/widgets/checklist_template_dialog.dart';
+import 'package:tapittrip/features/checklists/presentation/widgets/checklists_view.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/activity_timeline_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart';
@@ -245,6 +249,8 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 else if (_selectedTabIndex == 1)
                   _buildTransportTab(theme, colorScheme, items)
                 else if (_selectedTabIndex == 3)
+                  ChecklistsView(tripId: widget.tripId)
+                else if (_selectedTabIndex == 4)
                   _buildRecommendationsTab(theme, colorScheme)
                 else
                   _buildItineraryTab(theme, colorScheme, items),
@@ -266,16 +272,60 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
             ),
             onPressed: _selectedTabIndex == 2
                 ? () => AddStayBottomSheet.show(context, widget.tripId)
+                : _selectedTabIndex == 3
+                ? _openAddChecklistItem
                 : _openAddActivitySheet,
             icon: const Icon(Icons.add_rounded),
             label: Text(
-              _selectedTabIndex == 2 ? 'Add Accommodation' : 'Add Activity',
+              _selectedTabIndex == 2
+                  ? 'Add Accommodation'
+                  : _selectedTabIndex == 3
+                  ? 'Add Packing Item'
+                  : 'Add Activity',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
         ),
       ),
     );
+  }
+
+  void _openAddChecklistItem() {
+    final checklists =
+        ref.read(checklistListProvider(widget.tripId)).asData?.value ?? [];
+    if (checklists.isEmpty) {
+      ChecklistTemplateDialog.show(
+        context,
+        onSelectTemplate: (templateKey) async {
+          await ref
+              .read(checklistListProvider(widget.tripId).notifier)
+              .applyTemplate(templateKey);
+        },
+      );
+    } else {
+      final activeChecklist = checklists.first;
+      AddChecklistItemBottomSheet.show(
+        context,
+        checklistId: activeChecklist.id,
+        onSubmit:
+            ({
+              required String title,
+              required String category,
+              required int quantity,
+              String? notes,
+            }) async {
+              await ref
+                  .read(checklistListProvider(widget.tripId).notifier)
+                  .addItem(
+                    checklistId: activeChecklist.id,
+                    title: title,
+                    category: category,
+                    quantity: quantity,
+                    notes: notes,
+                  );
+            },
+      );
+    }
   }
 
   Widget _buildStaysTab(ThemeData theme, ColorScheme colorScheme) {

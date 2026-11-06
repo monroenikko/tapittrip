@@ -2,10 +2,53 @@
 
 ## Current milestone
 
-- Milestone: **M3 — Today's Home Dashboard & Live Travel Timeline (with Nearest Transit & Airport Suggestions)**
-- Status: **Completed**
-- Basis: Acceptance gate passed across backend (57/57 PostgreSQL tests) and mobile client (57/57 Flutter tests).
-- Boundary: Milestone M3 complete, including all user-requested forgiving in-place editing, suggestion mechanisms, clean luggage profile defaults, and nearest transit & arrival airport suggestions. Awaiting user approval to proceed to Milestone M4 (Checklists, Packs & Media Organization).
+- Milestone: **M4 — Checklists, Packs & Media Organization**
+- Status: **In Progress (Slice 1 & Slice 2 Completed)**
+- Basis: Acceptance gate passed across backend (62/62 PostgreSQL tests) and mobile client (65/65 Flutter tests).
+- Boundary: M4 Slices 1 & 2 complete: Backend Checklist & Item API, Starter Packing Packs, Mobile Packing UI with Category Filtering, Progress Indicators, Tactile Checkoff, and Offline Cache.
+
+## 2026-11-06 — Milestone M4 (Slices 1 & 2): Checklists, Starter Packs & Offline Packing
+
+### Completed
+
+- **Database Migrations & Schema**:
+  - `checklists`: UUID primary key, `trip_id` FK cascade, `title`, `type` (`packing`, `documents`, `departure`, `return`, `custom`), `description`, `sort_order`, timestamps.
+  - `checklist_items`: UUID primary key, `checklist_id` FK cascade, `trip_id` FK cascade, `title`, `category` (`documents`, `clothing`, `electronics`, `toiletries`, `health`, `gear`, `other`), `is_packed`, `quantity`, `notes`, `photo_url`, `sort_order`, `packed_at`, `version`, timestamps.
+  - Applied on dev (`tapittrip`) and test (`tapittrip_test`) databases with privileged tools container.
+- **Backend Domain & Application Services**:
+  - Models: `Checklist` (with computed accessors `total_items_count`, `packed_items_count`, `progress_percentage`) and `ChecklistItem`.
+  - Added `checklists()` and `checklistItems()` relationships on `Trip`.
+  - Application Services:
+    - `GetTripChecklistsService`
+    - `CreateChecklistService`
+    - `CreateChecklistItemService`
+    - `ToggleChecklistItemService` (updates `is_packed`, `packed_at` timestamp, increments `version`)
+    - `UpdateChecklistItemService`
+    - `DeleteChecklistItemService`
+    - `DeleteChecklistService`
+    - `ApplyChecklistTemplateService` (provides starter packs: `international_essentials`, `electronics_gear`, `clothing_apparel`, `toiletries_health`, and `all_essentials`).
+- **Backend API & Route Registration**:
+  - `ChecklistController` and `ChecklistItemController` under `auth:sanctum`.
+  - Form Requests: `StoreChecklistRequest`, `ApplyChecklistTemplateRequest`, `StoreChecklistItemRequest`, `UpdateChecklistItemRequest`.
+  - Resources: `ChecklistResource`, `ChecklistItemResource`.
+  - Strict tenant authorization via `TripPolicy`.
+  - Updated `docs/api/openapi.yaml` with all checklist operations and schemas.
+- **Mobile Client UI & State Management**:
+  - Models: `Checklist` and `ChecklistItem` with JSON serialization and dynamic progress percentage getters.
+  - Data & Cache: `ChecklistRepository` with offline cache (`cached_checklists_${tripId}`) stored in `FlutterSecureStorage` with automatic fallback.
+  - State: `checklistListProvider(tripId)` family `AsyncNotifier` with optimistic local checkoff and server reconciliation.
+  - UI Components:
+    - `ChecklistsView`: List switcher, progress card, category tabs, and items.
+    - `ChecklistProgressCard`: Overall percentage, progress bar, packed count, and "All packed! 🎉" completion celebration badge.
+    - `ChecklistCategoryTabs`: Horizontal chip selector filtering by category with dynamic item counts.
+    - `ChecklistItemTile`: Tactile checkoff box, strikethrough typography, category icon, quantity badge, and edit/delete actions.
+    - `AddChecklistItemBottomSheet`: Form for item title, category chips, quantity stepper (- / +), and notes.
+    - `ChecklistTemplateDialog`: Starter pack cards with one-tap bootstrap.
+  - Integrated into `TripItineraryPage` as a dedicated **Checklists** filter tab with context-sensitive bottom action button.
+- **Automated Verification**:
+  - Backend: Added `ChecklistTest.php` with 5 tests, 53 assertions. Full suite passes at 62/62 tests (367 assertions).
+  - Mobile: Added `checklist_test.dart` with 8 tests. Full client suite passes at 65/65 tests.
+  - Pint & Flutter Analyze: 0 style or static analysis issues.
 
 ## 2026-11-06 — Nearest Transit Station & Airport Transport Suggestions
 

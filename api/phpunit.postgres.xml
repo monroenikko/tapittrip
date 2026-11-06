@@ -11,6 +11,7 @@
             <file>tests/Feature/StayTest.php</file>
             <file>tests/Feature/StayTransportComparisonTest.php</file>
             <file>tests/Feature/TripTodayTest.php</file>
+            <file>tests/Feature/ChecklistTest.php</file>
         </testsuite>
     </testsuites>
     <php>
