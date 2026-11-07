@@ -22,7 +22,7 @@ final class ApplyChecklistTemplateRequest extends FormRequest
             'template' => [
                 'required',
                 'string',
-                'in:international_essentials,electronics_gear,clothing_apparel,toiletries_health,all_essentials',
+                'in:international_essentials,electronics_gear,clothing_apparel,toiletries_health,all_essentials,departure_day,return_trip',
             ],
         ];
     }

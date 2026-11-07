@@ -69,6 +69,7 @@ class _ChecklistsViewState extends ConsumerState<ChecklistsView> {
             required String category,
             required int quantity,
             String? notes,
+            String? photoUrl,
           }) async {
             await ref
                 .read(checklistListProvider(widget.tripId).notifier)
@@ -78,6 +79,7 @@ class _ChecklistsViewState extends ConsumerState<ChecklistsView> {
                   category: category,
                   quantity: quantity,
                   notes: notes,
+                  photoUrl: photoUrl,
                 );
           },
     );
@@ -94,6 +96,7 @@ class _ChecklistsViewState extends ConsumerState<ChecklistsView> {
             required String category,
             required int quantity,
             String? notes,
+            String? photoUrl,
           }) async {
             await ref
                 .read(checklistListProvider(widget.tripId).notifier)
@@ -103,8 +106,58 @@ class _ChecklistsViewState extends ConsumerState<ChecklistsView> {
                   category: category,
                   quantity: quantity,
                   notes: notes,
+                  photoUrl: photoUrl,
                 );
           },
+    );
+  }
+
+  void _openAttachPhotoDialog(ChecklistItem item) {
+    final photoController = TextEditingController(text: item.photoUrl ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Attach Photo to "${item.title}"'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter a photo or document URL for quick offline preview:',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: photoController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Image / Document URL',
+                hintText: 'https://...',
+                prefixIcon: Icon(Icons.link_rounded),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final url = photoController.text.trim();
+              Navigator.of(ctx).pop();
+              await ref
+                  .read(checklistListProvider(widget.tripId).notifier)
+                  .updateItem(
+                    itemId: item.id,
+                    photoUrl: url.isNotEmpty ? url : null,
+                  );
+            },
+            child: const Text('Save Photo'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -379,6 +432,7 @@ class _ChecklistsViewState extends ConsumerState<ChecklistsView> {
                           .toggleItem(item.id);
                     },
                     onEdit: () => _openEditItemSheet(activeChecklist, item),
+                    onAttachPhoto: () => _openAttachPhotoDialog(item),
                     onDelete: () {
                       ref
                           .read(checklistListProvider(widget.tripId).notifier)

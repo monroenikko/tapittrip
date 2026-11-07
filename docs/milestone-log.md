@@ -3,9 +3,57 @@
 ## Current milestone
 
 - Milestone: **M4 — Checklists, Packs & Media Organization**
-- Status: **In Progress (Slice 1 & Slice 2 Completed)**
-- Basis: Acceptance gate passed across backend (62/62 PostgreSQL tests) and mobile client (65/65 Flutter tests).
-- Boundary: M4 Slices 1 & 2 complete: Backend Checklist & Item API, Starter Packing Packs, Mobile Packing UI with Category Filtering, Progress Indicators, Tactile Checkoff, and Offline Cache.
+- Status: **Completed**
+- Basis: Acceptance gate passed across backend (66/66 PostgreSQL tests, 398 assertions) and mobile client (70/70 Flutter tests).
+- Boundary: Milestone M4 is fully completed across all three slices:
+  - Slice 1: Checklist & Items API, starter packing templates, and tenant-scoped authorization.
+  - Slice 2: Mobile interactive packing lists, dynamic category filtering, optimistic checkoff, progress rings, and offline cache.
+  - Slice 3: Private trip document & media vault, photo attachments for packing items, full-screen photo viewer, and trip-stage checklists (`departure_day` & `return_trip`).
+  Awaiting user approval to proceed to **Milestone M5 — Notifications & Geofencing**.
+
+## 2026-11-07 — Milestone M4 (Slice 3): Trip Document Vault, Item Photos & Trip-Stage Checklists
+
+### Completed
+
+- **Database Migrations & Schema**:
+  - `media_attachments`: UUID primary key, `trip_id` FK cascade, `attachable_type` (`checklist_item`, `stay`, `itinerary_item`, `trip_document`), `attachable_id` UUID, `uploaded_by_id` FK cascade (`users.id`), `original_filename`, `file_path`, `mime_type`, `file_size_bytes`, `title`, `notes`, timestamps.
+  - Applied on dev (`tapittrip`) and test (`tapittrip_test`) PostgreSQL databases with privileged tools container.
+- **Backend Media & Document Architecture**:
+  - Model: `MediaAttachment` with private disk storage, `is_image` and `is_pdf` helpers, formatted size, and authenticated URL.
+  - Wired `mediaAttachments()` relationship on `Trip` and `ChecklistItem`.
+  - Application Services:
+    - `UploadMediaService`: Validates file (max 10MB; allowed mimes: JPEG, PNG, WEBP, HEIC, PDF), stores on private disk under `trips/{trip_id}/`, creates `MediaAttachment`, and synchronizes `photo_url` when attached to a checklist item.
+    - `GetTripMediaService`: Lists trip documents & media with optional `attachable_type` filtering.
+    - `DeleteMediaService`: Deletes physical file from storage disk and cleans up associated checklist item photo references.
+  - Trip-stage checklists in `ApplyChecklistTemplateService`:
+    - `departure_day`: Departure day checklist (flight status check-in, physical passport & visa in hand, luggage weighing/tagging, empty water bottles, home appliances/door locks).
+    - `return_trip`: Return trip checklist (hotel room safe check, key return, souvenir packing, tax-free receipts, repacking liquids, return airport transit).
+- **Backend API & Route Registration**:
+  - `MediaController`:
+    - `GET /api/v1/trips/{trip}/media`
+    - `POST /api/v1/trips/{trip}/media`
+    - `GET /api/v1/trips/{trip}/media/{media}` (private streaming download with membership check)
+    - `DELETE /api/v1/trips/{trip}/media/{media}`
+  - `POST /api/v1/checklist-items/{item}/photo` in `ChecklistItemController`.
+  - Updated `docs/api/openapi.yaml` with all media routes, multipart requests, and schemas.
+- **Mobile Client Media & Photo Attachments**:
+  - Domain Model: `MediaAttachment` with JSON serialization.
+  - `ChecklistRepository`: Added `uploadItemPhoto`, `fetchTripMedia`, and `deleteMedia`.
+  - `ChecklistListNotifier`: Added `uploadItemPhoto` and `tripMediaProvider`.
+  - `ChecklistItemTile`: Displays a neat photo thumbnail when `photoUrl` is set; tapping launches `PhotoViewerDialog`.
+  - `PhotoViewerDialog`: Full-screen interactive viewer with pinch-to-zoom, title, loading progress, and close button.
+  - `AddChecklistItemBottomSheet`: Photo URL / document link field for attaching media directly when creating or editing packing items.
+  - `ChecklistTemplateDialog`: Added Departure Day and Return Trip template cards.
+- **Automated Tests**:
+  - Backend: Added `api/tests/Feature/MediaAttachmentTest.php` (4 tests, 31 assertions). Full suite: 66/66 tests passing (398 assertions).
+  - Mobile: Added `client/test/media_attachment_test.dart` (5 tests). Full suite: 70/70 tests passing.
+  - Pint: 0 issues. Flutter analyze: 0 issues.
+
+### Security and offline considerations
+
+- Files are strictly stored on the `local` private filesystem disk under trip-scoped directories (`storage/app/private/trips/{trip_id}/...`) and never exposed publicly without authentication.
+- File streaming endpoint verifies `TripPolicy` membership; unauthorized users receive `403 Forbidden`.
+- Checklists and attached photo metadata persist in `FlutterSecureStorage` cache for full offline usability.
 
 ## 2026-11-06 — Milestone M4 (Slices 1 & 2): Checklists, Starter Packs & Offline Packing
 

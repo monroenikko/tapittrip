@@ -12,6 +12,7 @@
             <file>tests/Feature/StayTransportComparisonTest.php</file>
             <file>tests/Feature/TripTodayTest.php</file>
             <file>tests/Feature/ChecklistTest.php</file>
+            <file>tests/Feature/MediaAttachmentTest.php</file>
         </testsuite>
     </testsuites>
     <php>

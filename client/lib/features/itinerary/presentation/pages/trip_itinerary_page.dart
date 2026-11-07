@@ -313,6 +313,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
               required String category,
               required int quantity,
               String? notes,
+              String? photoUrl,
             }) async {
               await ref
                   .read(checklistListProvider(widget.tripId).notifier)
@@ -322,6 +323,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                     category: category,
                     quantity: quantity,
                     notes: notes,
+                    photoUrl: photoUrl,
                   );
             },
       );

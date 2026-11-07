@@ -17,6 +17,7 @@ class AddChecklistItemBottomSheet extends StatefulWidget {
     required String category,
     required int quantity,
     String? notes,
+    String? photoUrl,
   })
   onSubmit;
 
@@ -29,6 +30,7 @@ class AddChecklistItemBottomSheet extends StatefulWidget {
       required String category,
       required int quantity,
       String? notes,
+      String? photoUrl,
     })
     onSubmit,
   }) {
@@ -56,6 +58,7 @@ class _AddChecklistItemBottomSheetState
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _notesController;
+  late final TextEditingController _photoUrlController;
 
   late String _selectedCategory;
   late int _quantity;
@@ -80,6 +83,9 @@ class _AddChecklistItemBottomSheetState
     _notesController = TextEditingController(
       text: widget.initialItem?.notes ?? '',
     );
+    _photoUrlController = TextEditingController(
+      text: widget.initialItem?.photoUrl ?? '',
+    );
     _selectedCategory = widget.initialItem?.category ?? 'other';
     _quantity = widget.initialItem?.quantity ?? 1;
   }
@@ -88,6 +94,7 @@ class _AddChecklistItemBottomSheetState
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    _photoUrlController.dispose();
     super.dispose();
   }
 
@@ -103,6 +110,9 @@ class _AddChecklistItemBottomSheetState
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        photoUrl: _photoUrlController.text.trim().isEmpty
+            ? null
+            : _photoUrlController.text.trim(),
       );
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -260,6 +270,20 @@ class _AddChecklistItemBottomSheetState
                     borderRadius: BorderRadius.circular(14),
                   ),
                   prefixIcon: const Icon(Icons.notes_rounded),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Photo URL Field
+              TextFormField(
+                controller: _photoUrlController,
+                decoration: InputDecoration(
+                  labelText: 'Photo or Document URL (optional)',
+                  hintText: 'https://... or sample receipt link',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  prefixIcon: const Icon(Icons.add_photo_alternate_outlined),
                 ),
               ),
               const SizedBox(height: 24),

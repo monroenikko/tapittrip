@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Checklists\Models;
 
+use App\Domain\Media\Models\MediaAttachment;
 use App\Domain\Trips\Models\Trip;
 use Database\Factories\ChecklistItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -72,5 +73,17 @@ final class ChecklistItem extends Model
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class);
+    }
+
+    /**
+     * All media attachments associated with this checklist item.
+     *
+     * @return HasMany<MediaAttachment, $this>
+     */
+    public function mediaAttachments(): HasMany
+    {
+        return $this->hasMany(MediaAttachment::class, 'attachable_id')
+            ->where('attachable_type', 'checklist_item')
+            ->orderBy('created_at', 'desc');
     }
 }

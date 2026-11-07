@@ -4,6 +4,7 @@ import '../../../../core/network/api_client.dart';
 import '../../data/checklist_repository.dart';
 import '../../domain/models/checklist.dart';
 import '../../domain/models/checklist_item.dart';
+import '../../domain/models/media_attachment.dart';
 
 final checklistRepositoryProvider = Provider<ChecklistRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -219,8 +220,9 @@ class ChecklistListNotifier extends AsyncNotifier<List<Checklist>> {
 
     state = AsyncValue.data(
       previous.map((checklist) {
-        final filteredItems =
-            checklist.items.where((i) => i.id != itemId).toList();
+        final filteredItems = checklist.items
+            .where((i) => i.id != itemId)
+            .toList();
         final total = filteredItems.length;
         final packed = filteredItems.where((i) => i.isPacked).length;
         final progress = total > 0 ? ((packed / total) * 100).round() : 0;
@@ -241,10 +243,52 @@ class ChecklistListNotifier extends AsyncNotifier<List<Checklist>> {
       rethrow;
     }
   }
+
+  Future<ChecklistItem> uploadItemPhoto({
+    required String itemId,
+    required String fileName,
+    required List<int> bytes,
+    String? title,
+    String? notes,
+  }) async {
+    final updated = await _repository.uploadItemPhoto(
+      itemId,
+      fileName: fileName,
+      bytes: bytes,
+      title: title,
+      notes: notes,
+    );
+
+    final current = state.asData?.value ?? [];
+    state = AsyncValue.data(
+      current.map((checklist) {
+        final itemIndex = checklist.items.indexWhere((i) => i.id == itemId);
+        if (itemIndex == -1) return checklist;
+
+        final newItems = List<ChecklistItem>.from(checklist.items);
+        newItems[itemIndex] = updated;
+
+        return checklist.copyWith(items: newItems);
+      }).toList(),
+    );
+
+    return updated;
+  }
 }
 
 /// Checklists list provider parameterized by tripId.
 final checklistListProvider =
-    AsyncNotifierProvider.family<ChecklistListNotifier, List<Checklist>, String>(
-      (tripId) => ChecklistListNotifier(tripId),
-    );
+    AsyncNotifierProvider.family<
+      ChecklistListNotifier,
+      List<Checklist>,
+      String
+    >((tripId) => ChecklistListNotifier(tripId));
+
+/// Trip media attachments provider.
+final tripMediaProvider = FutureProvider.family<List<MediaAttachment>, String>((
+  ref,
+  tripId,
+) async {
+  final repository = ref.watch(checklistRepositoryProvider);
+  return repository.fetchTripMedia(tripId);
+});

@@ -81,6 +81,32 @@ final class ApplyChecklistTemplateService
             'description' => 'Comprehensive checklist covering documents, electronics, clothing, toiletries, and health.',
             'items' => [], // Populated dynamically by merging above
         ],
+        'departure_day' => [
+            'title' => 'Departure Day Checklist',
+            'type' => 'departure',
+            'description' => 'Final day checklist before leaving home: keys, appliances, passports, and luggage checks.',
+            'items' => [
+                ['title' => 'Check flight status & online check-in', 'category' => 'documents', 'quantity' => 1],
+                ['title' => 'Physical passport, ID & visa in hand', 'category' => 'documents', 'quantity' => 1],
+                ['title' => 'Luggage weighed & luggage tags attached', 'category' => 'gear', 'quantity' => 1],
+                ['title' => 'Water bottle emptied before airport security', 'category' => 'gear', 'quantity' => 1],
+                ['title' => 'House keys, wallet & phone in personal bag', 'category' => 'documents', 'quantity' => 1],
+                ['title' => 'Turn off home appliances & lock doors/windows', 'category' => 'other', 'quantity' => 1],
+            ],
+        ],
+        'return_trip' => [
+            'title' => 'Return Trip Checklist',
+            'type' => 'return',
+            'description' => 'Hotel room departure checks, souvenir packing, tax-free receipts, and airport return transit.',
+            'items' => [
+                ['title' => 'Check hotel room safe & wardrobe', 'category' => 'other', 'quantity' => 1],
+                ['title' => 'Return room keys & settle hotel bill', 'category' => 'other', 'quantity' => 1],
+                ['title' => 'Souvenirs & tax-free receipts organized', 'category' => 'documents', 'quantity' => 1],
+                ['title' => 'Repack liquids in checked luggage', 'category' => 'gear', 'quantity' => 1],
+                ['title' => 'Passport, return tickets & boarding passes ready', 'category' => 'documents', 'quantity' => 1],
+                ['title' => 'Confirm airport return transit & departure terminal', 'category' => 'other', 'quantity' => 1],
+            ],
+        ],
     ];
 
     /**

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/checklist_item.dart';
+import 'photo_viewer_dialog.dart';
 
 class ChecklistItemTile extends StatelessWidget {
   const ChecklistItemTile({
@@ -9,12 +10,14 @@ class ChecklistItemTile extends StatelessWidget {
     required this.onToggle,
     this.onEdit,
     this.onDelete,
+    this.onAttachPhoto,
   });
 
   final ChecklistItem item;
   final VoidCallback onToggle;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onAttachPhoto;
 
   IconData _categoryIcon(String category) {
     switch (category) {
@@ -161,6 +164,38 @@ class ChecklistItemTile extends StatelessWidget {
                 ),
               ),
 
+              if (item.photoUrl != null && item.photoUrl!.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => PhotoViewerDialog.show(
+                    context,
+                    photoUrl: item.photoUrl!,
+                    title: item.title,
+                  ),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: colorScheme.surfaceContainerHighest,
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.network(
+                      item.photoUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.photo_rounded,
+                        size: 18,
+                        color: Colors.blueGrey,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
               // Context Menu
               PopupMenuButton<String>(
                 icon: Icon(
@@ -174,6 +209,7 @@ class ChecklistItemTile extends StatelessWidget {
                 ),
                 onSelected: (value) {
                   if (value == 'edit') onEdit?.call();
+                  if (value == 'photo') onAttachPhoto?.call();
                   if (value == 'delete') onDelete?.call();
                 },
                 itemBuilder: (ctx) => [
@@ -184,6 +220,16 @@ class ChecklistItemTile extends StatelessWidget {
                         Icon(Icons.edit_outlined, size: 18),
                         SizedBox(width: 8),
                         Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'photo',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add_a_photo_outlined, size: 18),
+                        SizedBox(width: 8),
+                        Text('Attach Photo'),
                       ],
                     ),
                   ),

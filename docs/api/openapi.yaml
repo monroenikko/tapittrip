@@ -1288,6 +1288,218 @@ paths:
         "403":
           description: Forbidden.
 
+  /checklist-items/{item}/photo:
+    post:
+      operationId: uploadChecklistItemPhoto
+      summary: Upload and attach a photo to a checklist item
+      tags:
+        - Checklists
+        - Media
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Photo attached to checklist item.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ChecklistItem"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /trips/{trip}/media:
+    get:
+      operationId: getTripMedia
+      summary: List all media attachments and documents for a trip
+      tags:
+        - Media
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: attachable_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [checklist_item, stay, itinerary_item, trip_document]
+      responses:
+        "200":
+          description: List of media attachments.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MediaAttachment"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: uploadTripMedia
+      summary: Upload a media file or document to a trip
+      tags:
+        - Media
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                attachable_type:
+                  type: string
+                  enum: [checklist_item, stay, itinerary_item, trip_document]
+                attachable_id:
+                  type: string
+                  format: uuid
+                notes:
+                  type: string
+      responses:
+        "201":
+          description: Media uploaded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MediaAttachment"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /trips/{trip}/media/{media}:
+    get:
+      operationId: getMediaAttachment
+      summary: View or download private media file with trip authorization
+      tags:
+        - Media
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: media
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Binary file stream.
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "404":
+          description: Media not found.
+    delete:
+      operationId: deleteMediaAttachment
+      summary: Delete a media attachment
+      tags:
+        - Media
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: media
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Media deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2483,6 +2695,8 @@ components:
             - clothing_apparel
             - toiletries_health
             - all_essentials
+            - departure_day
+            - return_trip
 
     CreateChecklistItemRequest:
       type: object
@@ -2528,6 +2742,67 @@ components:
           nullable: true
         sort_order:
           type: integer
+
+    MediaAttachment:
+      type: object
+      required:
+        - id
+        - trip_id
+        - uploaded_by_id
+        - original_filename
+        - mime_type
+        - file_size_bytes
+        - formatted_size
+        - url
+        - is_image
+        - is_pdf
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        attachable_type:
+          type: string
+          nullable: true
+          enum: [checklist_item, stay, itinerary_item, trip_document]
+        attachable_id:
+          type: string
+          format: uuid
+          nullable: true
+        uploaded_by_id:
+          type: string
+          format: uuid
+        uploaded_by_name:
+          type: string
+          nullable: true
+        original_filename:
+          type: string
+        mime_type:
+          type: string
+        file_size_bytes:
+          type: integer
+        formatted_size:
+          type: string
+        title:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        url:
+          type: string
+        is_image:
+          type: boolean
+        is_pdf:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
 
 

@@ -47,6 +47,22 @@ class ChecklistTemplateDialog extends StatelessWidget {
       'color': Colors.pinkAccent,
       'count': 7,
     },
+    {
+      'key': 'departure_day',
+      'title': 'Departure Day Checklist',
+      'subtitle': 'Pre-flight door checks, passport in hand, luggage weighing & empty water bottles.',
+      'icon': Icons.door_front_door_outlined,
+      'color': Colors.orange,
+      'count': 6,
+    },
+    {
+      'key': 'return_trip',
+      'title': 'Return Trip Checklist',
+      'subtitle': 'Hotel room safe check, key drop-off, souvenirs, liquids repacked & return transit.',
+      'icon': Icons.flight_land_rounded,
+      'color': Colors.indigo,
+      'count': 6,
+    },
   ];
 
   static Future<void> show(

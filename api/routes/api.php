@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\ChecklistController;
 use App\Http\Controllers\Api\V1\ChecklistItemController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ItineraryItemController;
+use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\PlaceController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\StayController;
@@ -60,5 +61,11 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/checklist-items/{item}', [ChecklistItemController::class, 'update'])->name('checklist-items.update');
         Route::post('/checklist-items/{item}/toggle', [ChecklistItemController::class, 'toggle'])->name('checklist-items.toggle');
         Route::delete('/checklist-items/{item}', [ChecklistItemController::class, 'destroy'])->name('checklist-items.destroy');
+        Route::post('/checklist-items/{item}/photo', [ChecklistItemController::class, 'uploadPhoto'])->name('checklist-items.photo.upload');
+
+        Route::get('/trips/{trip}/media', [MediaController::class, 'index'])->name('trips.media.index');
+        Route::post('/trips/{trip}/media', [MediaController::class, 'store'])->name('trips.media.store');
+        Route::get('/trips/{trip}/media/{media}', [MediaController::class, 'show'])->name('trips.media.show');
+        Route::delete('/trips/{trip}/media/{media}', [MediaController::class, 'destroy'])->name('trips.media.destroy');
     });
 });

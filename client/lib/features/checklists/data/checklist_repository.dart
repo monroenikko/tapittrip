@@ -2,12 +2,14 @@
 
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exceptions.dart';
 import '../domain/models/checklist.dart';
 import '../domain/models/checklist_item.dart';
+import '../domain/models/media_attachment.dart';
 
 class ChecklistRepository {
   ChecklistRepository({required this.apiClient, FlutterSecureStorage? storage})
@@ -160,5 +162,52 @@ class ChecklistRepository {
   /// Delete an item from a checklist.
   Future<void> deleteItem(String itemId) async {
     await apiClient.delete('/checklist-items/$itemId');
+  }
+
+  /// Upload and attach a photo to a checklist item.
+  Future<ChecklistItem> uploadItemPhoto(
+    String itemId, {
+    required String fileName,
+    required List<int> bytes,
+    String? title,
+    String? notes,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: fileName),
+      if (title != null) 'title': title,
+      if (notes != null) 'notes': notes,
+    });
+
+    final response = await apiClient.post(
+      '/checklist-items/$itemId/photo',
+      data: formData,
+    );
+
+    return ChecklistItem.fromJson(response as Map<String, dynamic>);
+  }
+
+  /// Fetch all media attachments for a trip.
+  Future<List<MediaAttachment>> fetchTripMedia(
+    String tripId, {
+    String? attachableType,
+  }) async {
+    final response = await apiClient.get(
+      '/trips/$tripId/media',
+      queryParameters: {
+        if (attachableType != null) 'attachable_type': attachableType,
+      },
+    );
+
+    if (response is List) {
+      return response
+          .map((json) => MediaAttachment.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  /// Delete a media attachment.
+  Future<void> deleteMedia(String tripId, String mediaId) async {
+    await apiClient.delete('/trips/$tripId/media/$mediaId');
   }
 }

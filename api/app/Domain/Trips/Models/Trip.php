@@ -8,6 +8,7 @@ use App\Domain\Checklists\Models\Checklist;
 use App\Domain\Checklists\Models\ChecklistItem;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
+use App\Domain\Media\Models\MediaAttachment;
 use App\Domain\Stays\Models\Stay;
 use App\Models\User;
 use Database\Factories\TripFactory;
@@ -172,5 +173,16 @@ final class Trip extends Model
         return $this->hasMany(ChecklistItem::class)
             ->orderBy('sort_order')
             ->orderBy('created_at');
+    }
+
+    /**
+     * All media attachments and uploaded documents for this trip.
+     *
+     * @return HasMany<MediaAttachment, $this>
+     */
+    public function mediaAttachments(): HasMany
+    {
+        return $this->hasMany(MediaAttachment::class)
+            ->orderBy('created_at', 'desc');
     }
 }

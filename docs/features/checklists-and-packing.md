@@ -3,11 +3,11 @@
 - Milestone: `M4`
 - Status: `implemented`
 - Owner: `engineering`
-- Last verified: `2026-11-06`
+- Last verified: `2026-11-07`
 
 ## Purpose and traveler outcome
 
-Travelers often worry about leaving behind vital travel documents, prescription medicine, power adapters, or clothing. Checklists & Packing Management enables travelers to create customized packing lists, bootstrap from pre-built starter packs (International Essentials, Tech Gear, Clothing, Toiletries), and check off items in real-time with instant optimistic feedback, offline caching, and category filtering.
+Travelers often worry about leaving behind vital travel documents, prescription medicine, power adapters, or clothing. Checklists & Packing Management enables travelers to create customized packing lists, bootstrap from pre-built starter packs (International Essentials, Tech Gear, Clothing, Toiletries, Departure Day, Return Trip), attach photo vouchers or documents, and check off items in real-time with instant optimistic feedback, offline caching, and category filtering.
 
 ## How it works
 
@@ -18,21 +18,25 @@ Travelers often worry about leaving behind vital travel documents, prescription 
    - *Electronics & Tech*: 7 items (chargers, power bank, noise-cancelling headphones, cables).
    - *Clothing & Apparel*: 7 items (tops, shorts, walking shoes, rain jacket).
    - *Toiletries & Health*: 7 items (TSA liquids, dental care, sun protection, first aid).
-3. **Item Checkoff**: Tapping any item instantly toggles its packed status with tactile visual feedback (checkbox check, strikethrough typography, progress bar increment).
-4. **Category Filtering**: Horizontal chips filter items by category (All, Documents, Clothing, Electronics, Toiletries, Health, Gear, Other) showing live item counts.
-5. **Adding & Editing**: Travelers can add items with quantity steppers (- / +) and optional notes, edit item details, or delete items.
+   - *Departure Day Checklist*: Pre-flight door checks, passport in hand, luggage weighing/tagging, empty water bottles.
+   - *Return Trip Checklist*: Hotel safe check, key return, tax-free receipts, souvenirs, repacking liquids, return transit.
+3. **Photo Attachments & Document Vault**: Travelers can attach photos or documents to packing items or the trip vault (boarding passes, booking confirmations, luggage receipts). Photos display inline thumbnails and support a full-screen pinch-to-zoom interactive viewer.
+4. **Item Checkoff**: Tapping any item instantly toggles its packed status with tactile visual feedback (checkbox check, strikethrough typography, progress bar increment).
+5. **Category Filtering**: Horizontal chips filter items by category (All, Documents, Clothing, Electronics, Toiletries, Health, Gear, Other) showing live item counts.
+6. **Adding & Editing**: Travelers can add items with quantity steppers (- / +), photo links, and optional notes, edit item details, or delete items.
 
 ## Architecture and data flow
 
 - **Mobile Client**:
-  - `ChecklistRepository`: Loads from and saves to `FlutterSecureStorage` cache (`cached_checklists_${tripId}`), falling back to offline cache on network interruptions.
+  - `ChecklistRepository`: Loads from and saves to `FlutterSecureStorage` cache (`cached_checklists_${tripId}`), falling back to offline cache on network interruptions. Supports multipart photo uploads.
   - `ChecklistListNotifier`: Riverpod `AsyncNotifier` managing state with optimistic updates for instant checkoff and background server reconciliation.
-  - UI: `ChecklistsView`, `ChecklistProgressCard`, `ChecklistCategoryTabs`, `ChecklistItemTile`, `AddChecklistItemBottomSheet`, `ChecklistTemplateDialog`.
+  - UI: `ChecklistsView`, `ChecklistProgressCard`, `ChecklistCategoryTabs`, `ChecklistItemTile`, `AddChecklistItemBottomSheet`, `ChecklistTemplateDialog`, `PhotoViewerDialog`.
 - **Backend API**:
-  - Modular monolith Application Services under `app/Application/Checklists/Services/`:
-    - `GetTripChecklistsService`, `CreateChecklistService`, `ApplyChecklistTemplateService`, `CreateChecklistItemService`, `ToggleChecklistItemService`, `UpdateChecklistItemService`, `DeleteChecklistItemService`, `DeleteChecklistService`.
-  - Eloquent Models: `Checklist` and `ChecklistItem` with UUID primary keys and foreign keys cascading on delete.
-  - Database migrations: `2026_11_06_060000_create_checklists_table.php` and `2026_11_06_060100_create_checklist_items_table.php`.
+  - Modular monolith Application Services under `app/Application/Checklists/Services/` and `app/Application/Media/Services/`:
+    - Checklists: `GetTripChecklistsService`, `CreateChecklistService`, `ApplyChecklistTemplateService`, `CreateChecklistItemService`, `ToggleChecklistItemService`, `UpdateChecklistItemService`, `DeleteChecklistItemService`, `DeleteChecklistService`.
+    - Media Vault: `UploadMediaService`, `GetTripMediaService`, `DeleteMediaService`.
+  - Eloquent Models: `Checklist`, `ChecklistItem`, and `MediaAttachment` with UUID primary keys and foreign keys cascading on delete.
+  - Database migrations: `2026_11_06_060000_create_checklists_table.php`, `2026_11_06_060100_create_checklist_items_table.php`, and `2026_11_07_070000_create_media_attachments_table.php`.
 
 ## API contract
 
@@ -46,6 +50,11 @@ Travelers often worry about leaving behind vital travel documents, prescription 
   - `PATCH /api/v1/checklist-items/{item}` (`updateChecklistItem`)
   - `POST /api/v1/checklist-items/{item}/toggle` (`toggleChecklistItem`)
   - `DELETE /api/v1/checklist-items/{item}` (`deleteChecklistItem`)
+  - `POST /api/v1/checklist-items/{item}/photo` (`uploadChecklistItemPhoto`)
+  - `GET /api/v1/trips/{trip}/media` (`getTripMedia`)
+  - `POST /api/v1/trips/{trip}/media` (`uploadTripMedia`)
+  - `GET /api/v1/trips/{trip}/media/{media}` (`getMediaAttachment`)
+  - `DELETE /api/v1/trips/{trip}/media/{media}` (`deleteMediaAttachment`)
 
 ## Security and privacy
 
@@ -62,3 +71,4 @@ Travelers often worry about leaving behind vital travel documents, prescription 
 
 - **Backend Tests**: `api/tests/Feature/ChecklistTest.php` (5 tests, 53 assertions). Full PostgreSQL suite: 62/62 tests passing.
 - **Mobile Tests**: `client/test/checklist_test.dart` (8 tests). Full Flutter suite: 65/65 tests passing.
+
