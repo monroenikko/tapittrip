@@ -1500,6 +1500,189 @@ paths:
         "403":
           description: Forbidden.
 
+  /devices/register:
+    post:
+      operationId: registerDevice
+      summary: Register or update device push token
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDeviceRequest"
+      responses:
+        "200":
+          description: Device registered successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/UserDevice"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "422":
+          description: Validation error.
+
+  /me/notification-preferences:
+    get:
+      operationId: getNotificationPreferences
+      summary: Get notification preferences for the user
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Notification preferences returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/NotificationPreference"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    put:
+      operationId: updateNotificationPreferences
+      summary: Update notification preferences
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationPreferencesRequest"
+      responses:
+        "200":
+          description: Notification preferences updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/NotificationPreference"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "422":
+          description: Validation error.
+
+  /trips/{trip}/reminders:
+    get:
+      operationId: listTripReminders
+      summary: List scheduled reminders for a trip
+      tags:
+        - Reminders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [scheduled, cancelled, delivered, dismissed]
+      responses:
+        "200":
+          description: List of reminders.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Reminder"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /trips/{trip}/reminders/generate:
+    post:
+      operationId: generateTripReminders
+      summary: Recalculate and generate scheduled trip reminders
+      tags:
+        - Reminders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Active scheduled reminders returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Reminder"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /itinerary-items/{item}/visit-events:
+    post:
+      operationId: recordVisitEvent
+      summary: Record arrival or visited status for an itinerary item
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordVisitEventRequest"
+      responses:
+        "201":
+          description: Visit event recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/VisitEvent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2803,6 +2986,257 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    UserDevice:
+      type: object
+      required:
+        - id
+        - user_id
+        - platform
+        - device_key
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        platform:
+          type: string
+          enum: [ios, android, web]
+        device_key:
+          type: string
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RegisterDeviceRequest:
+      type: object
+      required:
+        - platform
+        - device_key
+      properties:
+        platform:
+          type: string
+          enum: [ios, android, web]
+        device_key:
+          type: string
+        push_token:
+          type: string
+          nullable: true
+
+    NotificationPreference:
+      type: object
+      required:
+        - id
+        - user_id
+        - morning_summary_enabled
+        - morning_summary_time
+        - activity_reminders_enabled
+        - activity_reminder_lead_minutes
+        - checklist_reminders_enabled
+        - stay_reminders_enabled
+        - quiet_hours_enabled
+        - geofence_arrival_enabled
+        - timezone_behavior
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        morning_summary_enabled:
+          type: boolean
+        morning_summary_time:
+          type: string
+          example: "08:00"
+        activity_reminders_enabled:
+          type: boolean
+        activity_reminder_lead_minutes:
+          type: integer
+          example: 30
+        checklist_reminders_enabled:
+          type: boolean
+        stay_reminders_enabled:
+          type: boolean
+        quiet_hours_enabled:
+          type: boolean
+        quiet_hours_start:
+          type: string
+          nullable: true
+          example: "22:00"
+        quiet_hours_end:
+          type: string
+          nullable: true
+          example: "07:00"
+        geofence_arrival_enabled:
+          type: boolean
+        timezone_behavior:
+          type: string
+          enum: [destination, home, device]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UpdateNotificationPreferencesRequest:
+      type: object
+      properties:
+        morning_summary_enabled:
+          type: boolean
+        morning_summary_time:
+          type: string
+          example: "08:00"
+        activity_reminders_enabled:
+          type: boolean
+        activity_reminder_lead_minutes:
+          type: integer
+          example: 30
+        checklist_reminders_enabled:
+          type: boolean
+        stay_reminders_enabled:
+          type: boolean
+        quiet_hours_enabled:
+          type: boolean
+        quiet_hours_start:
+          type: string
+          nullable: true
+          example: "22:00"
+        quiet_hours_end:
+          type: string
+          nullable: true
+          example: "07:00"
+        geofence_arrival_enabled:
+          type: boolean
+        timezone_behavior:
+          type: string
+          enum: [destination, home, device]
+
+    Reminder:
+      type: object
+      required:
+        - id
+        - trip_id
+        - type
+        - title
+        - body
+        - trigger_at_utc
+        - timezone
+        - delivery_channel
+        - status
+        - dedupe_key
+        - source_version
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        itinerary_item_id:
+          type: string
+          format: uuid
+          nullable: true
+        checklist_id:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+          enum: [morning_summary, activity_reminder, departure_checklist, stay_checkin, stay_checkout, custom]
+        title:
+          type: string
+        body:
+          type: string
+        trigger_at_utc:
+          type: string
+          format: date-time
+        timezone:
+          type: string
+        delivery_channel:
+          type: string
+          enum: [local, push, both]
+        status:
+          type: string
+          enum: [scheduled, cancelled, delivered, dismissed]
+        dedupe_key:
+          type: string
+        source_version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    VisitEvent:
+      type: object
+      required:
+        - id
+        - itinerary_item_id
+        - user_id
+        - event_type
+        - method
+        - detected_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        itinerary_item_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum: [suggested, confirmed, revoked]
+        method:
+          type: string
+          enum: [manual, geofence]
+        detected_at:
+          type: string
+          format: date-time
+        accuracy_m:
+          type: number
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RecordVisitEventRequest:
+      type: object
+      required:
+        - event_type
+      properties:
+        event_type:
+          type: string
+          enum: [suggested, confirmed, revoked]
+        method:
+          type: string
+          enum: [manual, geofence]
+          default: manual
+        accuracy_m:
+          type: number
+          nullable: true
+        detected_at:
+          type: string
+          format: date-time
+          nullable: true
 
 
 

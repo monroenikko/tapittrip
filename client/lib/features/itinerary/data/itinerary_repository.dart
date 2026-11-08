@@ -9,6 +9,7 @@ import '../../../core/network/api_exceptions.dart';
 import '../domain/models/itinerary_item.dart';
 import '../domain/models/place.dart';
 import '../domain/models/trip_day.dart';
+import '../domain/models/visit_event.dart';
 
 class ItineraryRepository {
   ItineraryRepository({required this.apiClient, FlutterSecureStorage? storage})
@@ -226,5 +227,24 @@ class ItineraryRepository {
           .toList();
     }
     return [];
+  }
+
+  /// Record a visit event for an itinerary item (suggested, confirmed, revoked).
+  Future<VisitEvent> recordVisitEvent(
+    String itemId, {
+    required String eventType,
+    String method = 'manual',
+    double? accuracyM,
+  }) async {
+    final response = await apiClient.post(
+      '/itinerary-items/$itemId/visit-events',
+      data: {
+        'event_type': eventType,
+        'method': method,
+        if (accuracyM != null) 'accuracy_m': accuracyM,
+      },
+    );
+
+    return VisitEvent.fromJson(response as Map<String, dynamic>);
   }
 }

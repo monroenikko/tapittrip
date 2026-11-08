@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Itinerary\Models;
 
+use App\Domain\Notifications\Models\Reminder;
 use App\Domain\Stays\Models\Stay;
 use App\Domain\Trips\Models\Trip;
 use Database\Factories\ItineraryItemFactory;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -95,5 +97,26 @@ final class ItineraryItem extends Model
     public function stay(): BelongsTo
     {
         return $this->belongsTo(Stay::class);
+    }
+
+    /**
+     * All reminders attached to this itinerary item.
+     *
+     * @return HasMany<Reminder, $this>
+     */
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(Reminder::class);
+    }
+
+    /**
+     * All visit events (suggested, confirmed, revoked) recorded for this item.
+     *
+     * @return HasMany<VisitEvent, $this>
+     */
+    public function visitEvents(): HasMany
+    {
+        return $this->hasMany(VisitEvent::class)
+            ->orderBy('detected_at', 'desc');
     }
 }

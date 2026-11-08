@@ -9,6 +9,7 @@ use App\Domain\Checklists\Models\ChecklistItem;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
 use App\Domain\Media\Models\MediaAttachment;
+use App\Domain\Notifications\Models\Reminder;
 use App\Domain\Stays\Models\Stay;
 use App\Models\User;
 use Database\Factories\TripFactory;
@@ -184,5 +185,16 @@ final class Trip extends Model
     {
         return $this->hasMany(MediaAttachment::class)
             ->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * All scheduled or recorded reminders for this trip.
+     *
+     * @return HasMany<Reminder, $this>
+     */
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(Reminder::class)
+            ->orderBy('trigger_at_utc');
     }
 }

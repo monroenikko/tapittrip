@@ -3,16 +3,20 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChecklistController;
 use App\Http\Controllers\Api\V1\ChecklistItemController;
+use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ItineraryItemController;
 use App\Http\Controllers\Api\V1\MediaController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\PlaceController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\ReminderController;
 use App\Http\Controllers\Api\V1\StayController;
 use App\Http\Controllers\Api\V1\StayTransportController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
 use App\Http\Controllers\Api\V1\TripTodayController;
+use App\Http\Controllers\Api\V1\VisitEventController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -67,5 +71,14 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/trips/{trip}/media', [MediaController::class, 'store'])->name('trips.media.store');
         Route::get('/trips/{trip}/media/{media}', [MediaController::class, 'show'])->name('trips.media.show');
         Route::delete('/trips/{trip}/media/{media}', [MediaController::class, 'destroy'])->name('trips.media.destroy');
+
+        Route::post('/devices/register', [DeviceController::class, 'register'])->name('devices.register');
+        Route::get('/me/notification-preferences', [NotificationPreferenceController::class, 'show'])->name('me.notification-preferences.show');
+        Route::put('/me/notification-preferences', [NotificationPreferenceController::class, 'update'])->name('me.notification-preferences.update');
+
+        Route::get('/trips/{trip}/reminders', [ReminderController::class, 'index'])->name('trips.reminders.index');
+        Route::post('/trips/{trip}/reminders/generate', [ReminderController::class, 'generate'])->name('trips.reminders.generate');
+
+        Route::post('/itinerary-items/{item}/visit-events', [VisitEventController::class, 'store'])->name('itinerary-items.visit-events.store');
     });
 });

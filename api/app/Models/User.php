@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Domain\Notifications\Models\NotificationPreference;
+use App\Domain\Notifications\Models\UserDevice;
 use App\Domain\Trips\Models\Trip;
 use App\Domain\Trips\Models\TripMember;
 use Database\Factories\UserFactory;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -54,6 +57,26 @@ class User extends Authenticatable
         return $this->belongsToMany(Trip::class, 'trip_members')
             ->withPivot(['role', 'invitation_status'])
             ->withTimestamps();
+    }
+
+    /**
+     * All registered devices for this user.
+     *
+     * @return HasMany<UserDevice, $this>
+     */
+    public function devices(): HasMany
+    {
+        return $this->hasMany(UserDevice::class);
+    }
+
+    /**
+     * Notification preferences for this user.
+     *
+     * @return HasOne<NotificationPreference, $this>
+     */
+    public function notificationPreference(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class);
     }
 
     /**

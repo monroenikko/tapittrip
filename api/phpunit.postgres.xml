@@ -13,6 +13,8 @@
             <file>tests/Feature/TripTodayTest.php</file>
             <file>tests/Feature/ChecklistTest.php</file>
             <file>tests/Feature/MediaAttachmentTest.php</file>
+            <file>tests/Feature/NotificationTest.php</file>
+            <file>tests/Feature/VisitEventTest.php</file>
         </testsuite>
     </testsuites>
     <php>

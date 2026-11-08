@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:tapittrip/features/checklists/presentation/providers/checklist_provider.dart';
 import 'package:tapittrip/features/checklists/presentation/widgets/add_checklist_item_bottom_sheet.dart';
@@ -105,6 +106,11 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 setState(() => _isReordering = !_isReordering);
               },
             ),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'Notification preferences',
+            onPressed: () => context.push('/notifications/preferences'),
+          ),
           IconButton(
             icon: const Icon(Icons.bookmark_border_rounded),
             tooltip: 'Save itinerary',

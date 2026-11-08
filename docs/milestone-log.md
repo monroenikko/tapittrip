@@ -2,14 +2,63 @@
 
 ## Current milestone
 
-- Milestone: **M4 — Checklists, Packs & Media Organization**
+- Milestone: **M5 — Notifications & Geofencing**
 - Status: **Completed**
-- Basis: Acceptance gate passed across backend (66/66 PostgreSQL tests, 398 assertions) and mobile client (70/70 Flutter tests).
-- Boundary: Milestone M4 is fully completed across all three slices:
-  - Slice 1: Checklist & Items API, starter packing templates, and tenant-scoped authorization.
-  - Slice 2: Mobile interactive packing lists, dynamic category filtering, optimistic checkoff, progress rings, and offline cache.
-  - Slice 3: Private trip document & media vault, photo attachments for packing items, full-screen photo viewer, and trip-stage checklists (`departure_day` & `return_trip`).
-  Awaiting user approval to proceed to **Milestone M5 — Notifications & Geofencing**.
+- Basis: Acceptance gate passed across backend (76/76 PostgreSQL tests, 446 assertions) and mobile client (83/83 Flutter tests).
+- Boundary: Milestone M5 is fully completed across all three vertical slices:
+  - Slice 1: Backend Notification Engine, Reminders, Quiet Hours, Deduplication & Device Management.
+  - Slice 2: Mobile Offline Notification Engine, Secure Storage Caching & Notification Settings UI.
+  - Slice 3: Geofencing Proximity Detection, Arrival Suggestion Proof & Visited Status Confirmation.
+  Awaiting user approval to proceed to **Milestone M6 — Sync Hardening & MVP Beta**.
+
+## 2026-11-08 — Milestone M5: Notifications, Reminders & Geofenced Arrival Suggestions
+
+### Completed
+
+- **Database Migrations & Schema**:
+  - `user_devices`: UUID primary key, `user_id` FK cascade (`users.id`), `platform` (`ios`, `android`, `web`), `device_key`, `push_token`, `last_seen_at`, timestamps. Unique on `(user_id, device_key)`.
+  - `notification_preferences`: UUID primary key, `user_id` FK cascade (unique), `morning_summary_enabled`, `morning_summary_time` (`08:00`), `activity_reminders_enabled`, `activity_reminder_lead_minutes` (`30`), `checklist_reminders_enabled`, `stay_reminders_enabled`, `quiet_hours_enabled`, `quiet_hours_start` (`22:00`), `quiet_hours_end` (`07:00`), `geofence_arrival_enabled`, `timezone_behavior` (`destination`), timestamps.
+  - `reminders`: UUID primary key, `trip_id` FK cascade, `itinerary_item_id` FK cascade nullable, `checklist_id` FK cascade nullable, `type` (`morning_summary`, `activity_reminder`, `departure_checklist`, `stay_checkin`, `stay_checkout`, `custom`), `title`, `body`, `trigger_at_utc`, `timezone`, `delivery_channel` (`local`, `push`), `status` (`scheduled`, `cancelled`, `delivered`, `dismissed`), `dedupe_key` (indexed, unique per trip), `source_version`, timestamps.
+  - `visit_events`: UUID primary key, `itinerary_item_id` FK cascade, `user_id` FK cascade, `event_type` (`suggested`, `confirmed`, `revoked`), `method` (`manual`, `geofence`), `detected_at`, `accuracy_m`, timestamps.
+  - Applied on dev (`tapittrip`) and test (`tapittrip_test`) PostgreSQL databases with privileged tools container.
+- **Backend Application Services & Domain Architecture**:
+  - Domain models: `UserDevice`, `NotificationPreference`, `Reminder`, `VisitEvent`.
+  - Wired relationships: `devices()` and `notificationPreference()` on `User`; `reminders()` on `Trip`; `reminders()` and `visitEvents()` on `ItineraryItem`.
+  - Application Services:
+    - `RegisterDeviceService`: Upserts device push tokens and updates `last_seen_at`.
+    - `GetNotificationPreferencesService` & `UpdateNotificationPreferencesService`: Manages traveler notification preferences and quiet hours.
+    - `GetTripRemindersService`: Fetches active trip reminders.
+    - `ScheduleTripRemindersService`: Calculates upcoming reminders for morning summaries, planned activities (with configurable lead time), stay check-in/out deadlines, and departure packing lists; enforces quiet hours; uses deterministic `dedupe_key` hashing (`{trip_id}:{type}:{target_id}:{trigger_utc}`) to prevent duplicates; automatically marks outdated reminders `cancelled` when activities/stays are rescheduled.
+    - `RecordVisitEventService`: Records geofence arrival detection or manual check-in; transitions `itinerary_item.status` to `visited` on confirmation or back to `planned` on revocation.
+- **Backend API & Route Registration**:
+  - `DeviceController`: `POST /api/v1/devices/register`
+  - `NotificationPreferenceController`: `GET /api/v1/me/notification-preferences` and `PUT /api/v1/me/notification-preferences`
+  - `ReminderController`: `GET /api/v1/trips/{trip}/reminders` and `POST /api/v1/trips/{trip}/reminders/generate`
+  - `VisitEventController`: `POST /api/v1/itinerary-items/{item}/visit-events`
+  - Centralized JSON responses and strict `TripPolicy` authorization.
+  - Updated `docs/api/openapi.yaml` with all new reminder, preference, and visit-event paths and schemas.
+- **Mobile Client Architecture & UI**:
+  - Models: `NotificationPreference`, `TripReminder`, `VisitEvent` with JSON serialization.
+  - `NotificationRepository`: Secure local storage caching (`cached_notification_preferences`, `cached_reminders_$tripId`) with automatic offline fallback.
+  - `LocalNotificationService`: Offline scheduling engine with quiet hours verification (overnight and same-day) and secure offline persistence (`scheduled_local_notifications_$tripId`).
+  - `GeofenceService`: Haversine proximity detection (250m radius) against upcoming itinerary stops.
+  - `NotificationPreferencesPage`: Full preferences management screen (morning summary time picker, departure alert lead-time chips, quiet hours time pickers, checklist/stay alerts, arrival suggestions switch).
+  - `NotificationPermissionBanner`: Non-blocking informative banner shown when notification permissions are disabled.
+  - `ArrivalSuggestionDialog`: Interactive arrival prompt with place name, address, and estimated distance; confirms arrival via one-tap "Mark Visited" without silently modifying visited state.
+  - Registered `/notifications/preferences` route and quick-action icon in `TripItineraryPage`.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `NotificationTest.php` (6 tests) and `VisitEventTest.php` (4 tests). Full suite passes: 76/76 tests, 446 assertions.
+  - Backend Pint: Passed with 0 style issues.
+  - Mobile Flutter Tests: Added `notification_test.dart` (7 tests) and `geofence_test.dart` (6 tests). Full suite passes: 83/83 tests.
+  - Mobile Flutter Analyzer: 0 issues.
+  - Feature document created: `docs/features/notifications-and-geofencing.md`.
+
+### Security and offline considerations
+
+- In strict compliance with `AGENTS.md`, arrival detection **never** silently marks activities as visited; travelers are prompted to confirm arrival explicitly.
+- Local notification schedules and user preferences persist in encrypted `FlutterSecureStorage` so offline travel experiences remain functional during flights or disconnected periods.
+- Quiet hours suppression prevents untimely disruption to travelers.
+- All endpoints enforce trip membership authorization via `TripPolicy`. Sensitive details (booking references, room keys) are never exposed in push notification payloads.
 
 ## 2026-11-07 — Milestone M4 (Slice 3): Trip Document Vault, Item Photos & Trip-Stage Checklists
 
