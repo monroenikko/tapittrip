@@ -16,6 +16,7 @@
             <file>tests/Feature/NotificationTest.php</file>
             <file>tests/Feature/VisitEventTest.php</file>
             <file>tests/Feature/SyncTest.php</file>
+            <file>tests/Feature/AirportLoungeTest.php</file>
         </testsuite>
     </testsuites>
     <php>

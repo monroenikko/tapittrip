@@ -1760,6 +1760,89 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthenticated"
 
+  /airports/{iata}/lounges:
+    get:
+      operationId: searchAirportLounges
+      summary: Search and filter lounges for an airport by IATA code
+      tags:
+        - Lounges
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: iata
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: terminal
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: is_airside
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: access_methods
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        "200":
+          description: Airport and filtered lounges.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      airport:
+                        $ref: "#/components/schemas/Airport"
+                      lounges:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AirportLounge"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          description: Airport not found.
+
+  /lounges/{lounge}:
+    get:
+      operationId: getAirportLounge
+      summary: Get details of an airport lounge
+      tags:
+        - Lounges
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lounge
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Detailed lounge information.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AirportLounge"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          description: Lounge not found.
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3436,6 +3519,119 @@ components:
         created_at:
           type: string
           format: date-time
+
+    Airport:
+      type: object
+      required:
+        - id
+        - iata_code
+        - name
+        - city
+        - country
+      properties:
+        id:
+          type: string
+          format: uuid
+        iata_code:
+          type: string
+          example: MNL
+        name:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        timezone:
+          type: string
+        terminals:
+          type: array
+          items:
+            $ref: "#/components/schemas/AirportTerminal"
+
+    AirportTerminal:
+      type: object
+      required:
+        - id
+        - airport_id
+        - name
+        - code
+      properties:
+        id:
+          type: string
+          format: uuid
+        airport_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+          example: T3
+
+    AirportLounge:
+      type: object
+      required:
+        - id
+        - airport_id
+        - terminal_id
+        - name
+        - operator
+        - location_description
+        - is_airside
+      properties:
+        id:
+          type: string
+          format: uuid
+        airport_id:
+          type: string
+          format: uuid
+        terminal_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        operator:
+          type: string
+        location_description:
+          type: string
+        is_airside:
+          type: boolean
+        opening_hours:
+          type: object
+          nullable: true
+        amenities:
+          type: array
+          items:
+            type: string
+          nullable: true
+        access_methods:
+          type: array
+          items:
+            type: string
+          nullable: true
+        estimated_price:
+          type: object
+          nullable: true
+        booking_url:
+          type: string
+          nullable: true
+        transit_warning:
+          type: string
+          nullable: true
+        disclaimer:
+          type: string
+          nullable: true
+        terminal:
+          $ref: "#/components/schemas/AirportTerminal"
+        airport:
+          $ref: "#/components/schemas/Airport"
+
 
 
 

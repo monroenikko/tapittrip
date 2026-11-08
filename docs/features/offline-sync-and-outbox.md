@@ -83,3 +83,4 @@ Documented in `docs/api/openapi.yaml`:
 - **Test Results**:
   - Backend: 81/81 passed (484 assertions), Pint 0 issues.
   - Mobile: 94/94 passed, `flutter analyze` 0 issues, `dart format` clean.
+

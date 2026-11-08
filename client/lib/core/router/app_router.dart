@@ -7,6 +7,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/itinerary/presentation/pages/trip_itinerary_page.dart';
+import '../../features/lounges/presentation/pages/airport_lounge_finder_page.dart';
 import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
 import '../../features/today/presentation/pages/today_dashboard_page.dart';
 import '../../features/trips/domain/models/trip.dart';
@@ -52,6 +53,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications/preferences',
         builder: (context, state) => const NotificationPreferencesPage(),
+      ),
+      GoRoute(
+        path: '/lounges',
+        builder: (context, state) {
+          final iata = state.uri.queryParameters['iata'];
+          final terminal = state.uri.queryParameters['terminal'];
+          return AirportLoungeFinderPage(
+            initialIata: iata,
+            initialTerminal: terminal,
+          );
+        },
       ),
       GoRoute(
         path: '/trips',

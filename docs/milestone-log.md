@@ -2,14 +2,58 @@
 
 ## Current milestone
 
-- Milestone: **M6 — Sync Hardening & MVP Beta Packaging**
-- Status: **Completed**
-- Basis: Acceptance gate passed across backend (81/81 PostgreSQL tests, 484 assertions) and mobile client (94/94 Flutter tests).
-- Boundary: Milestone M6 is fully completed across all three vertical slices:
-  - Slice 1: Backend Monotonic Sync Engine (`/sync/push` & `/sync/pull`), Idempotency & Conflict Detection.
-  - Slice 2: Mobile Durable Outbox, Sync Queue & Bidirectional Reconciler (`OutboxStorage`, `SyncService`).
-  - Slice 3: Offline Conflict UI, Multi-Device Concurrency & MVP Beta Packaging (`SyncStatusIndicator`, `ConflictResolutionDialog`).
-  All core MVP milestones (M0 through M6) are complete and verified. Ready for beta release / M7+ planning.
+- Milestone: **M7 — Smart Airport Experience & AI Travel Assistant**
+- Status: **In Progress (Slice 1 Completed)**
+- Basis: Slice 1 acceptance gate passed across backend (86/86 PostgreSQL tests, 502 assertions) and mobile client (100/100 Flutter tests).
+- Boundary:
+  - Slice 1: Smart Airport Lounge Finder (Directory, Terminal Filtering & Amenities) — **Completed**.
+  - Slice 2: AI Smart Itinerary Planner & Neighborhood Route Clustering — **Next**.
+  - Slice 3: "Ask TapItTrip" Contextual In-Trip Assistant — **Pending**.
+
+## 2026-11-08 — Milestone M7 (Slice 1): Smart Airport Lounge Finder
+
+### Completed
+
+- **Database Migrations & Schema**:
+  - `airports`: UUID primary key, `iata_code` (unique char 3), `name`, `city`, `country`, `latitude`, `longitude`, `timezone`, timestamps.
+  - `airport_terminals`: UUID primary key, `airport_id` FK cascade (`airports.id`), `name` (e.g. "Terminal 3"), `code` (e.g. "T3"), timestamps. Unique on `[airport_id, code]`.
+  - `airport_lounges`: UUID primary key, `airport_id` FK cascade, `terminal_id` FK cascade, `name`, `operator`, `location_description`, `is_airside` boolean, `opening_hours` jsonb, `amenities` jsonb array (`buffet`, `bar`, `showers`, `wifi`, `power_outlets`, `quiet_area`, `family_room`), `access_methods` jsonb array (`priority_pass`, `dragon_pass`, `lounge_key`, `star_alliance_gold`, `business_class`, `paid_walkin`), `estimated_price` jsonb nullable, `booking_url` string nullable, `transit_warning` text nullable, `disclaimer` text nullable, timestamps. Indexed on `[airport_id, terminal_id]` and `[airport_id, is_airside]`.
+  - Applied on dev (`tapittrip`) and test (`tapittrip_test`) PostgreSQL databases with privileged tools container.
+  - Seeder: `AirportLoungeSeeder` populated verified lounge directories for key hubs (MNL T3 & T1, NRT T1).
+- **Backend Application Services & Domain Architecture**:
+  - Domain models: `Airport`, `AirportTerminal`, `AirportLounge`.
+  - Factories: `AirportFactory`, `AirportTerminalFactory`, `AirportLoungeFactory`.
+  - Application Services:
+    - `SearchAirportLoungesService`: Searches lounges by airport IATA code with case-insensitive normalization, terminal filtering, airside status, and access method matching.
+    - `GetAirportLoungeDetailsService`: Retrieves detailed lounge record with terminal and airport relationships.
+- **Backend API & Route Registration**:
+  - `AirportLoungeController`:
+    - `GET /api/v1/airports/{iata}/lounges`: Search airport lounges with terminal/airside query parameters.
+    - `GET /api/v1/lounges/{lounge}`: Retrieve detailed lounge data.
+  - Form request: `SearchAirportLoungesRequest`.
+  - API Resources: `AirportResource`, `AirportTerminalResource`, `AirportLoungeResource`.
+  - Updated `docs/api/openapi.yaml` with lounge endpoints and schemas.
+- **Mobile Client Lounge Finder & In-Flight Caching**:
+  - Models: `Airport`, `AirportTerminal`, `AirportLounge` with JSON serialization.
+  - `LoungeRepository`: Secure local storage caching (`cached_lounges_{iata}`) with automatic offline fallback when roaming or in-flight without connection.
+  - Providers: `airportLoungesProvider`, `selectedAirportIataProvider`, `selectedTerminalFilterProvider`, `selectedAirsideFilterProvider`.
+  - `LoungeCard`: Compact card showing terminal badge, airside pill, walking directions, and amenities preview.
+  - `LoungeDetailSheet`: Interactive modal sheet detailing location, full amenities, entry programs, walk-in pricing, official booking links, transit warnings, and boarding gate reminder notices.
+  - `AirportLoungeFinderPage`: Hub search with popular airport chips, terminal filter chips, and airside toggle.
+  - Dashboard Integration: Added "Airport Lounge Finder" launcher card to `TodayDashboardPage` and registered `/lounges` in `AppRouter`.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `AirportLoungeTest.php` (5 tests, 18 assertions). Full suite passes: 86/86 tests, 502 assertions.
+  - Backend Pint: Passed with 0 style issues.
+  - Mobile Flutter Tests: Added `airport_lounge_test.dart` (6 tests). Full suite passes: 100/100 tests.
+  - Mobile Flutter Analyzer: 0 issues.
+  - Mobile Dart Formatter: 100% formatted.
+  - Feature document created: `docs/features/airport-lounge-finder.md`.
+
+### Security and offline considerations
+
+- Airport lounge directory data is cached securely in `FlutterSecureStorage` so travelers can view accessible lounges and terminal walking directions while offline or in airplane mode.
+- Access restrictions, airside/landside zones, and inter-terminal security re-clearance warnings are prominently highlighted to prevent travelers from becoming stranded across terminals.
+- All endpoints enforce authenticated requests via Sanctum.
 
 ## 2026-11-08 — Milestone M6: Sync Hardening, Durable Outbox & MVP Beta Packaging
 
