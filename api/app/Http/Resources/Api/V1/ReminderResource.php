@@ -39,3 +39,4 @@ final class ReminderResource extends JsonResource
         ];
     }
 }
+

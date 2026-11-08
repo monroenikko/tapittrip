@@ -46,3 +46,4 @@ final class ReminderController extends Controller
         return ReminderResource::collection($reminders);
     }
 }
+

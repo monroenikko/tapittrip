@@ -33,3 +33,4 @@ final class UpdateNotificationPreferencesRequest extends FormRequest
         ];
     }
 }
+

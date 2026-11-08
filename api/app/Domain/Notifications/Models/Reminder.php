@@ -84,3 +84,4 @@ final class Reminder extends Model
         return $this->belongsTo(Checklist::class);
     }
 }
+

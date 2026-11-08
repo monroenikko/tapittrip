@@ -37,3 +37,4 @@ final class RecordVisitEventService
         return $event;
     }
 }
+

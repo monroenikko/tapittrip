@@ -26,3 +26,4 @@ final class RecordVisitEventRequest extends FormRequest
         ];
     }
 }
+

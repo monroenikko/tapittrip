@@ -60,3 +60,4 @@ final readonly class UpdateNotificationPreferencesData
         ], fn ($val): bool => $val !== null);
     }
 }
+

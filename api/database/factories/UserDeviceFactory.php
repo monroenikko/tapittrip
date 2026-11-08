@@ -31,3 +31,4 @@ final class UserDeviceFactory extends Factory
         ];
     }
 }
+

@@ -26,3 +26,4 @@ final readonly class RecordVisitEventData
         );
     }
 }
+

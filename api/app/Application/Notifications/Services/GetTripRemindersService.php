@@ -26,3 +26,4 @@ final class GetTripRemindersService
         return $query->get();
     }
 }
+
