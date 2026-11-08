@@ -16,6 +16,7 @@ import 'package:tapittrip/features/itinerary/presentation/widgets/timeline_day_b
 import 'package:tapittrip/features/stays/presentation/providers/stay_provider.dart';
 import 'package:tapittrip/features/stays/presentation/widgets/add_stay_bottom_sheet.dart';
 import 'package:tapittrip/features/stays/presentation/widgets/stay_card.dart';
+import 'package:tapittrip/features/sync/presentation/widgets/sync_status_indicator.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
 
@@ -106,6 +107,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 setState(() => _isReordering = !_isReordering);
               },
             ),
+          SyncStatusIndicator(tripId: widget.tripId),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             tooltip: 'Notification preferences',

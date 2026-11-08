@@ -40,4 +40,3 @@ final class UpdateNotificationPreferencesService
         return $preferences->refresh();
     }
 }
-

@@ -39,4 +39,3 @@ final class NotificationPreferenceResource extends JsonResource
         ];
     }
 }
-

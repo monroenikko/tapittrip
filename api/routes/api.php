@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ReminderController;
 use App\Http\Controllers\Api\V1\StayController;
 use App\Http\Controllers\Api\V1\StayTransportController;
+use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
 use App\Http\Controllers\Api\V1\TripTodayController;
@@ -80,5 +81,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/trips/{trip}/reminders/generate', [ReminderController::class, 'generate'])->name('trips.reminders.generate');
 
         Route::post('/itinerary-items/{item}/visit-events', [VisitEventController::class, 'store'])->name('itinerary-items.visit-events.store');
+
+        Route::post('/sync/push', [SyncController::class, 'push'])->name('sync.push');
+        Route::get('/sync/pull', [SyncController::class, 'pull'])->name('sync.pull');
     });
 });

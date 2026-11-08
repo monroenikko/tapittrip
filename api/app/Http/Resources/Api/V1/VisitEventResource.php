@@ -33,4 +33,3 @@ final class VisitEventResource extends JsonResource
         ];
     }
 }
-

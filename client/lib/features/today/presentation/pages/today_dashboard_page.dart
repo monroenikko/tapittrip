@@ -12,6 +12,8 @@ import '../widgets/quick_actions_grid.dart';
 import '../widgets/today_hero_card.dart';
 import '../widgets/trip_progress_card.dart';
 
+import 'package:tapittrip/features/sync/presentation/widgets/sync_status_indicator.dart';
+
 class TodayDashboardPage extends ConsumerStatefulWidget {
   const TodayDashboardPage({super.key, this.initialTripId});
 
@@ -189,6 +191,7 @@ class _TodayDashboardPageState extends ConsumerState<TodayDashboardPage> {
           orElse: () => const Text('TapItTrip'),
         ),
         actions: [
+          const SyncStatusIndicator(),
           IconButton(
             tooltip: 'All Trips',
             icon: const Icon(Icons.luggage_outlined),

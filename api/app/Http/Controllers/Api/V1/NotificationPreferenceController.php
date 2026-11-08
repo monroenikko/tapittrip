@@ -46,4 +46,3 @@ final class NotificationPreferenceController extends Controller
             ->setStatusCode(200);
     }
 }
-

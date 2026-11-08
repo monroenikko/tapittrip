@@ -2,14 +2,67 @@
 
 ## Current milestone
 
-- Milestone: **M5 — Notifications & Geofencing**
+- Milestone: **M6 — Sync Hardening & MVP Beta Packaging**
 - Status: **Completed**
-- Basis: Acceptance gate passed across backend (76/76 PostgreSQL tests, 446 assertions) and mobile client (83/83 Flutter tests).
-- Boundary: Milestone M5 is fully completed across all three vertical slices:
-  - Slice 1: Backend Notification Engine, Reminders, Quiet Hours, Deduplication & Device Management.
-  - Slice 2: Mobile Offline Notification Engine, Secure Storage Caching & Notification Settings UI.
-  - Slice 3: Geofencing Proximity Detection, Arrival Suggestion Proof & Visited Status Confirmation.
-  Awaiting user approval to proceed to **Milestone M6 — Sync Hardening & MVP Beta**.
+- Basis: Acceptance gate passed across backend (81/81 PostgreSQL tests, 484 assertions) and mobile client (94/94 Flutter tests).
+- Boundary: Milestone M6 is fully completed across all three vertical slices:
+  - Slice 1: Backend Monotonic Sync Engine (`/sync/push` & `/sync/pull`), Idempotency & Conflict Detection.
+  - Slice 2: Mobile Durable Outbox, Sync Queue & Bidirectional Reconciler (`OutboxStorage`, `SyncService`).
+  - Slice 3: Offline Conflict UI, Multi-Device Concurrency & MVP Beta Packaging (`SyncStatusIndicator`, `ConflictResolutionDialog`).
+  All core MVP milestones (M0 through M6) are complete and verified. Ready for beta release / M7+ planning.
+
+## 2026-11-08 — Milestone M6: Sync Hardening, Durable Outbox & MVP Beta Packaging
+
+### Completed
+
+- **Database Migrations & Schema**:
+  - `sync_server_sequence`: PostgreSQL monotonic sequence incrementing sequentially for global order.
+  - `sync_operations`: UUID primary key, `operation_id` (unique client UUID), `user_id` FK cascade, `trip_id` FK cascade nullable, `device_key`, `entity_type` (`trip`, `itinerary_item`, `stay`, `checklist_item`), `entity_id` UUID, `operation_type` (`create`, `update`, `delete`), `payload` jsonb, `base_version` integer, `server_sequence` bigInteger (default `nextval('sync_server_sequence')`), `status` (`accepted`, `conflict`, `rejected`), `conflict_details` jsonb nullable, `processed_at`, timestamps. Indexed on `[user_id, trip_id, server_sequence]` and `[entity_type, entity_id]`.
+  - `sync_cursors`: UUID primary key, `user_id` FK cascade, `device_key`, `trip_id` FK cascade nullable, `last_server_sequence` bigInteger default 0, timestamps. Unique on `[user_id, device_key, trip_id]`.
+  - Applied on dev (`tapittrip`) and test (`tapittrip_test`) PostgreSQL databases with privileged tools container.
+- **Backend Application Services & Domain Architecture**:
+  - Domain models: `SyncOperation`, `SyncCursor`.
+  - Factories: `SyncOperationFactory`, `SyncCursorFactory`.
+  - Application Services:
+    - `PushSyncOperationsService`: Processes offline mutation batches inside a database transaction; enforces idempotency deduplication by `operation_id`; checks trip membership authorization via `TripPolicy`; performs optimistic concurrency control / version conflict detection (`base_version < current_version`); applies valid entity mutations and increments entity version; records monotonic `server_sequence`; records conflict details when stale.
+    - `PullSyncChangesService`: Fetches operations where `server_sequence > cursor` scoped by user or trip; returns ordered mutations, deletion tombstones, and updated sequence cursor.
+- **Backend API & Route Registration**:
+  - `SyncController`:
+    - `POST /api/v1/sync/push`: Batch push offline mutations.
+    - `GET /api/v1/sync/pull`: Pull server updates using monotonic cursors.
+  - Updated `docs/api/openapi.yaml` with both sync endpoints, request/response bodies, and schemas.
+- **Mobile Client Durable Outbox & Sync Engine**:
+  - Models: `OutboxOperation`, `SyncOperationResult`, `PullResult` with full JSON serialization and copyWith.
+  - `OutboxStorage`: Encrypted local persistence using `FlutterSecureStorage` (`tapittrip_outbox_queue`, `tapittrip_sync_cursor_${tripId}`). Survives app kill, memory pressure, and device reboot.
+  - `SyncService`:
+    - `queueMutation`: Enqueues offline changes with unique UUID and base version.
+    - `pushPending`: Batches pending outbox operations to server, removing accepted items and updating conflict records.
+    - `pullLatest`: Retrieves remote changes from cursor and advances local cursor.
+    - `syncAll`: Push-then-pull bidirectional reconciliation.
+    - `resolveConflict`: Interactive resolution allowing user to "Keep My Offline Edit" (re-applies on top of server version) or "Keep Server Version" (discards local edit).
+  - Riverpod State: `syncProvider` exposing `SyncStatus` (`synced`, `pending`, `syncing`, `conflict`, `offline`), counts, and error tracking.
+- **Mobile UI & Conflict Resolution**:
+  - `SyncStatusIndicator`: Compact badge embedded in `TodayDashboardPage` and `TripItineraryPage` AppBars showing:
+    - 🟢 Green cloud: "All changes synced"
+    - 🟡 Amber pill: "${count} pending sync"
+    - 🔴 Red warning pill: "Conflict (${count})" with one-tap resolution dialog
+    - ⚪ Grey cloud: "Offline mode"
+  - `ConflictResolutionDialog`: Visual diff dialog presenting server version vs traveler offline edit with "Keep Server Version" and "Keep My Offline Edit" actions.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `SyncTest.php` (5 tests, 38 assertions). Full suite passes: 81/81 tests, 484 assertions.
+  - Backend Pint: Passed with 0 style issues.
+  - Mobile Flutter Tests: Added `sync_test.dart` (11 tests). Full suite passes: 94/94 tests.
+  - Mobile Flutter Analyzer: 0 issues.
+  - Mobile Dart Formatter: 100% formatted.
+  - Feature document created: `docs/features/offline-sync-and-outbox.md`.
+
+### Security and offline considerations
+
+- In strict compliance with `AGENTS.md`, mutations queued offline survive device restarts and reboots via hardware-backed encrypted storage (`FlutterSecureStorage`).
+- Retrying sync operations never duplicates entities or side-effects due to strict client UUID `operation_id` deduplication.
+- Version conflict detection prevents silent overwrite of concurrent edits; conflicts are cleanly presented to the traveler.
+- Monotonic server cursors ensure multi-device sync completeness and proper deletion tombstone propagation.
+- All sync operations enforce trip membership authorization via `TripPolicy`. Sensitive auth credentials and tokens are never queued in the outbox.
 
 ## 2026-11-08 — Milestone M5: Notifications, Reminders & Geofenced Arrival Suggestions
 

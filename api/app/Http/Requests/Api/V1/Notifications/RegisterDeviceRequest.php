@@ -25,4 +25,3 @@ final class RegisterDeviceRequest extends FormRequest
         ];
     }
 }
-

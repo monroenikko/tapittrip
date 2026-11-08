@@ -30,4 +30,3 @@ final class DeviceController extends Controller
             ->setStatusCode(200);
     }
 }
-

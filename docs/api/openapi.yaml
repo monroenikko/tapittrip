@@ -1683,6 +1683,83 @@ paths:
         "403":
           description: Forbidden.
 
+  /sync/push:
+    post:
+      operationId: pushSyncOperations
+      summary: Push a batch of client offline mutations
+      tags:
+        - Sync
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSyncOperationsRequest"
+      responses:
+        "200":
+          description: Sync operations evaluated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SyncOperationResult"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /sync/pull:
+    get:
+      operationId: pullSyncChanges
+      summary: Pull updates from the server using monotonic sequence cursors
+      tags:
+        - Sync
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: device_key
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: trip_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Pulled operations and updated cursor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PullSyncResult"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3237,6 +3314,129 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    PushSyncOperationsRequest:
+      type: object
+      required:
+        - device_key
+        - operations
+      properties:
+        device_key:
+          type: string
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncOperationItem"
+
+    SyncOperationItem:
+      type: object
+      required:
+        - operation_id
+        - entity_type
+        - entity_id
+        - operation_type
+      properties:
+        operation_id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+          nullable: true
+        entity_type:
+          type: string
+          enum: [trip, itinerary_item, stay, checklist_item]
+        entity_id:
+          type: string
+          format: uuid
+        operation_type:
+          type: string
+          enum: [create, update, delete]
+        base_version:
+          type: integer
+          default: 1
+        payload:
+          type: object
+          nullable: true
+
+    SyncOperationResult:
+      type: object
+      required:
+        - operation_id
+        - status
+      properties:
+        operation_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [accepted, conflict, rejected]
+        server_sequence:
+          type: integer
+          nullable: true
+        current_version:
+          type: integer
+          nullable: true
+        conflict_details:
+          type: object
+          nullable: true
+
+    PullSyncResult:
+      type: object
+      required:
+        - cursor
+        - operations
+        - has_more
+      properties:
+        cursor:
+          type: integer
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncOperation"
+        has_more:
+          type: boolean
+
+    SyncOperation:
+      type: object
+      required:
+        - id
+        - operation_id
+        - entity_type
+        - entity_id
+        - operation_type
+        - server_sequence
+      properties:
+        id:
+          type: string
+          format: uuid
+        operation_id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+          nullable: true
+        device_key:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        operation_type:
+          type: string
+        payload:
+          type: object
+          nullable: true
+        base_version:
+          type: integer
+        server_sequence:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
 
 
 

@@ -72,4 +72,3 @@ class NotificationPermissionBanner extends StatelessWidget {
     );
   }
 }
-

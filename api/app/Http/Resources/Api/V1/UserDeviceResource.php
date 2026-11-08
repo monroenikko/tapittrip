@@ -31,4 +31,3 @@ final class UserDeviceResource extends JsonResource
         ];
     }
 }
-

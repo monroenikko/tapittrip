@@ -15,6 +15,7 @@
             <file>tests/Feature/MediaAttachmentTest.php</file>
             <file>tests/Feature/NotificationTest.php</file>
             <file>tests/Feature/VisitEventTest.php</file>
+            <file>tests/Feature/SyncTest.php</file>
         </testsuite>
     </testsuites>
     <php>

@@ -36,4 +36,3 @@ final class VisitEventController extends Controller
             ->setStatusCode(201);
     }
 }
-
