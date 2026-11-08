@@ -78,3 +78,4 @@ Documented in `docs/api/openapi.yaml`:
 - **Backend**: `NotificationTest.php` (6 tests) and `VisitEventTest.php` (4 tests). Full PHPUnit suite passes at 76/76 tests (446 assertions).
 - **Mobile**: `notification_test.dart` (7 tests) and `geofence_test.dart` (6 tests). Full Flutter test suite passes at 83/83 tests.
 - **Code Style & Analyzer**: `./vendor/bin/sail bin pint --test` (0 issues) and `flutter analyze` (0 issues).
+

@@ -95,3 +95,4 @@ class LocalNotificationService {
         currentStr.compareTo(quietEnd) < 0;
   }
 }
+

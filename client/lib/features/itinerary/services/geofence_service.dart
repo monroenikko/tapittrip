@@ -80,3 +80,4 @@ class GeofenceService {
 
   double _degToRad(double deg) => deg * (math.pi / 180.0);
 }
+

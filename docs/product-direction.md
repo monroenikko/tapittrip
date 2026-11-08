@@ -14,7 +14,10 @@ The product grows outward from that foundation:
 4. Build a local-first today experience that works with sparse trip data.
 5. Add checklists, reminders, and confirmed arrival assistance.
 6. Harden sync and operational readiness before beta.
-7. Add advanced providers, AI, collaboration, and travel utilities only through separately approved slices. [Trip Circles](../MASTER_PLAN.md#14c-trip-circles--travel-together) defines planned family/group invitations and a shared trip workspace; moving it before M7+ remains an owner decision.
+7. Add advanced providers, AI, collaboration, and travel utilities only through separately approved slices:
+   - [Trip Circles](../MASTER_PLAN.md#14c-trip-circles--travel-together): planned family/group invitations and shared workspace.
+   - [Smart Airport Lounge Finder](../MASTER_PLAN.md#14e-smart-airport-lounge-finder-proposed-module): proposed departure terminal filtering, lounge amenities, eligibility rules, and gate departure reminders.
+   - [AI Smart Itinerary Planner & "Ask TapItTrip"](../MASTER_PLAN.md#14f-ai-smart-itinerary-planner--ask-tapittrip-assistant-proposed-module): proposed three-mode planning (manual, AI-generated, AI-assisted) with "AI suggests; user approves" invariant, neighborhood route clustering, weather/family-aware alternatives, and in-trip assistant.
 
 ## Engineering direction
 

@@ -1,6 +1,6 @@
 # TapItTrip — Master Product & Engineering Plan
 
-Status: Planning baseline v1.6 (2026-11-06). Incorporates in-place Trip and Activity editing mechanisms, location/hotel/address suggestions, and clean unselected luggage profile UX. This is a living specification, not authorization to implement all features simultaneously.
+Status: Planning baseline v1.7 (2026-11-08). Incorporates in-place Trip and Activity editing mechanisms, location/hotel/address suggestions, clean unselected luggage profile UX, and proposed Smart Airport Lounge Finder, AI Smart Itinerary Planner, and "Ask TapItTrip" contextual assistant modules. This is a living specification, not authorization to implement all features simultaneously.
 
 ## Product identity and naming
 
@@ -599,6 +599,88 @@ All items below are **planned and unchecked**. These steps refine section 14C; t
 ### 4. Clean Luggage Profile Initial State
 - **Zero Pre-Selection Rule**: All luggage category chips (`backpack`, `carry_on`, `checked_bag`, `stroller`, `oversized`, `others`) start completely **empty / unselected** by default.
 - **Eliminates Confusion**: Travelers are never confused by pre-checked items they do not carry; they explicitly tap and add only the specific bags they are bringing.
+
+## 14E. Smart Airport Lounge Finder (Proposed Module)
+
+### 1. Vision and Traveler Value
+The **Smart Airport Lounge Finder** helps travelers discover and access airport lounges seamlessly based on their airport, terminal, and flight details directly on the trip dashboard, eliminating the need to search through separate applications or third-party websites while navigating busy airport terminals.
+
+### 2. Core Behavior and Terminal Filtering
+- **Contextual Detection**: When a traveler adds or imports their flight, TapItTrip automatically identifies the departure airport (IATA code) and departure terminal.
+- **Terminal & Area Filtering**: The finder surfaces lounges accessible from the traveler's specific departure zone:
+  - Terminal assignment (e.g., Manila MNL Terminal 3, Tokyo NRT Terminal 1).
+  - Concourse and gate vicinity.
+  - Airside (post-security / post-immigration) versus Landside (pre-security) placement.
+  - Inter-terminal transit limitations: Clearly warns if a lounge is in a terminal that requires re-clearing security, exiting immigration, or is physically inaccessible to passengers departing from another gate area.
+- **Directory Metadata**:
+  - Lounge name, operator, location description, and walking directions from main security checkpoints.
+  - Operating hours and live open/closed status.
+  - Amenities: hot buffet/meals, beverages/bar, private showers, Wi-Fi, power outlets, quiet rest areas, and family/nursery rooms.
+  - Access programs & entry methods: Airline class (Business / First), elite frequent-flyer status, membership programs (Priority Pass, LoungeKey, DragonPass), credit card access partnerships, and walk-in paid entry.
+  - Transparent pricing estimates and direct links to official booking/reservation portals where available.
+- **Disclaimers & Verification**:
+  - Prominently displays: *"Actual lounge access depends on airline status, card eligibility, capacity, and terminal security regulations. Check with the lounge desk for real-time entry."*
+  - Avoids fabricating access or claiming entry rights without provider verification.
+
+### 3. Smart Gate Departure Reminders
+- Integrated with TapItTrip's notification engine (Milestone M5):
+  - Sends a timely departure alert before boarding: *"Your flight to Tokyo (NH870) departs from Gate 112 in 45 minutes. Allow 15 minutes to leave the lounge and reach your gate."*
+  - Helps travelers avoid rushing or missing flights while enjoying lounge amenities.
+
+### 4. Technical Architecture & Phasing
+- **Data Model**: `airports`, `airport_terminals`, `airport_lounges`, `lounge_access_methods`.
+- **Offline Caching**: Previously viewed/saved lounge details for the departure airport are stored locally so travelers have offline access while boarding or without cellular connection.
+- **Phasing**:
+  - *Phase 2*: Airport lounge discovery, terminal filtering, and amenities showcase.
+  - *Phase 3*: Live eligibility matching (Priority Pass, airline status), walk-in booking links, and gate departure reminders.
+
+---
+
+## 14F. AI Smart Itinerary Planner & "Ask TapItTrip" Assistant (Proposed Module)
+
+### 1. Core Principle: "AI Suggests; The User Approves"
+TapItTrip empowers travelers with three flexible planning modes:
+1. **Manual Planning**: Travelers add destinations, activities, stays, and transport themselves. Ideal for those with fixed schedules or clear preferences.
+2. **AI-Generated Itinerary**: Proposes a complete, cohesive day-by-day itinerary tailored to the traveler's destination, duration, budget, companions, pace, and interests.
+3. **AI-Assisted Planning**: Travelers start with their own plans or imported bookings, then request TapItTrip to fill open time slots, optimize route sequences, suggest nearby dining, or recommend toddler-friendly alternatives.
+
+> [!IMPORTANT]
+> **Non-Destructive Invariant**: AI recommendations are strictly advisory and never silently overwrite existing user plans, stays, or confirmed bookings. Proposed itineraries are previewed in an interactive staging sheet; the traveler can accept individual days, swap activities, or discard recommendations entirely.
+
+### 2. Preference Dimensions
+When launching the AI Planner, travelers specify key parameters:
+- **Destination & Duration**: City/region and date range or day count (e.g. Tokyo · 5 days).
+- **Budget Tier**: Low / Backpacker, Moderate, Luxury.
+- **Travel Party / Companions**: Solo, Couple, Friends, Family with kids / toddlers, Seniors (mobility-conscious).
+- **Travel Pace**: Relaxed (1–2 main activities/day), Balanced (3–4 activities/day), High-energy / Packed (5+ activities/day).
+- **Interests**: Food & Dining, Culture & Heritage, Shopping, Nature & Scenery, Theme Parks, Hidden Gems & Local Vibe.
+
+### 3. Additional Itinerary Intelligence
+- **Smart Route Optimization**: Clusters nearby attractions into the same half-day or neighborhood (e.g., Asakusa & Ueno together, Shibuya & Harajuku together) to reduce transit time and prevent zigzagging across the city.
+- **Family & Mobility Awareness**: Incorporates stroller accessibility, elevator-friendly transit stations, and rest stops for families traveling with children or elderly companions.
+- **Weather-Aware Alternatives**: In inclement weather or extreme heat, proactively suggests indoor alternatives (covered markets, museums, observation decks, shopping arcades).
+- **Budget Estimation**: Provides transparent itemized cost estimates (attraction tickets, typical meals, local transit) in local currency with converted home currency.
+- **Opening Hours & Seasonal Validation**: Verifies operating hours to prevent recommending closed museums or restaurants on rest days.
+- **Arrival / Departure Awareness**: Automatically keeps airport days lighter, scheduling around airport transit and hotel check-in/out buffers.
+- **Trip Circles Group Voting**: Allows shared trip members to vote (thumbs up/down) on proposed activities, allowing the organizer to finalize a schedule everyone enjoys.
+- **Smart In-Trip Replanning**: When an activity is delayed, cancelled, or skipped, the planner suggests nearby alternative spots or adjusted schedules.
+
+### 4. "Ask TapItTrip" Contextual Trip Assistant
+An in-trip conversational card / sheet aware of the traveler's active trip state:
+- **Context-Aware Assistance**: Understands the traveler's hotel location, today's schedule, party composition, and weather.
+- **Example Queries**:
+  - *"Where should we eat dinner tonight within 10 minutes walk of our hotel?"*
+  - *"Which airport lounge can we use in Terminal 3 before our flight?"*
+  - *"Can you adjust Day 2 to be easier for our 3-year-old toddler?"*
+  - *"It's raining today in Kyoto — what indoor activities do you recommend instead of Arashiyama?"*
+
+### 5. Technical Architecture & Phasing
+- **Backend Orchestration**:
+  - Laravel service integrating with structured LLM prompts, returning typed JSON compliant with OpenAPI schemas.
+  - Validation layer checks place existence against Google Places / OSM, validates operating hours, and computes route geometries.
+- **Phasing**:
+  - *Phase 2*: Personalized day-by-day itinerary generation, interest filters, and route clustering.
+  - *Phase 3*: Weather-aware alternatives, Trip Circles voting on suggestions, and the "Ask TapItTrip" contextual assistant.
 
 ## 15. Work process for Codex
 
