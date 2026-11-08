@@ -28,6 +28,8 @@ final class UserResource extends JsonResource
             'avatar_url' => $this->avatar_url,
             'locale' => $this->locale ?? 'en',
             'home_timezone' => $this->home_timezone ?? 'UTC',
+            'home_country' => $this->home_country,
+            'home_currency' => $this->home_currency,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

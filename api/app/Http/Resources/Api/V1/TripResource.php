@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Domain\Trips\Models\Trip;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -22,6 +23,7 @@ final class TripResource extends JsonResource
     {
         $currentUser = $request->user();
         $role = $currentUser ? $this->memberRole($currentUser) : null;
+        $destinationCurrency = CountryCurrencyResolver::resolve($this->destination_country ?? $this->title);
 
         return [
             'id' => (string) $this->id,
@@ -32,6 +34,7 @@ final class TripResource extends JsonResource
             'primary_timezone' => $this->primary_timezone,
             'origin_country' => $this->origin_country,
             'destination_country' => $this->destination_country,
+            'destination_currency' => $destinationCurrency,
             'trip_type' => $this->trip_type,
             'planning_mode' => $this->planning_mode,
             'status' => $this->status,

@@ -10,10 +10,16 @@ TapItTrip provides international travelers with an integrated multi-currency exp
    - Real-time spending progress is displayed via a progress bar indicating percentage utilized and remaining budget headroom.
 2. **Logging Expenses & Receipt Capture**:
    - Tapping the floating action button (**"Log Expense"**) opens the logging bottom sheet.
+   - **Automatic Destination Currency Defaulting**: If the trip has a destination location in the database (e.g. Japan, France, Singapore), the currency input automatically pre-selects the destination's local currency (`JPY`, `EUR`, `SGD`, etc.), eliminating repetitive manual entry.
+   - **Live Foreign Exchange (Forex) & Home Reflection**: When entering an amount in destination currency (e.g. `¥3,000 JPY`), the sheet fetches live market rates and instantly displays the converted value in the traveler's home currency (e.g. `≈ ₱1,140.00 PHP • 1 JPY = 0.3800 PHP`), auto-populating `exchange_rate` and `base_amount_minor`.
    - Travelers select an expense category (Dining, Transport, Accommodation, Activities, Shopping, Other), input what they paid for, enter the amount, and choose the payment currency.
    - If spending in a foreign currency (e.g. paying ¥3,000 JPY on a USD-based trip), travelers can specify the exchange rate or let the system apply standard conversion, computing `base_amount_minor` deterministically.
    - Expenses can optionally link to an existing Itinerary Item or Stay.
    - Travelers can upload digital photos of paper receipts (`POST /v1/expenses/{expense}/receipt`) for verification and expense records.
+3. **Country of Residence & Home Currency Configuration**:
+   - From their profile or within the expenses dashboard, travelers can set their country of residence (e.g. Philippines $\rightarrow$ `PH`, United States $\rightarrow$ `US`).
+   - The system automatically derives the traveler's primary home currency (`PHP`, `USD`, `JPY`, etc.) and persists it across sessions.
+   - If a traveler has not yet configured their home country, a non-intrusive prompt banner in `TripExpensesPage` invites them to set it with one tap via `CountryResidenceDialog`.
 3. **Group Expense Splitting & Debt Simplification (Trip Circles)**:
    - When logging an expense, travelers can specify whether the cost is for themselves only (`Single`) or shared equally across the group (`Split equally`).
    - The **"Balances & Settle"** tab calculates the net spending balance for every companion in the trip's base currency:
@@ -37,6 +43,8 @@ TapItTrip provides international travelers with an integrated multi-currency exp
 
 ## API Contracts
 Documented in `docs/api/openapi.yaml`:
+- `PATCH /v1/me`: Update traveler profile (`home_country`, `home_currency`, `display_name`).
+- `GET /v1/currencies/rates`: Fetch current live or cached exchange rates between any two currencies.
 - `GET /v1/trips/{trip}/budget`: Retrieve budget configuration.
 - `PUT /v1/trips/{trip}/budget`: Set or update total and daily target budgets.
 - `GET /v1/trips/{trip}/expenses`: List trip expenses with optional category and date filters.
@@ -52,15 +60,18 @@ Documented in `docs/api/openapi.yaml`:
 
 ## Verification
 - **Backend Tests**:
+  - `CurrencyTest.php` (4 tests covering live exchange rate lookups, reciprocal rates, `CountryCurrencyResolver`, and `TripResource.destination_currency`).
+  - `AuthTest.php` (tests covering profile residence updates and auto-derived currency).
   - `TripBudgetTest.php` (5 tests covering creation, update, authorization, and validation).
   - `TripExpenseTest.php` (7 tests covering creation, foreign currency conversion, filtering, summary analytics, deletion, and receipt uploads).
   - `GroupSettlementTest.php` (5 tests covering net balances, greedy cash-flow simplification, settlement payment recording, validation, and authorization).
   - `TripTodayTest.php` (4 tests including today dashboard budget pacing).
-  - 115/115 PostgreSQL feature tests passing (636 assertions).
+  - 120/120 PostgreSQL feature tests passing (675 assertions).
 - **Mobile Tests**:
+  - `currency_test.dart` (8 tests covering `CountryCurrencyHelper`, models, `CurrencyRepository`, `AddExpenseBottomSheet` auto-destination defaulting with live conversion badge, and `CountryResidenceDialog`).
   - `expense_test.dart` (9 tests covering models, repository, `TripExpensesPage`, `AddExpenseBottomSheet`, and `SettleUpDialog`).
   - `today_test.dart` (15 tests including `TodayBudgetCard` and `BudgetPacing`).
-  - 118/118 mobile unit and widget tests passing.
+  - 126/126 mobile unit and widget tests passing.
 - **Code Standards**:
   - Laravel Pint: 0 style issues.
   - Flutter Analyze: 0 analyzer issues.

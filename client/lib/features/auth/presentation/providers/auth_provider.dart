@@ -93,6 +93,31 @@ class AuthNotifier extends Notifier<AuthState> {
       state = const Unauthenticated();
     }
   }
+
+  Future<bool> updateProfile({
+    String? displayName,
+    String? homeCountry,
+    String? homeCurrency,
+    String? homeTimezone,
+    String? locale,
+  }) async {
+    final current = state;
+    if (current is! Authenticated) return false;
+
+    try {
+      final updatedUser = await _repository.updateProfile(
+        displayName: displayName,
+        homeCountry: homeCountry,
+        homeCurrency: homeCurrency,
+        homeTimezone: homeTimezone,
+        locale: locale,
+      );
+      state = Authenticated(user: updatedUser, token: current.token);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 final authProvider = NotifierProvider<AuthNotifier, AuthState>(

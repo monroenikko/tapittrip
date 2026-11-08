@@ -21,6 +21,14 @@ abstract interface class AuthRepository {
 
   Future<AuthUser> getProfile();
 
+  Future<AuthUser> updateProfile({
+    String? displayName,
+    String? homeCountry,
+    String? homeCurrency,
+    String? homeTimezone,
+    String? locale,
+  });
+
   Future<void> logout();
 
   Future<void> deleteAccount();
@@ -88,6 +96,25 @@ class RemoteAuthRepository implements AuthRepository {
   @override
   Future<AuthUser> getProfile() async {
     final response = await apiClient.get('/me');
+    return AuthUser.fromJson(response as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AuthUser> updateProfile({
+    String? displayName,
+    String? homeCountry,
+    String? homeCurrency,
+    String? homeTimezone,
+    String? locale,
+  }) async {
+    final payload = <String, dynamic>{};
+    if (displayName != null) payload['display_name'] = displayName;
+    if (homeCountry != null) payload['home_country'] = homeCountry;
+    if (homeCurrency != null) payload['home_currency'] = homeCurrency;
+    if (homeTimezone != null) payload['home_timezone'] = homeTimezone;
+    if (locale != null) payload['locale'] = locale;
+
+    final response = await apiClient.patch('/me', data: payload);
     return AuthUser.fromJson(response as Map<String, dynamic>);
   }
 

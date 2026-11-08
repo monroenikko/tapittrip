@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/countries.dart';
 import '../../domain/models/today_dashboard_summary.dart';
 import '../../../expenses/presentation/widgets/add_expense_bottom_sheet.dart';
 
@@ -174,10 +175,17 @@ class TodayBudgetCard extends StatelessWidget {
               const Spacer(),
               FilledButton.tonalIcon(
                 onPressed: () {
+                  final destCurrency = summary.trip.destinationCurrency ??
+                      CountryCurrencyHelper.resolveCurrency(
+                        summary.trip.destinationCountry ?? summary.trip.title,
+                        defaultCurrency: pacing.currency,
+                      );
+
                   AddExpenseBottomSheet.show(
                     context,
                     tripId: summary.trip.id,
-                    defaultCurrency: pacing.currency,
+                    defaultCurrency: destCurrency,
+                    homeCurrency: pacing.currency,
                   );
                 },
                 icon: const Icon(Icons.add_rounded, size: 18),
@@ -190,3 +198,4 @@ class TodayBudgetCard extends StatelessWidget {
     );
   }
 }
+

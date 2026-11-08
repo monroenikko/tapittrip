@@ -53,6 +53,16 @@ class _SetBudgetDialogState extends ConsumerState<SetBudgetDialog> {
     'PHP',
     'GBP',
     'SGD',
+    'AUD',
+    'THB',
+    'KRW',
+    'CAD',
+    'HKD',
+    'TWD',
+    'IDR',
+    'MYR',
+    'AED',
+    'CHF',
   ];
 
   @override

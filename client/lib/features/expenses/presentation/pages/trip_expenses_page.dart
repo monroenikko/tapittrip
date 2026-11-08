@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/countries.dart';
+import '../../../auth/domain/models/auth_state.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/presentation/widgets/country_residence_dialog.dart';
+import '../../../trips/presentation/providers/trip_list_provider.dart';
+import '../../data/currency_repository.dart';
 import '../../domain/models/expense.dart';
 import '../providers/expense_provider.dart';
 import '../widgets/add_expense_bottom_sheet.dart';
@@ -22,6 +28,19 @@ class TripExpensesPage extends ConsumerWidget {
     final summaryAsync = ref.watch(expenseSummaryProvider(tripId));
     final balancesAsync = ref.watch(groupBalancesProvider(tripId));
     final selectedFilter = ref.watch(selectedExpenseCategoryFilterProvider);
+
+    final authState = ref.watch(authProvider);
+    final authUser = authState is Authenticated ? authState.user : null;
+    final homeCurrency = authUser?.homeCurrency ?? 'USD';
+    final homeCountry = authUser?.homeCountry;
+
+    final trips = ref.watch(tripListProvider).asData?.value;
+    final trip = trips?.where((t) => t.id == tripId).firstOrNull;
+    final destinationCurrency = trip?.destinationCurrency ??
+        CountryCurrencyHelper.resolveCurrency(
+          trip?.destinationCountry ?? trip?.title,
+          defaultCurrency: 'USD',
+        );
 
     final categories = const [
       'all',
@@ -54,7 +73,7 @@ class TripExpensesPage extends ConsumerWidget {
                 SetBudgetDialog.show(
                   context,
                   tripId: tripId,
-                  initialCurrency: budget?.currency ?? 'USD',
+                  initialCurrency: budget?.currency ?? homeCurrency,
                   initialTotalBudgetMinor: budget?.totalBudgetMinor,
                   initialDailyBudgetMinor: budget?.dailyBudgetMinor,
                 );
@@ -87,6 +106,125 @@ class TripExpensesPage extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Country Residence Prompt Banner if not set
+                  if (homeCountry == null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.secondaryContainer.withValues(
+                          alpha: 0.4,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: colorScheme.secondary.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text('🌏', style: TextStyle(fontSize: 22)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Set your home country',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSecondaryContainer,
+                                  ),
+                                ),
+                                Text(
+                                  'Auto-converts $destinationCurrency to your home currency',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSecondaryContainer
+                                        .withValues(alpha: 0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          FilledButton.tonal(
+                            onPressed: () =>
+                                CountryResidenceDialog.show(context),
+                            style: FilledButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                            ),
+                            child: const Text('Set'),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Live Market Exchange Rate Pill
+                  if (destinationCurrency.toUpperCase() !=
+                      homeCurrency.toUpperCase())
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final rateAsync = ref.watch(
+                          currencyRateProvider((
+                            from: destinationCurrency,
+                            to: homeCurrency,
+                          )),
+                        );
+                        return rateAsync.when(
+                          data: (rate) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: colorScheme.outlineVariant.withValues(
+                                    alpha: 0.3,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.trending_up_rounded,
+                                    size: 16,
+                                    color: colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Market rate: 1 $destinationCurrency ≈ ${rate.rate.toStringAsFixed(4)} $homeCurrency',
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    rate.isOffline ? 'Cached' : 'Live',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: rate.isOffline
+                                          ? colorScheme.outline
+                                          : Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
+                        );
+                      },
+                    ),
+
                   // Top Budget & Spending Overview Card
                   summaryAsync.when(
                     loading: () => const Card(
@@ -377,6 +515,8 @@ class TripExpensesPage extends ConsumerWidget {
                                           context,
                                           tripId: tripId,
                                           initialExpense: expense,
+                                          defaultCurrency: destinationCurrency,
+                                          homeCurrency: homeCurrency,
                                         );
                                       } else if (val == 'delete') {
                                         ref
@@ -737,11 +877,11 @@ class TripExpensesPage extends ConsumerWidget {
           icon: const Icon(Icons.add_rounded),
           label: const Text('Log Expense'),
           onPressed: () {
-            final defaultCur = budgetAsync.asData?.value?.currency ?? 'USD';
             AddExpenseBottomSheet.show(
               context,
               tripId: tripId,
-              defaultCurrency: defaultCur,
+              defaultCurrency: destinationCurrency,
+              homeCurrency: homeCurrency,
             );
           },
         ),

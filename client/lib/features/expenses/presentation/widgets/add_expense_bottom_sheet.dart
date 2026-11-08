@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/currency_repository.dart';
 import '../../domain/models/expense.dart';
 import '../providers/expense_provider.dart';
 
@@ -10,17 +11,20 @@ class AddExpenseBottomSheet extends ConsumerStatefulWidget {
     required this.tripId,
     this.initialExpense,
     this.defaultCurrency = 'USD',
+    this.homeCurrency = 'USD',
   });
 
   final String tripId;
   final Expense? initialExpense;
   final String defaultCurrency;
+  final String homeCurrency;
 
   static Future<void> show(
     BuildContext context, {
     required String tripId,
     Expense? initialExpense,
     String defaultCurrency = 'USD',
+    String homeCurrency = 'USD',
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -30,6 +34,7 @@ class AddExpenseBottomSheet extends ConsumerStatefulWidget {
         tripId: tripId,
         initialExpense: initialExpense,
         defaultCurrency: defaultCurrency,
+        homeCurrency: homeCurrency,
       ),
     );
   }
@@ -49,6 +54,8 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
   late DateTime _selectedDate;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _convertedText;
+  double _currentRate = 1.0;
 
   final List<String> _categories = const [
     'dining',
@@ -66,6 +73,16 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
     'PHP',
     'GBP',
     'SGD',
+    'AUD',
+    'THB',
+    'KRW',
+    'CAD',
+    'HKD',
+    'TWD',
+    'IDR',
+    'MYR',
+    'AED',
+    'CHF',
   ];
 
   @override
@@ -81,6 +98,7 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
             ? expense.amountMinor.toString()
             : (expense.amountMinor / 100.0).toStringAsFixed(2),
       );
+      _currentRate = expense.exchangeRate;
     } else {
       _amountController = TextEditingController();
     }
@@ -92,14 +110,84 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
     _selectedDate = expense != null
         ? (DateTime.tryParse(expense.expenseDate) ?? DateTime.now())
         : DateTime.now();
+
+    _amountController.addListener(_updateConversion);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateConversion());
   }
 
   @override
   void dispose() {
+    _amountController.removeListener(_updateConversion);
     _titleController.dispose();
     _amountController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  void _updateConversion() async {
+    final amountText = _amountController.text.trim();
+    final parsed = double.tryParse(amountText);
+    if (parsed == null ||
+        parsed <= 0 ||
+        _currency.toUpperCase() == widget.homeCurrency.toUpperCase()) {
+      if (mounted) {
+        setState(() {
+          _convertedText = null;
+          _currentRate = 1.0;
+        });
+      }
+      return;
+    }
+
+    try {
+      final repo = ref.read(currencyRepositoryProvider);
+      final details = await repo.getRateDetails(_currency, widget.homeCurrency);
+      if (!mounted) return;
+
+      final rate = details.rate;
+      final converted = parsed * rate;
+      final isTargetZeroDecimal = widget.homeCurrency.toUpperCase() == 'JPY';
+      final symbol = _currencySymbol(widget.homeCurrency);
+      final rateStr =
+          rate < 0.01 ? rate.toStringAsFixed(6) : rate.toStringAsFixed(4);
+      final formattedAmount = isTargetZeroDecimal
+          ? converted.round().toString()
+          : converted.toStringAsFixed(2);
+
+      setState(() {
+        _currentRate = rate;
+        _convertedText =
+            '≈ $symbol$formattedAmount ${widget.homeCurrency} (1 $_currency = $rateStr ${widget.homeCurrency})';
+      });
+    } catch (_) {}
+  }
+
+  String _currencySymbol(String curr) {
+    switch (curr.toUpperCase()) {
+      case 'PHP':
+        return '₱';
+      case 'JPY':
+        return '¥';
+      case 'EUR':
+        return '€';
+      case 'GBP':
+        return '£';
+      case 'SGD':
+        return 'S\$';
+      case 'AUD':
+        return 'A\$';
+      case 'THB':
+        return '฿';
+      case 'KRW':
+        return '₩';
+      case 'CAD':
+        return 'C\$';
+      case 'HKD':
+        return 'HK\$';
+      case 'USD':
+      default:
+        return '\$';
+    }
   }
 
   Future<void> _submit() async {
@@ -139,6 +227,7 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
               title: title,
               amountMinor: amountMinor,
               currency: _currency,
+              exchangeRate: _currentRate,
               category: _category,
               expenseDate: dateStr,
               notes: _notesController.text.trim().isNotEmpty
@@ -153,6 +242,7 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
               title: title,
               amountMinor: amountMinor,
               currency: _currency,
+              exchangeRate: _currentRate,
               expenseDate: dateStr,
               splitType: _splitType,
               notes: _notesController.text.trim().isNotEmpty
@@ -305,12 +395,52 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
                         return DropdownMenuItem(value: c, child: Text(c));
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null) setState(() => _currency = val);
+                        if (val != null) {
+                          setState(() => _currency = val);
+                          _updateConversion();
+                        }
                       },
                     ),
                   ),
                 ],
               ),
+              if (_convertedText != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.currency_exchange_rounded,
+                        size: 16,
+                        color: colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _convertedText!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
 
               // Category Selector

@@ -2,13 +2,48 @@
 
 ## Current milestone
 
-- Milestone: **M8 — Multi-Currency Expenses & Group Budget Tracker**
+- Milestone: **M8b — Automatic Travel Destination Currency & Residing Country Conversion**
 - Status: **Completed**
-- Basis: Approved Milestone M8 plan (`m8-expenses-and-budget-plan.md`). Core trip budget target setting, multi-currency integer minor-unit expenses, categorization, daily spending analytics, Trip Circles group expense splitting, greedy cash-flow simplification, debt settlement, today dashboard budget pacing, and receipt attachments implemented and verified across backend and mobile client.
+- Basis: Approved Milestone M8b plan (`m8b-auto-currency-and-residence-conversion-plan.md`). Traveler country of residence and home currency profile setting, live market exchange rate provider architecture with caching and offline fallback, automatic destination currency selection from trip location, and live converted home reflection badge in expense logging.
 - Boundary:
-  - Slice 1: Core Trip Budget & Categorized Expense Tracking — **Completed**.
-  - Slice 2: Trip Circles Group Expense Splitting & Debt Settlement — **Completed**.
-  - Slice 3: Today Dashboard Budget Pacing & Receipt Capture — **Completed**.
+  - Slice 1: Backend Profile Residing Country & Live Exchange Rate Services — **Completed**.
+  - Slice 2: Mobile Profile Residence Setup & Country Resolution — **Completed**.
+  - Slice 3: Automatic Expense Currency Defaulting & Live Home Reflection — **Completed**.
+
+## 2026-11-08 — Milestone M8b: Automatic Travel Destination Currency & Residing Country Conversion
+
+### Completed
+
+- **Backend Architecture & Forex Services**:
+  - Database Migration: Added `home_country` (string(2) nullable) and `home_currency` (string(3) nullable) to `users` table. Applied on dev and test databases.
+  - Domain Services:
+    - `CountryCurrencyResolver`: Standardized mapping between ISO country codes, popular country names, and major city keywords to primary ISO 4217 currencies.
+    - `ExchangeRateProviderInterface`: Pluggable contract for currency exchange rate fetching.
+    - `LiveExchangeRateProvider`: Connects to live market exchange rate feed with timeout, retry, and built-in fallback.
+    - `FakeExchangeRateProvider`: Deterministic rate provider for unit and feature tests.
+    - `CurrencyExchangeRateService`: Coordinates provider, caching (1-hour TTL), and reciprocal rate calculations ($1 / \text{rate}$).
+    - `UpdateProfileService`: In-place updates for traveler profile fields (`home_country`, `home_currency`, `display_name`, `home_timezone`, `locale`) with automatic currency derivation.
+  - Routes & Endpoints:
+    - `PATCH /api/v1/me`: Update profile attributes via `UpdateProfileRequest`.
+    - `GET /api/v1/currencies/rates`: Fetch live or cached exchange rates between any two currencies via `CurrencyController`.
+    - `UserResource` & `TripResource`: Exposed `home_country`, `home_currency`, and dynamically resolved `destination_currency`.
+    - Documented all endpoints and schema updates in `docs/api/openapi.yaml`.
+- **Mobile Client Integration**:
+  - Models: Added `homeCountry` and `homeCurrency` to `AuthUser`, `destinationCurrency` to `Trip`.
+  - Helpers: Created `CountryCurrencyHelper` in `client/lib/core/constants/countries.dart` with supported countries list, flags, and currency resolution.
+  - Data: Created `CurrencyRepository` with encrypted secure storage caching (`cached_forex_{from}_{to}`) and offline snapshot fallbacks. Added `updateProfile` to `AuthRepository` and `authProvider`.
+  - UI & Widgets:
+    - `CountryResidenceDialog`: Searchable country picker displaying flags, countries, and currencies with one-tap profile persistence.
+    - Prompt Banner: Non-intrusive prompt in `TripExpensesPage` inviting travelers to configure their residence when not yet set.
+    - Live Market Rate Pill: Embedded indicator in `TripExpensesPage` showing real-time market rate between destination currency and home currency (`1 JPY ≈ ₱0.3800 PHP • Live/Cached`).
+    - `AddExpenseBottomSheet`: Automatically defaults currency to the trip's destination currency; calculates and displays real-time conversion badge (`≈ ₱1,140.00 PHP • 1 JPY = 0.3800 PHP`) as amounts are typed, and supplies `exchange_rate` automatically.
+    - `TodayBudgetCard`: Passes destination currency and home currency when launching "Log Expense" from the Today dashboard.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `CurrencyTest.php` (4 tests) and updated `AuthTest.php`. Full suite passes: 120/120 tests, 675 assertions.
+  - Backend Pint: 0 style issues.
+  - Mobile Flutter Tests: Added `currency_test.dart` (8 tests). Full suite passes: 126/126 tests.
+  - Mobile Analyzer: 0 issues.
+  - Documentation: Updated `docs/features/expenses-and-budgeting.md` and `docs/api/openapi.yaml`.
 
 ## 2026-11-08 — Milestone M8 (Slice 3): Today Dashboard Budget Pacing & Receipt Capture
 

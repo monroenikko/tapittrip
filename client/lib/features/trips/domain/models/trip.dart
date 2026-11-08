@@ -10,6 +10,7 @@ class Trip {
     this.primaryTimezone = 'UTC',
     this.originCountry,
     this.destinationCountry,
+    this.destinationCurrency,
     this.tripType = 'leisure',
     this.planningMode = PlanningMode.diy,
     this.status = 'planned',
@@ -27,6 +28,7 @@ class Trip {
   final String primaryTimezone;
   final String? originCountry;
   final String? destinationCountry;
+  final String? destinationCurrency;
   final String tripType;
   final PlanningMode planningMode;
   final String status;
@@ -51,6 +53,7 @@ class Trip {
       primaryTimezone: (json['primary_timezone'] as String?) ?? 'UTC',
       originCountry: json['origin_country'] as String?,
       destinationCountry: json['destination_country'] as String?,
+      destinationCurrency: json['destination_currency'] as String?,
       tripType: (json['trip_type'] as String?) ?? 'leisure',
       planningMode: PlanningMode.fromString(json['planning_mode'] as String?),
       status: (json['status'] as String?) ?? 'planned',
@@ -74,6 +77,7 @@ class Trip {
     'primary_timezone': primaryTimezone,
     'origin_country': originCountry,
     'destination_country': destinationCountry,
+    'destination_currency': destinationCurrency,
     'trip_type': tripType,
     'planning_mode': planningMode.value,
     'status': status,

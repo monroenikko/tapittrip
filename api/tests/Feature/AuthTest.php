@@ -225,6 +225,8 @@ final class AuthTest extends TestCase
             'display_name' => 'Solo Wanderer',
             'locale' => 'en',
             'home_timezone' => 'America/New_York',
+            'home_country' => 'PH',
+            'home_currency' => 'PHP',
         ]);
 
         Sanctum::actingAs($user);
@@ -241,8 +243,43 @@ final class AuthTest extends TestCase
                     'email' => $user->email,
                     'locale' => 'en',
                     'home_timezone' => 'America/New_York',
+                    'home_country' => 'PH',
+                    'home_currency' => 'PHP',
                 ],
             ]);
+    }
+
+    public function test_authenticated_user_can_update_profile_residence_and_currency(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        // Update home country to PH without specifying currency - should auto-derive PHP
+        $response = $this->patchJson('/api/v1/me', [
+            'display_name' => 'Manila Traveler',
+            'home_country' => 'PH',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.display_name', 'Manila Traveler')
+            ->assertJsonPath('data.home_country', 'PH')
+            ->assertJsonPath('data.home_currency', 'PHP');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'home_country' => 'PH',
+            'home_currency' => 'PHP',
+        ]);
+
+        // Explicitly override currency to USD
+        $response2 = $this->patchJson('/api/v1/me', [
+            'home_currency' => 'USD',
+        ]);
+
+        $response2
+            ->assertOk()
+            ->assertJsonPath('data.home_currency', 'USD');
     }
 
     public function test_unauthenticated_request_to_me_is_rejected(): void

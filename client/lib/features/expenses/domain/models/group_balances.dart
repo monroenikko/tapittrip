@@ -223,3 +223,4 @@ class GroupBalances {
     'settlement_history': settlementHistory.map((h) => h.toJson()).toList(),
   };
 }
+

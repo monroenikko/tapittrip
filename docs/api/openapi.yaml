@@ -179,6 +179,43 @@ paths:
                 $ref: "#/components/schemas/UserResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+    patch:
+      operationId: updateProfile
+      summary: Update traveler profile, country of residence, and home currency
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                home_country:
+                  type: string
+                  description: ISO 3166-1 alpha-2 country code (e.g. PH, US, JP, SG)
+                home_currency:
+                  type: string
+                  description: ISO 4217 currency code (e.g. PHP, USD, JPY, EUR)
+                home_timezone:
+                  type: string
+                locale:
+                  type: string
+      responses:
+        "200":
+          description: Updated user profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "422":
+          $ref: "#/components/responses/ValidationError"
     delete:
       operationId: deleteAccount
       summary: Delete traveler account and revoke access tokens
@@ -2407,6 +2444,55 @@ paths:
         "422":
           description: Validation error.
 
+  /currencies/rates:
+    get:
+      operationId: getExchangeRate
+      summary: Get live or cached market exchange rate between two currencies
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            default: USD
+          description: Source currency code (e.g. JPY, USD, EUR)
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            default: PHP
+          description: Target currency code (e.g. PHP, USD, JPY)
+      responses:
+        "200":
+          description: Exchange rate data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      from:
+                        type: string
+                      to:
+                        type: string
+                      rate:
+                        type: number
+                      reciprocal_rate:
+                        type: number
+                      as_of:
+                        type: string
+                      provider:
+                        type: string
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2539,6 +2625,14 @@ components:
           type: string
         home_timezone:
           type: string
+        home_country:
+          type: string
+          nullable: true
+          description: ISO 3166-1 alpha-2 country code (e.g. PH, US, JP)
+        home_currency:
+          type: string
+          nullable: true
+          description: ISO 4217 currency code (e.g. PHP, USD, JPY)
         created_at:
           type: string
           format: date-time
@@ -2691,6 +2785,10 @@ components:
         destination_country:
           type: string
           nullable: true
+        destination_currency:
+          type: string
+          nullable: true
+          description: ISO 4217 currency code automatically resolved from destination
         trip_type:
           type: string
         planning_mode:

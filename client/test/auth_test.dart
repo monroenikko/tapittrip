@@ -58,6 +58,26 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> updateProfile({
+    String? displayName,
+    String? homeCountry,
+    String? homeCurrency,
+    String? homeTimezone,
+    String? locale,
+  }) async {
+    if (shouldFail) {
+      throw ApiException(code: 'update_failed', message: failureMessage);
+    }
+    return testUser.copyWith(
+      displayName: displayName,
+      homeCountry: homeCountry,
+      homeCurrency: homeCurrency,
+      homeTimezone: homeTimezone,
+      locale: locale,
+    );
+  }
+
+  @override
   Future<void> logout() async {}
 
   @override

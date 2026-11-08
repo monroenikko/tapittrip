@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AirportLoungeController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChecklistController;
 use App\Http\Controllers\Api\V1\ChecklistItemController;
+use App\Http\Controllers\Api\V1\CurrencyController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\GroupSettlementController;
 use App\Http\Controllers\Api\V1\HealthController;
@@ -35,6 +36,7 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/me', [ProfileController::class, 'show'])->name('me.show');
+        Route::patch('/me', [ProfileController::class, 'update'])->name('me.update');
         Route::delete('/me', [ProfileController::class, 'destroy'])->name('me.destroy');
 
         Route::apiResource('trips', TripController::class);
@@ -78,6 +80,8 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/trips/{trip}/settlements', [GroupSettlementController::class, 'index'])->name('trips.settlements.index');
         Route::post('/trips/{trip}/settlements', [GroupSettlementController::class, 'store'])->name('trips.settlements.store');
+
+        Route::get('/currencies/rates', [CurrencyController::class, 'rate'])->name('currencies.rates');
 
         Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');
         Route::post('/trips/{trip}/checklists', [ChecklistController::class, 'store'])->name('trips.checklists.store');
