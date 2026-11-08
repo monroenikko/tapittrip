@@ -15,13 +15,16 @@ use App\Domain\Trips\Models\Trip;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Expenses\CreateExpenseRequest;
 use App\Http\Requests\Api\V1\Expenses\UpdateExpenseRequest;
+use App\Http\Requests\Api\V1\Expenses\UploadReceiptRequest;
 use App\Http\Resources\Api\V1\ExpenseResource;
 use App\Http\Resources\Api\V1\TripExpenseSummaryResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 final class TripExpenseController extends Controller
 {
@@ -125,6 +128,26 @@ final class TripExpenseController extends Controller
         $result = $service->execute($trip);
 
         return (new TripExpenseSummaryResource($result))
+            ->response();
+    }
+
+    /**
+     * Upload and attach a receipt photo to an expense.
+     */
+    public function uploadReceipt(
+        UploadReceiptRequest $request,
+        Expense $expense,
+    ): JsonResponse {
+        Gate::authorize('update', $expense->trip);
+
+        /** @var UploadedFile $file */
+        $file = $request->file('file');
+        $path = $file->store("receipts/{$expense->trip_id}", 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $expense->update(['receipt_url' => $url]);
+
+        return (new ExpenseResource($expense->fresh(['payer', 'itineraryItem', 'stay', 'splits.user'])))
             ->response();
     }
 }

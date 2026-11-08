@@ -2295,6 +2295,52 @@ paths:
         "404":
           description: Expense not found.
 
+  /expenses/{expense}/receipt:
+    post:
+      operationId: uploadExpenseReceipt
+      summary: Upload and attach a receipt image to an expense
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: expense
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Receipt uploaded and linked.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Expense"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "404":
+          description: Expense not found.
+        "422":
+          description: Validation error.
+
   /trips/{trip}/settlements:
     get:
       operationId: getTripSettlements

@@ -33,6 +33,7 @@ final class TodaySummaryResource extends JsonResource
                 ? new StayResource($this->resource->currentStay)
                 : null,
             'metrics' => $this->resource->metrics,
+            'budget_pacing' => $this->resource->budgetPacing,
             'timezone' => $this->resource->timezone,
             'local_time' => $this->resource->localTime,
         ];

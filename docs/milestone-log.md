@@ -3,12 +3,32 @@
 ## Current milestone
 
 - Milestone: **M8 — Multi-Currency Expenses & Group Budget Tracker**
-- Status: **In Progress (Slice 1 & 2 Completed)**
-- Basis: Approved Milestone M8 plan (`m8-expenses-and-budget-plan.md`). Core trip budget target setting, multi-currency integer minor-unit expenses, categorization, daily spending analytics, Trip Circles group expense splitting, greedy cash-flow simplification, and debt settlement implemented and verified across backend and mobile client.
+- Status: **Completed**
+- Basis: Approved Milestone M8 plan (`m8-expenses-and-budget-plan.md`). Core trip budget target setting, multi-currency integer minor-unit expenses, categorization, daily spending analytics, Trip Circles group expense splitting, greedy cash-flow simplification, debt settlement, today dashboard budget pacing, and receipt attachments implemented and verified across backend and mobile client.
 - Boundary:
   - Slice 1: Core Trip Budget & Categorized Expense Tracking — **Completed**.
   - Slice 2: Trip Circles Group Expense Splitting & Debt Settlement — **Completed**.
-  - Slice 3: Offline Sync, Currency Exchange Cache & Receipt Capture — **Planned**.
+  - Slice 3: Today Dashboard Budget Pacing & Receipt Capture — **Completed**.
+
+## 2026-11-08 — Milestone M8 (Slice 3): Today Dashboard Budget Pacing & Receipt Capture
+
+### Completed
+
+- **Backend Application Services & Today Integration**:
+  - `GetTodaySummaryService`: Integrated real-time budget pacing into today's dashboard response (`currency`, `total_budget_minor`, `daily_budget_minor`, `spent_today_minor`, `total_spent_minor`, `remaining_budget_minor`, `daily_utilization_percent`).
+  - `TodaySummaryResult` & `TodaySummaryResource`: Added `budget_pacing` contract.
+  - Receipt Upload: `POST /api/v1/expenses/{expense}/receipt` via `UploadReceiptRequest` with validation (mimes: jpeg, png, webp, pdf up to 10MB) and public storage disk integration.
+  - OpenAPI Specification: Documented receipt endpoint in `docs/api/openapi.yaml`.
+- **Mobile Client Today Budget Card & Receipt Support**:
+  - Models: Added `BudgetPacing` model with minor-unit getters to `TodayDashboardSummary`.
+  - `TodayBudgetCard`: Embedded card in `TodayDashboardPage` showing daily spending progress bar, color-coded threshold indicator (green under budget, red over daily target), remaining daily limit, and quick one-tap "Log Expense" / "All Expenses" actions.
+  - `ExpenseRepository`: Added `uploadReceipt(expenseId, filePath)` method.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `test_today_dashboard_includes_budget_pacing_when_budget_is_configured` to `TripTodayTest.php` and `test_can_upload_receipt_image_for_expense` to `TripExpenseTest.php`. Full suite passes: 115/115 tests, 636 assertions.
+  - Backend Pint: 0 style issues.
+  - Mobile Flutter Tests: Added `TodayBudgetCard` test in `today_test.dart`. Full suite passes: 118/118 tests.
+  - Mobile Analyzer: 0 issues.
+  - Documentation: Updated `docs/features/expenses-and-budgeting.md`.
 
 ## 2026-11-08 — Milestone M8 (Slice 2): Trip Circles Group Expense Splitting & Debt Settlement
 

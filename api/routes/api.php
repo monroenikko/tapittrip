@@ -74,6 +74,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/expenses/{expense}', [TripExpenseController::class, 'show'])->name('expenses.show');
         Route::patch('/expenses/{expense}', [TripExpenseController::class, 'update'])->name('expenses.update');
         Route::delete('/expenses/{expense}', [TripExpenseController::class, 'destroy'])->name('expenses.destroy');
+        Route::post('/expenses/{expense}/receipt', [TripExpenseController::class, 'uploadReceipt'])->name('expenses.receipt.upload');
 
         Route::get('/trips/{trip}/settlements', [GroupSettlementController::class, 'index'])->name('trips.settlements.index');
         Route::post('/trips/{trip}/settlements', [GroupSettlementController::class, 'store'])->name('trips.settlements.store');

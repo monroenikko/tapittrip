@@ -8,21 +8,25 @@ TapItTrip provides international travelers with an integrated multi-currency exp
    - From the trip itinerary, travelers open the overflow menu and select **"Expenses & Budget"** (`/trips/:tripId/expenses`).
    - Travelers can configure a target total trip budget and an optional daily target budget in their preferred base currency (e.g. USD, EUR, PHP, JPY).
    - Real-time spending progress is displayed via a progress bar indicating percentage utilized and remaining budget headroom.
-2. **Logging Expenses**:
+2. **Logging Expenses & Receipt Capture**:
    - Tapping the floating action button (**"Log Expense"**) opens the logging bottom sheet.
    - Travelers select an expense category (Dining, Transport, Accommodation, Activities, Shopping, Other), input what they paid for, enter the amount, and choose the payment currency.
    - If spending in a foreign currency (e.g. paying ¥3,000 JPY on a USD-based trip), travelers can specify the exchange rate or let the system apply standard conversion, computing `base_amount_minor` deterministically.
    - Expenses can optionally link to an existing Itinerary Item or Stay.
+   - Travelers can upload digital photos of paper receipts (`POST /v1/expenses/{expense}/receipt`) for verification and expense records.
 3. **Group Expense Splitting & Debt Simplification (Trip Circles)**:
    - When logging an expense, travelers can specify whether the cost is for themselves only (`Single`) or shared equally across the group (`Split equally`).
    - The **"Balances & Settle"** tab calculates the net spending balance for every companion in the trip's base currency:
      - Companion balances clearly distinguish who is owed money (`+$30.00 is owed`) versus who owes companions (`-$30.00 owes`).
    - A **Greedy Cash-Flow Minimization Algorithm** reduces mutual group debts to the minimum number of transactions (e.g. if Alice pays for Bob and Bob pays for Charlie, Charlie can settle directly with Alice, eliminating intermediate payments).
    - Tapping **"Settle Up"** on a suggested transfer opens the settlement modal with pre-populated amounts and payment notes (cash, Venmo, bank transfer).
-4. **Filtering & Daily Insights**:
+4. **Today Dashboard Integration & Pacing**:
+   - The **Today Dashboard** prominently features a `TodayBudgetCard` displaying today's spending progress against the daily budget limit.
+   - Travelers can instantly gauge remaining daily headroom or over-budget warnings, and quickly log an expense with one tap.
+5. **Filtering & Daily Insights**:
    - Filter chips at the top allow immediate filtering by category (Dining, Transport, etc.).
    - The summary endpoint provides daily breakdown trends and category distribution percentages.
-5. **Offline Resilience**:
+6. **Offline Resilience**:
    - Expenses, budget configurations, and settlement balances are cached locally using encrypted secure storage.
    - Travelers can review past expenditures, balances, and logged amounts even without an active internet connection.
 
@@ -41,18 +45,22 @@ Documented in `docs/api/openapi.yaml`:
 - `GET /v1/expenses/{expense}`: Retrieve single expense details.
 - `PATCH /v1/expenses/{expense}`: Update an expense.
 - `DELETE /v1/expenses/{expense}`: Remove an expense.
+- `POST /v1/expenses/{expense}/receipt`: Upload and link paper receipt photo.
 - `GET /v1/trips/{trip}/settlements`: Get companion net balances and minimal suggested transfers.
 - `POST /v1/trips/{trip}/settlements`: Record a debt settlement between two companions.
+- `GET /v1/trips/{trip}/today`: Includes `budget_pacing` metrics when a budget is set.
 
 ## Verification
 - **Backend Tests**:
   - `TripBudgetTest.php` (5 tests covering creation, update, authorization, and validation).
-  - `TripExpenseTest.php` (6 tests covering creation, foreign currency conversion, filtering, summary analytics, and deletion).
+  - `TripExpenseTest.php` (7 tests covering creation, foreign currency conversion, filtering, summary analytics, deletion, and receipt uploads).
   - `GroupSettlementTest.php` (5 tests covering net balances, greedy cash-flow simplification, settlement payment recording, validation, and authorization).
-  - 113/113 PostgreSQL feature tests passing (624 assertions).
+  - `TripTodayTest.php` (4 tests including today dashboard budget pacing).
+  - 115/115 PostgreSQL feature tests passing (636 assertions).
 - **Mobile Tests**:
   - `expense_test.dart` (9 tests covering models, repository, `TripExpensesPage`, `AddExpenseBottomSheet`, and `SettleUpDialog`).
-  - 117/117 mobile unit and widget tests passing.
+  - `today_test.dart` (15 tests including `TodayBudgetCard` and `BudgetPacing`).
+  - 118/118 mobile unit and widget tests passing.
 - **Code Standards**:
   - Laravel Pint: 0 style issues.
   - Flutter Analyze: 0 analyzer issues.

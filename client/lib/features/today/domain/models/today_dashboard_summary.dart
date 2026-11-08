@@ -62,6 +62,56 @@ class DashboardMetrics {
   }
 }
 
+class BudgetPacing {
+  const BudgetPacing({
+    required this.currency,
+    required this.totalBudgetMinor,
+    this.dailyBudgetMinor,
+    required this.spentTodayMinor,
+    required this.totalSpentMinor,
+    required this.remainingBudgetMinor,
+    this.dailyUtilizationPercent,
+  });
+
+  final String currency;
+  final int totalBudgetMinor;
+  final int? dailyBudgetMinor;
+  final int spentTodayMinor;
+  final int totalSpentMinor;
+  final int remainingBudgetMinor;
+  final double? dailyUtilizationPercent;
+
+  double get spentToday => spentTodayMinor / 100.0;
+  double get totalBudget => totalBudgetMinor / 100.0;
+  double? get dailyBudget =>
+      dailyBudgetMinor != null ? dailyBudgetMinor! / 100.0 : null;
+  double get remainingBudget => remainingBudgetMinor / 100.0;
+
+  factory BudgetPacing.fromJson(Map<String, dynamic> json) {
+    return BudgetPacing(
+      currency: json['currency'] as String? ?? 'USD',
+      totalBudgetMinor: (json['total_budget_minor'] as num?)?.toInt() ?? 0,
+      dailyBudgetMinor: (json['daily_budget_minor'] as num?)?.toInt(),
+      spentTodayMinor: (json['spent_today_minor'] as num?)?.toInt() ?? 0,
+      totalSpentMinor: (json['total_spent_minor'] as num?)?.toInt() ?? 0,
+      remainingBudgetMinor:
+          (json['remaining_budget_minor'] as num?)?.toInt() ?? 0,
+      dailyUtilizationPercent:
+          (json['daily_utilization_percent'] as num?)?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'currency': currency,
+    'total_budget_minor': totalBudgetMinor,
+    'daily_budget_minor': dailyBudgetMinor,
+    'spent_today_minor': spentTodayMinor,
+    'total_spent_minor': totalSpentMinor,
+    'remaining_budget_minor': remainingBudgetMinor,
+    'daily_utilization_percent': dailyUtilizationPercent,
+  };
+}
+
 class TodayDashboardSummary {
   const TodayDashboardSummary({
     required this.trip,
@@ -74,6 +124,7 @@ class TodayDashboardSummary {
     required this.metrics,
     required this.timezone,
     this.localTime,
+    this.budgetPacing,
   });
 
   final Trip trip;
@@ -86,6 +137,7 @@ class TodayDashboardSummary {
   final DashboardMetrics metrics;
   final String timezone;
   final DateTime? localTime;
+  final BudgetPacing? budgetPacing;
 
   bool get isPreTrip => tripStatus == 'pre_trip';
   bool get isActive => tripStatus == 'active';
@@ -132,6 +184,9 @@ class TodayDashboardSummary {
       metrics: DashboardMetrics.fromJson(metricsJson),
       timezone: json['timezone'] as String? ?? 'UTC',
       localTime: DateTime.tryParse(json['local_time'] as String? ?? ''),
+      budgetPacing: json['budget_pacing'] != null
+          ? BudgetPacing.fromJson(json['budget_pacing'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -147,6 +202,7 @@ class TodayDashboardSummary {
       'metrics': metrics.toJson(),
       'timezone': timezone,
       'local_time': localTime?.toIso8601String(),
+      'budget_pacing': budgetPacing?.toJson(),
     };
   }
 }

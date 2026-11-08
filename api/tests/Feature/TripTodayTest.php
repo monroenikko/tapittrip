@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Domain\Expenses\Models\Expense;
+use App\Domain\Expenses\Models\TripBudget;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
 use App\Domain\Stays\Models\Stay;
@@ -157,5 +159,48 @@ final class TripTodayTest extends TestCase
         $response = $this->getJson("/api/v1/trips/{$trip->id}/today");
 
         $response->assertForbidden();
+    }
+
+    public function test_today_dashboard_includes_budget_pacing_when_budget_is_configured(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $today = Carbon::now('Asia/Tokyo')->toDateString();
+
+        $trip = Trip::factory()->create([
+            'owner_id' => $user->id,
+            'title' => 'Tokyo Budgeted Trip',
+            'start_date' => $today,
+            'end_date' => Carbon::now('Asia/Tokyo')->addDays(5)->toDateString(),
+            'primary_timezone' => 'Asia/Tokyo',
+        ]);
+
+        TripBudget::factory()->create([
+            'trip_id' => $trip->id,
+            'currency' => 'USD',
+            'total_budget_minor' => 100000,
+            'daily_budget_minor' => 20000,
+        ]);
+
+        Expense::factory()->create([
+            'trip_id' => $trip->id,
+            'payer_id' => $user->id,
+            'amount_minor' => 5000,
+            'currency' => 'USD',
+            'base_amount_minor' => 5000,
+            'expense_date' => $today,
+        ]);
+
+        $response = $this->getJson("/api/v1/trips/{$trip->id}/today");
+
+        $response->assertOk()
+            ->assertJsonPath('data.budget_pacing.currency', 'USD')
+            ->assertJsonPath('data.budget_pacing.total_budget_minor', 100000)
+            ->assertJsonPath('data.budget_pacing.daily_budget_minor', 20000)
+            ->assertJsonPath('data.budget_pacing.spent_today_minor', 5000)
+            ->assertJsonPath('data.budget_pacing.remaining_budget_minor', 95000);
+
+        $this->assertEquals(25.0, $response->json('data.budget_pacing.daily_utilization_percent'));
     }
 }

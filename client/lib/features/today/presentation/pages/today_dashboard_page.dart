@@ -9,6 +9,7 @@ import '../providers/today_provider.dart';
 import '../widgets/current_stay_banner.dart';
 import '../widgets/next_stop_card.dart';
 import '../widgets/quick_actions_grid.dart';
+import '../widgets/today_budget_card.dart';
 import '../widgets/today_hero_card.dart';
 import '../widgets/trip_progress_card.dart';
 
@@ -391,6 +392,8 @@ class _TodayDashboardPageState extends ConsumerState<TodayDashboardPage> {
                     ),
                     const SizedBox(height: 16),
                     CurrentStayBanner(summary: summary),
+                    const SizedBox(height: 16),
+                    TodayBudgetCard(summary: summary),
                     const SizedBox(height: 16),
                     Card(
                       elevation: 0,

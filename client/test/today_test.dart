@@ -461,5 +461,57 @@ void main() {
       );
       expect(find.text('Hotel Indigo Tokyo Shibuya'), findsOneWidget);
     });
+
+    testWidgets(
+      'TodayDashboardPage renders TodayBudgetCard when budget pacing is present',
+      (tester) async {
+        final summaryWithBudget = TodayDashboardSummary(
+          trip: testTrip,
+          tripStatus: 'active',
+          activeDay: testSummary.activeDay,
+          todayItems: testSummary.todayItems,
+          nextUpcomingItem: testSummary.nextUpcomingItem,
+          currentStay: testSummary.currentStay,
+          metrics: testSummary.metrics,
+          timezone: testSummary.timezone,
+          budgetPacing: const BudgetPacing(
+            currency: 'USD',
+            totalBudgetMinor: 100000,
+            dailyBudgetMinor: 20000,
+            spentTodayMinor: 5000,
+            totalSpentMinor: 25000,
+            remainingBudgetMinor: 75000,
+            dailyUtilizationPercent: 25.0,
+          ),
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(
+            const TodayDashboardPage(initialTripId: 'trip-101'),
+            overrides: [
+              tripRepositoryProvider.overrideWithValue(
+                _FakeTripRepository([testTrip]),
+              ),
+              todaySummaryProvider('trip-101')
+                  .overrideWith((ref) async => summaryWithBudget),
+            ],
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        await tester.scrollUntilVisible(
+          find.text('Today\'s Spending & Budget'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+
+        expect(find.text('Today\'s Spending & Budget'), findsOneWidget);
+        expect(find.text('\$50.00'), findsOneWidget);
+        expect(find.text('Target: \$200.00'), findsOneWidget);
+        expect(find.text('25% daily limit used'), findsOneWidget);
+        expect(find.text('Remaining: \$150.00'), findsOneWidget);
+      },
+    );
   });
 }

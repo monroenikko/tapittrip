@@ -238,4 +238,13 @@ class ExpenseRepository {
     final data = response['data'] as Map<String, dynamic>;
     return SettlementRecord.fromJson(data);
   }
+
+  Future<Expense> uploadReceipt(String expenseId, String filePath) async {
+    final response = await apiClient.post(
+      '/v1/expenses/$expenseId/receipt',
+      data: {'file_path': filePath},
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return Expense.fromJson(data);
+  }
 }

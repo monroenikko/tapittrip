@@ -27,5 +27,6 @@ final readonly class TodaySummaryResult
         public array $metrics,
         public string $timezone,
         public string $localTime,
+        public ?array $budgetPacing = null,
     ) {}
 }

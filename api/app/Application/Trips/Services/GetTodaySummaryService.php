@@ -123,6 +123,33 @@ final class GetTodaySummaryService
             'progress_percentage' => $progressPercentage,
         ];
 
+        // Budget pacing
+        $budgetPacing = null;
+        $budget = $trip->budget;
+        if ($budget !== null) {
+            $spentTodayMinor = (int) $trip->expenses()
+                ->whereDate('expense_date', $todayDate)
+                ->sum('base_amount_minor');
+
+            $totalSpentMinor = (int) $trip->expenses()->sum('base_amount_minor');
+            $remainingBudgetMinor = $budget->total_budget_minor - $totalSpentMinor;
+            $dailyBudgetMinor = $budget->daily_budget_minor;
+
+            $dailyUtilizationPercent = ($dailyBudgetMinor !== null && $dailyBudgetMinor > 0)
+                ? round(($spentTodayMinor / $dailyBudgetMinor) * 100, 1)
+                : null;
+
+            $budgetPacing = [
+                'currency' => $budget->currency,
+                'total_budget_minor' => $budget->total_budget_minor,
+                'daily_budget_minor' => $dailyBudgetMinor,
+                'spent_today_minor' => $spentTodayMinor,
+                'total_spent_minor' => $totalSpentMinor,
+                'remaining_budget_minor' => $remainingBudgetMinor,
+                'daily_utilization_percent' => $dailyUtilizationPercent,
+            ];
+        }
+
         return new TodaySummaryResult(
             trip: $trip,
             tripStatus: $tripStatus,
@@ -134,6 +161,7 @@ final class GetTodaySummaryService
             metrics: $metrics,
             timezone: $timezone,
             localTime: $now->toIso8601String(),
+            budgetPacing: $budgetPacing,
         );
     }
 }

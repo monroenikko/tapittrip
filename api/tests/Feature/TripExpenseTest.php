@@ -9,6 +9,8 @@ use App\Domain\Expenses\Models\TripBudget;
 use App\Domain\Trips\Models\Trip;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -177,5 +179,32 @@ final class TripExpenseTest extends TestCase
         ]);
 
         $response->assertForbidden();
+    }
+
+    public function test_can_upload_receipt_image_for_expense(): void
+    {
+        Storage::fake('public');
+
+        $expense = Expense::factory()->create([
+            'trip_id' => $this->trip->id,
+            'payer_id' => $this->user->id,
+            'amount_minor' => 2500,
+            'currency' => 'USD',
+        ]);
+
+        $file = UploadedFile::fake()->image('receipt.jpg', 600, 800);
+
+        $response = $this->postJson("/api/v1/expenses/{$expense->id}/receipt", [
+            'file' => $file,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.id', $expense->id);
+
+        $this->assertNotNull($response->json('data.receipt_url'));
+        $this->assertStringContainsString('receipts/', $response->json('data.receipt_url'));
+
+        $expense->refresh();
+        $this->assertNotNull($expense->receipt_url);
     }
 }
