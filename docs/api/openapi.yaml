@@ -2028,6 +2028,273 @@ paths:
         "404":
           description: Lounge not found.
 
+  /trips/{trip}/budget:
+    get:
+      operationId: getTripBudget
+      summary: Get the configured budget for a trip
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Trip budget details or null.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripBudget"
+                    nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden - Not a trip member.
+        "404":
+          description: Trip not found.
+    put:
+      operationId: setTripBudget
+      summary: Set or update the target budget for a trip
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TripBudgetRequest"
+      responses:
+        "200":
+          description: Budget saved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripBudget"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden - Not authorized.
+        "422":
+          description: Validation error.
+
+  /trips/{trip}/expenses:
+    get:
+      operationId: listTripExpenses
+      summary: List all expenses recorded for a trip
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: expense_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: List of expenses for the trip.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Expense"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: createTripExpense
+      summary: Record a new expense for a trip
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseRequest"
+      responses:
+        "201":
+          description: Expense created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Expense"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation error.
+
+  /trips/{trip}/expenses/summary:
+    get:
+      operationId: getTripExpensesSummary
+      summary: Get aggregated spending analytics and budget tracking for a trip
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Spending summary and analytics.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripExpenseSummary"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /expenses/{expense}:
+    get:
+      operationId: getExpense
+      summary: Get details of a single expense
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: expense
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Expense details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Expense"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          description: Expense not found.
+    patch:
+      operationId: updateExpense
+      summary: Update an existing expense
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: expense
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExpenseRequest"
+      responses:
+        "200":
+          description: Expense updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Expense"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "404":
+          description: Expense not found.
+    delete:
+      operationId: deleteExpense
+      summary: Delete an expense record
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: expense
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Expense deleted successfully.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "404":
+          description: Expense not found.
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3816,6 +4083,299 @@ components:
           $ref: "#/components/schemas/AirportTerminal"
         airport:
           $ref: "#/components/schemas/Airport"
+
+    TripBudget:
+      type: object
+      required:
+        - id
+        - trip_id
+        - currency
+        - total_budget_minor
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+          example: USD
+        total_budget_minor:
+          type: integer
+          example: 150000
+        daily_budget_minor:
+          type: integer
+          nullable: true
+          example: 25000
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TripBudgetRequest:
+      type: object
+      required:
+        - currency
+        - total_budget_minor
+      properties:
+        currency:
+          type: string
+          example: USD
+        total_budget_minor:
+          type: integer
+          example: 150000
+        daily_budget_minor:
+          type: integer
+          nullable: true
+          example: 25000
+
+    Expense:
+      type: object
+      required:
+        - id
+        - trip_id
+        - payer_id
+        - category
+        - title
+        - amount_minor
+        - currency
+        - base_amount_minor
+        - expense_date
+        - split_type
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        payer_id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [transport, accommodation, dining, activities, shopping, other]
+          example: dining
+        title:
+          type: string
+          example: Dinner in Shibuya
+        amount_minor:
+          type: integer
+          example: 3000
+        currency:
+          type: string
+          example: JPY
+        exchange_rate:
+          type: number
+          nullable: true
+          example: 0.0067
+        base_amount_minor:
+          type: integer
+          example: 20
+        expense_date:
+          type: string
+          format: date
+          example: 2026-11-10
+        notes:
+          type: string
+          nullable: true
+        itinerary_item_id:
+          type: string
+          format: uuid
+          nullable: true
+        stay_id:
+          type: string
+          format: uuid
+          nullable: true
+        split_type:
+          type: string
+          enum: [single, equal, exact, shares]
+          example: single
+        receipt_url:
+          type: string
+          nullable: true
+        version:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateExpenseRequest:
+      type: object
+      required:
+        - category
+        - title
+        - amount_minor
+        - currency
+        - expense_date
+      properties:
+        category:
+          type: string
+          enum: [transport, accommodation, dining, activities, shopping, other]
+        title:
+          type: string
+          maxLength: 255
+        amount_minor:
+          type: integer
+          minimum: 1
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        exchange_rate:
+          type: number
+          nullable: true
+        expense_date:
+          type: string
+          format: date
+        notes:
+          type: string
+          nullable: true
+          maxLength: 1000
+        itinerary_item_id:
+          type: string
+          format: uuid
+          nullable: true
+        stay_id:
+          type: string
+          format: uuid
+          nullable: true
+        split_type:
+          type: string
+          enum: [single, equal, exact, shares]
+        receipt_url:
+          type: string
+          nullable: true
+
+    UpdateExpenseRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [transport, accommodation, dining, activities, shopping, other]
+        title:
+          type: string
+          maxLength: 255
+        amount_minor:
+          type: integer
+          minimum: 1
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        exchange_rate:
+          type: number
+          nullable: true
+        expense_date:
+          type: string
+          format: date
+        notes:
+          type: string
+          nullable: true
+          maxLength: 1000
+        itinerary_item_id:
+          type: string
+          format: uuid
+          nullable: true
+        stay_id:
+          type: string
+          format: uuid
+          nullable: true
+        receipt_url:
+          type: string
+          nullable: true
+
+    TripExpenseSummary:
+      type: object
+      required:
+        - trip_id
+        - base_currency
+        - total_spent_base_minor
+        - expenses_count
+        - category_breakdown
+        - daily_spending
+      properties:
+        trip_id:
+          type: string
+          format: uuid
+        base_currency:
+          type: string
+          example: USD
+        total_budget_minor:
+          type: integer
+          nullable: true
+        daily_budget_minor:
+          type: integer
+          nullable: true
+        total_spent_base_minor:
+          type: integer
+          example: 25000
+        remaining_budget_minor:
+          type: integer
+          nullable: true
+          example: 75000
+        budget_utilization_percent:
+          type: number
+          nullable: true
+          example: 25.0
+        expenses_count:
+          type: integer
+          example: 5
+        category_breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseCategoryBreakdown"
+        daily_spending:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailySpendingItem"
+
+    ExpenseCategoryBreakdown:
+      type: object
+      required:
+        - category
+        - amount_minor
+        - count
+        - percent
+      properties:
+        category:
+          type: string
+          example: dining
+        amount_minor:
+          type: integer
+          example: 15000
+        count:
+          type: integer
+          example: 3
+        percent:
+          type: number
+          example: 60.0
+
+    DailySpendingItem:
+      type: object
+      required:
+        - date
+        - amount_minor
+        - count
+      properties:
+        date:
+          type: string
+          format: date
+          example: 2026-11-10
+        amount_minor:
+          type: integer
+          example: 25000
+        count:
+          type: integer
+          example: 5
+
 
 
 

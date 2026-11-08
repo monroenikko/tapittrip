@@ -6,6 +6,7 @@ import '../../features/auth/domain/models/auth_state.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/expenses/presentation/pages/trip_expenses_page.dart';
 import '../../features/itinerary/presentation/pages/trip_itinerary_page.dart';
 import '../../features/lounges/presentation/pages/airport_lounge_finder_page.dart';
 import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
@@ -79,6 +80,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               final tripId = state.pathParameters['tripId']!;
               final trip = state.extra as Trip?;
               return TripItineraryPage(tripId: tripId, initialTrip: trip);
+            },
+          ),
+          GoRoute(
+            path: ':tripId/expenses',
+            builder: (context, state) {
+              final tripId = state.pathParameters['tripId']!;
+              return TripExpensesPage(tripId: tripId);
             },
           ),
         ],

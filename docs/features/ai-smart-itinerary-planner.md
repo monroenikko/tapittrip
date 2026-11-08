@@ -61,3 +61,4 @@ All endpoints enforce trip membership via `TripPolicy`.
   - `ai_itinerary_test.dart` (5 tests covering model parsing, repository, preview sheet, planner dialog).
   - `trip_assistant_test.dart` (3 tests covering model, repository, assistant sheet with action execution).
   - 108/108 total mobile tests passing.
+

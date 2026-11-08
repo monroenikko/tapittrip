@@ -150,6 +150,8 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
             onSelected: (value) {
               if (value == 'notifications') {
                 context.push('/notifications/preferences');
+              } else if (value == 'expenses') {
+                context.push('/trips/${widget.tripId}/expenses');
               } else if (value == 'favorite') {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -168,6 +170,16 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                     Icon(Icons.notifications_outlined, size: 20),
                     SizedBox(width: 8),
                     Text('Notifications'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'expenses',
+                child: Row(
+                  children: [
+                    Icon(Icons.account_balance_wallet_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Expenses & Budget'),
                   ],
                 ),
               ),

@@ -2,13 +2,55 @@
 
 ## Current milestone
 
-- Milestone: **M7 — Smart Airport Experience & AI Travel Assistant**
-- Status: **Completed**
-- Basis: All three vertical slices (Airport Lounge Finder, AI Smart Itinerary Planner, and "Ask TapItTrip" Contextual Assistant) implemented and fully verified across backend (97/97 PostgreSQL tests, 545 assertions) and mobile client (108/108 Flutter tests, 0 analyzer issues).
+- Milestone: **M8 — Multi-Currency Expenses & Group Budget Tracker**
+- Status: **In Progress (Slice 1 Completed)**
+- Basis: Approved Milestone M8 plan (`m8-expenses-and-budget-plan.md`). Core trip budget target setting, multi-currency integer minor-unit expenses, categorization, daily spending analytics, and encrypted offline caching implemented and verified across backend and mobile client.
 - Boundary:
-  - Slice 1: Smart Airport Lounge Finder (Directory, Terminal Filtering & Amenities) — **Completed**.
-  - Slice 2: AI Smart Itinerary Planner & Neighborhood Route Clustering — **Completed**.
-  - Slice 3: "Ask TapItTrip" Contextual In-Trip Assistant — **Completed**.
+  - Slice 1: Core Trip Budget & Categorized Expense Tracking — **Completed**.
+  - Slice 2: Trip Circles Group Expense Splitting & Debt Settlement — **Planned**.
+  - Slice 3: Offline Sync, Currency Exchange Cache & Receipt Capture — **Planned**.
+
+## 2026-11-08 — Milestone M8 (Slice 1): Core Trip Budget & Categorized Expense Tracking
+
+### Completed
+
+- **Database Migrations & Schema**:
+  - `trip_budgets`: UUID primary key, `trip_id` FK cascade (`trips.id`), `currency` (char 3), `total_budget_minor` integer, `daily_budget_minor` integer nullable, timestamps. Unique on `[trip_id]`.
+  - `expenses`: UUID primary key, `trip_id` FK cascade, `payer_id` FK cascade (`users.id`), `category` string (`transport`, `accommodation`, `dining`, `activities`, `shopping`, `other`), `title` string (255), `amount_minor` integer, `currency` char(3), `exchange_rate` decimal(12,6) nullable, `base_amount_minor` integer, `expense_date` date, `notes` text nullable, `itinerary_item_id` FK nullable, `stay_id` FK nullable, `split_type` string default 'single', `receipt_url` string nullable, `version` integer default 1, timestamps. Indexed on `[trip_id, expense_date]` and `[trip_id, category]`.
+  - Applied on dev (`tapittrip`) and test (`tapittrip_test`) PostgreSQL databases with privileged migrator tools container.
+- **Backend Application Services & Domain Architecture**:
+  - Domain models: `TripBudget`, `Expense` under `App\Domain\Expenses\Models`.
+  - Relations: `budget(): HasOne` and `expenses(): HasMany` on `Trip`.
+  - Factories: `TripBudgetFactory`, `ExpenseFactory`.
+  - DTOs: `SetTripBudgetData`, `CreateExpenseData`, `UpdateExpenseData`, `TripExpensesSummaryResult` under `App\Application\Expenses\Data`.
+  - Application Services:
+    - `SetTripBudgetService`: Sets or updates trip budget target in integer minor units with `TripPolicy` authorization.
+    - `CreateExpenseService`: Records new expense, handles foreign currency conversion to trip base currency, and increments version.
+    - `UpdateExpenseService`: Updates expense details and recalculates converted base amounts.
+    - `DeleteExpenseService`: Deletes an expense with member authorization.
+    - `GetTripExpensesSummaryService`: Aggregates total spent in base currency, calculates remaining budget and utilization percentage, and computes category breakdown percentages and daily spending trends.
+- **Backend API & Route Registration**:
+  - Form Requests: `SetTripBudgetRequest`, `CreateExpenseRequest`, `UpdateExpenseRequest`.
+  - API Resources: `TripBudgetResource`, `ExpenseResource`, `TripExpenseSummaryResource`.
+  - Controllers:
+    - `TripBudgetController`: `GET /api/v1/trips/{trip}/budget`, `PUT /api/v1/trips/{trip}/budget`.
+    - `TripExpenseController`: `GET /api/v1/trips/{trip}/expenses`, `POST /api/v1/trips/{trip}/expenses`, `GET /api/v1/trips/{trip}/expenses/summary`, `GET /api/v1/expenses/{expense}`, `PATCH /api/v1/expenses/{expense}`, `DELETE /api/v1/expenses/{expense}`.
+  - OpenAPI Specification: Documented all endpoints, parameters, request bodies, and schemas in `docs/api/openapi.yaml`.
+- **Mobile Client Budgeting & Expense Logging**:
+  - Models: `TripBudget`, `Expense`, `ExpenseSummary`, `ExpenseCategoryBreakdown`, `DailySpendingItem` with JSON serialization, minor unit conversions, and currency formatting (including zero-decimal JPY).
+  - `ExpenseRepository`: API requests with encrypted offline storage fallback via `FlutterSecureStorage` (`cached_budget_{tripId}`, `cached_expenses_{tripId}`, `cached_summary_{tripId}`).
+  - Providers: `tripBudgetProvider`, `tripExpensesProvider`, `expenseSummaryProvider`, `selectedExpenseCategoryFilterProvider`.
+  - Widgets & UI:
+    - `TripExpensesPage`: Header budget overview card with utilization progress bar and remaining headroom, category filter chips (`All`, `Dining`, `Transport`, etc.), formatted expense list with category icons and multi-currency badges, and empty states.
+    - `SetBudgetDialog`: Modal dialog to configure trip base currency, total budget target, and optional daily spending limit.
+    - `AddExpenseBottomSheet`: Clean bottom sheet for quickly logging expenses with category selector, title, amount, currency, and date.
+    - Navigation: Added `/trips/:tripId/expenses` route in `AppRouter` and "Expenses & Budget" entry in `TripItineraryPage` overflow menu.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `TripBudgetTest.php` (5 tests) and `TripExpenseTest.php` (6 tests). Full suite passes: 108/108 tests, 587 assertions.
+  - Backend Pint: 0 style issues.
+  - Mobile Flutter Tests: Added `expense_test.dart` (6 tests). Full suite passes: 114/114 tests.
+  - Mobile Analyzer: 0 issues.
+  - Documentation: Created `docs/features/expenses-and-budgeting.md`.
 
 ## 2026-11-08 — Milestone M7: Smart Airport Experience & AI Travel Assistant (Full Delivery)
 

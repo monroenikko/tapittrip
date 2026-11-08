@@ -16,8 +16,10 @@ use App\Http\Controllers\Api\V1\ReminderController;
 use App\Http\Controllers\Api\V1\StayController;
 use App\Http\Controllers\Api\V1\StayTransportController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\TripBudgetController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
+use App\Http\Controllers\Api\V1\TripExpenseController;
 use App\Http\Controllers\Api\V1\TripTodayController;
 use App\Http\Controllers\Api\V1\VisitEventController;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +63,16 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/stays/{stay}', [StayController::class, 'update'])->name('stays.update');
         Route::delete('/stays/{stay}', [StayController::class, 'destroy'])->name('stays.destroy');
         Route::post('/stays/{stay}/transport-options', [StayTransportController::class, 'compare'])->name('stays.transport-options.compare');
+
+        Route::get('/trips/{trip}/budget', [TripBudgetController::class, 'show'])->name('trips.budget.show');
+        Route::put('/trips/{trip}/budget', [TripBudgetController::class, 'store'])->name('trips.budget.store');
+
+        Route::get('/trips/{trip}/expenses', [TripExpenseController::class, 'index'])->name('trips.expenses.index');
+        Route::post('/trips/{trip}/expenses', [TripExpenseController::class, 'store'])->name('trips.expenses.store');
+        Route::get('/trips/{trip}/expenses/summary', [TripExpenseController::class, 'summary'])->name('trips.expenses.summary');
+        Route::get('/expenses/{expense}', [TripExpenseController::class, 'show'])->name('expenses.show');
+        Route::patch('/expenses/{expense}', [TripExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('/expenses/{expense}', [TripExpenseController::class, 'destroy'])->name('expenses.destroy');
 
         Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');
         Route::post('/trips/{trip}/checklists', [ChecklistController::class, 'store'])->name('trips.checklists.store');

@@ -19,6 +19,8 @@
             <file>tests/Feature/AirportLoungeTest.php</file>
             <file>tests/Feature/AiItineraryTest.php</file>
             <file>tests/Feature/TripAssistantTest.php</file>
+            <file>tests/Feature/TripBudgetTest.php</file>
+            <file>tests/Feature/TripExpenseTest.php</file>
         </testsuite>
     </testsuites>
     <php>

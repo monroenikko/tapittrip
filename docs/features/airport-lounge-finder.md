@@ -66,3 +66,4 @@ Documented in `docs/api/openapi.yaml`:
 - **Test Suite Results**:
   - Backend: 86/86 tests passed (502 assertions), Pint 0 issues.
   - Mobile: 100/100 tests passed, `flutter analyze` 0 issues, `dart format` clean.
+

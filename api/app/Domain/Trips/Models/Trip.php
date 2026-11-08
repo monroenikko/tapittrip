@@ -6,6 +6,8 @@ namespace App\Domain\Trips\Models;
 
 use App\Domain\Checklists\Models\Checklist;
 use App\Domain\Checklists\Models\ChecklistItem;
+use App\Domain\Expenses\Models\Expense;
+use App\Domain\Expenses\Models\TripBudget;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
 use App\Domain\Media\Models\MediaAttachment;
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -196,5 +199,27 @@ final class Trip extends Model
     {
         return $this->hasMany(Reminder::class)
             ->orderBy('trigger_at_utc');
+    }
+
+    /**
+     * Target budget configured for this trip.
+     *
+     * @return HasOne<TripBudget, $this>
+     */
+    public function budget(): HasOne
+    {
+        return $this->hasOne(TripBudget::class);
+    }
+
+    /**
+     * All expenses logged for this trip.
+     *
+     * @return HasMany<Expense, $this>
+     */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class)
+            ->orderBy('expense_date', 'desc')
+            ->orderBy('created_at', 'desc');
     }
 }
