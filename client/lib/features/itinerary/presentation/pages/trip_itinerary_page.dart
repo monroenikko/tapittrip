@@ -10,6 +10,8 @@ import 'package:tapittrip/features/checklists/presentation/widgets/checklists_vi
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/activity_timeline_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/ai_itinerary_planner_dialog.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/ask_tapittrip_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/itinerary_filter_tabs.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/route_summary_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/timeline_day_badge.dart';
@@ -78,6 +80,29 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
     );
   }
 
+  void _openAiPlanner() {
+    final trip = _resolveTrip();
+    int initialDays = 3;
+    if (trip?.startDate != null && trip?.endDate != null) {
+      final start = DateTime.tryParse(trip!.startDate!);
+      final end = DateTime.tryParse(trip.endDate!);
+      if (start != null && end != null) {
+        initialDays = (end.difference(start).inDays + 1).clamp(1, 7);
+      }
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AiItineraryPlannerDialog(
+        tripId: widget.tripId,
+        initialDestination: trip?.destinationCountry != null
+            ? '${trip!.title}, ${trip.destinationCountry}'
+            : trip?.title,
+        initialDays: initialDays,
+      ),
+    );
+  }
+
   Future<void> _onRefresh() async {
     if (_selectedTabIndex == 2) {
       await ref.read(stayListProvider(widget.tripId).notifier).refresh();
@@ -97,6 +122,17 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
       appBar: AppBar(
         title: const Text('Your Itinerary'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_rounded),
+            tooltip: 'Plan with AI',
+            onPressed: _openAiPlanner,
+          ),
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            tooltip: 'Ask TapItTrip',
+            onPressed: () =>
+                AskTapItTripSheet.show(context, tripId: widget.tripId),
+          ),
           if (_selectedTabIndex == 0)
             IconButton(
               icon: Icon(
@@ -108,24 +144,54 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
               },
             ),
           SyncStatusIndicator(tripId: widget.tripId),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            tooltip: 'Notification preferences',
-            onPressed: () => context.push('/notifications/preferences'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.bookmark_border_rounded),
-            tooltip: 'Save itinerary',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Itinerary saved to favorites.')),
-              );
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            tooltip: 'More options',
+            onSelected: (value) {
+              if (value == 'notifications') {
+                context.push('/notifications/preferences');
+              } else if (value == 'favorite') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Itinerary saved to favorites.'),
+                  ),
+                );
+              } else if (value == 'refresh') {
+                _onRefresh();
+              }
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh',
-            onPressed: _onRefresh,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'notifications',
+                child: Row(
+                  children: [
+                    Icon(Icons.notifications_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Notifications'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'favorite',
+                child: Row(
+                  children: [
+                    Icon(Icons.bookmark_border_rounded, size: 20),
+                    SizedBox(width: 8),
+                    Text('Save to favorites'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'refresh',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh_rounded, size: 20),
+                    SizedBox(width: 8),
+                    Text('Refresh'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -536,10 +602,17 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Tap "Add Activity" below to plan your first stop.',
+                'Tap "Add Activity" below to plan your first stop, or let AI propose a curated route.',
+                textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                label: const Text('Plan with AI'),
+                onPressed: _openAiPlanner,
               ),
             ],
           ),

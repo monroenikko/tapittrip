@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../data/ai_itinerary_repository.dart';
 import '../../data/itinerary_repository.dart';
 import '../../domain/models/itinerary_item.dart';
 import '../../domain/models/trip_day.dart';
@@ -8,6 +9,11 @@ import '../../domain/models/trip_day.dart';
 final itineraryRepositoryProvider = Provider<ItineraryRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return ItineraryRepository(apiClient: apiClient);
+});
+
+final aiItineraryRepositoryProvider = Provider<AiItineraryRepository>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return AiItineraryRepository(apiClient: apiClient);
 });
 
 /// Trip days provider parametrized by tripId.

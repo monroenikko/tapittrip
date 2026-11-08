@@ -568,6 +568,191 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /trips/{trip}/ai-plan/generate:
+    post:
+      operationId: generateAiItinerary
+      summary: Propose an AI-generated itinerary suggestion based on preferences
+      tags:
+        - Itinerary
+        - AI
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - destination
+                - duration_days
+              properties:
+                destination:
+                  type: string
+                  example: "Tokyo, Japan"
+                duration_days:
+                  type: integer
+                  minimum: 1
+                  maximum: 7
+                  example: 3
+                budget_tier:
+                  type: string
+                  enum: [budget, moderate, luxury]
+                  default: moderate
+                travel_party:
+                  type: string
+                  enum: [solo, couple, family, friends, seniors]
+                  default: family
+                pace:
+                  type: string
+                  enum: [relaxed, balanced, fast]
+                  default: balanced
+                interests:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: Suggested AI itinerary plan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this trip.
+        "422":
+          description: Validation error.
+
+  /trips/{trip}/ai-plan/apply:
+    post:
+      operationId: applyAiItinerary
+      summary: Apply approved days from an AI itinerary plan
+      tags:
+        - Itinerary
+        - AI
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - days
+              properties:
+                days:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: Created itinerary items.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ItineraryItem"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to modify this trip.
+        "422":
+          description: Validation error.
+
+  /trips/{trip}/assistant/query:
+    post:
+      operationId: queryTripAssistant
+      summary: Ask TapItTrip contextual in-trip assistant
+      tags:
+        - Itinerary
+        - AI
+        - Assistant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                  example: "Where should we go tomorrow near our hotel?"
+                context_date:
+                  type: string
+                  format: date
+                  nullable: true
+                  example: "2026-11-11"
+                terminal_code:
+                  type: string
+                  maxLength: 20
+                  nullable: true
+                  example: "T3"
+      responses:
+        "200":
+          description: Contextual trip assistant answer.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      reply:
+                        type: string
+                      category:
+                        type: string
+                        enum: [dining, lounge, toddler_friendly, weather, general]
+                      context_summary:
+                        type: object
+                      suggested_actions:
+                        type: array
+                        items:
+                          type: object
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this trip.
+        "422":
+          description: Validation error.
+
   /itinerary-items/{item}:
     get:
       operationId: getItineraryItem

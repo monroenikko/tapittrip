@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AiItineraryController;
 use App\Http\Controllers\Api\V1\AirportLoungeController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChecklistController;
@@ -45,6 +46,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/itinerary-items/{item}', [ItineraryItemController::class, 'show'])->name('itinerary-items.show');
         Route::patch('/itinerary-items/{item}', [ItineraryItemController::class, 'update'])->name('itinerary-items.update');
         Route::delete('/itinerary-items/{item}', [ItineraryItemController::class, 'destroy'])->name('itinerary-items.destroy');
+
+        Route::post('/trips/{trip}/ai-plan/generate', [AiItineraryController::class, 'generate'])->name('trips.ai-plan.generate');
+        Route::post('/trips/{trip}/ai-plan/apply', [AiItineraryController::class, 'apply'])->name('trips.ai-plan.apply');
+        Route::post('/trips/{trip}/assistant/query', [AiItineraryController::class, 'ask'])->name('trips.assistant.query');
 
         Route::get('/places/search', [PlaceController::class, 'search'])->name('places.search');
         Route::post('/places', [PlaceController::class, 'store'])->name('places.store');

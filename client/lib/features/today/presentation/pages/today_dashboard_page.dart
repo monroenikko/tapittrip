@@ -12,6 +12,7 @@ import '../widgets/quick_actions_grid.dart';
 import '../widgets/today_hero_card.dart';
 import '../widgets/trip_progress_card.dart';
 
+import 'package:tapittrip/features/itinerary/presentation/widgets/ask_tapittrip_sheet.dart';
 import 'package:tapittrip/features/sync/presentation/widgets/sync_status_indicator.dart';
 
 class TodayDashboardPage extends ConsumerStatefulWidget {
@@ -434,6 +435,70 @@ class _TodayDashboardPageState extends ConsumerState<TodayDashboardPage> {
                                     const SizedBox(height: 2),
                                     Text(
                                       'Explore terminal lounges, amenities & gate tips',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => AskTapItTripSheet.show(
+                          context,
+                          tripId: selectedTripId,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.secondaryContainer,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  color: colorScheme.onSecondaryContainer,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Ask TapItTrip Assistant',
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Dining near hotel, terminal lounges, toddler pacing',
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: colorScheme.onSurfaceVariant,

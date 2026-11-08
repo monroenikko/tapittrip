@@ -3,12 +3,37 @@
 ## Current milestone
 
 - Milestone: **M7 — Smart Airport Experience & AI Travel Assistant**
-- Status: **In Progress (Slice 1 Completed)**
-- Basis: Slice 1 acceptance gate passed across backend (86/86 PostgreSQL tests, 502 assertions) and mobile client (100/100 Flutter tests).
+- Status: **Completed**
+- Basis: All three vertical slices (Airport Lounge Finder, AI Smart Itinerary Planner, and "Ask TapItTrip" Contextual Assistant) implemented and fully verified across backend (97/97 PostgreSQL tests, 545 assertions) and mobile client (108/108 Flutter tests, 0 analyzer issues).
 - Boundary:
   - Slice 1: Smart Airport Lounge Finder (Directory, Terminal Filtering & Amenities) — **Completed**.
-  - Slice 2: AI Smart Itinerary Planner & Neighborhood Route Clustering — **Next**.
-  - Slice 3: "Ask TapItTrip" Contextual In-Trip Assistant — **Pending**.
+  - Slice 2: AI Smart Itinerary Planner & Neighborhood Route Clustering — **Completed**.
+  - Slice 3: "Ask TapItTrip" Contextual In-Trip Assistant — **Completed**.
+
+## 2026-11-08 — Milestone M7: Smart Airport Experience & AI Travel Assistant (Full Delivery)
+
+### Completed
+
+- **Slice 1: Smart Airport Lounge Finder**:
+  - PostgreSQL schema and migrations for `airports`, `airport_terminals`, and `airport_lounges`.
+  - Application services: `SearchAirportLoungesService`, `GetAirportLoungeDetailsService`.
+  - API endpoints: `GET /api/v1/airports/{iata}/lounges` and `GET /api/v1/lounges/{lounge}`.
+  - Mobile client: `LoungeRepository` with encrypted offline caching, `AirportLoungeFinderPage`, `LoungeCard`, `LoungeDetailSheet`, launcher in `TodayDashboardPage`.
+- **Slice 2: AI Smart Itinerary Planner & Route Clustering**:
+  - Application services: `GenerateAiItineraryService` (neighborhood clustering, budget tiering, family tips, weather fallbacks), `ApplyAiItineraryService` (atomic non-destructive persistence).
+  - API endpoints: `POST /api/v1/trips/{trip}/ai-plan/generate`, `POST /api/v1/trips/{trip}/ai-plan/apply`.
+  - Invariant strictly enforced: **"AI suggests; the user approves"**. Existing bookings and activities are never overwritten.
+  - Mobile client: `AiItineraryPlan` and `AiActivitySuggestion` domain models, `AiItineraryRepository`, `AiItineraryPlannerDialog`, `AiItineraryPreviewSheet`, launcher button on `TripItineraryPage` and empty itinerary states.
+- **Slice 3: "Ask TapItTrip" Contextual In-Trip Assistant**:
+  - Application service: `AskTapItTripService` ingests active trip context (stays, schedule, party mode, terminal) and answers queries (`dining`, `lounge`, `toddler_friendly`, `weather`, `general`).
+  - API endpoint: `POST /api/v1/trips/{trip}/assistant/query` with `TripPolicy` authorization gate.
+  - Mobile client: `TripAssistantResponse` model, `AskTapItTripSheet` bottom sheet with quick-prompt chips, advisory badge, and actionable buttons. Launcher cards integrated on `TodayDashboardPage` and `TripItineraryPage`.
+- **Automated Verification**:
+  - Backend PHPUnit: 97/97 tests passing (545 assertions) across PostgreSQL and Redis.
+  - Backend Pint: 0 formatting/linter issues.
+  - Mobile Flutter: 108/108 tests passing.
+  - Mobile Analyzer: 0 issues.
+  - Documentation: Created `docs/features/airport-lounge-finder.md`, `docs/features/ai-smart-itinerary-planner.md`, updated `docs/api/openapi.yaml`.
 
 ## 2026-11-08 — Milestone M7 (Slice 1): Smart Airport Lounge Finder
 
