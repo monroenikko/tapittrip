@@ -6,6 +6,9 @@ namespace App\Application\Expenses\Data;
 
 final readonly class CreateExpenseData
 {
+    /**
+     * @param  array<int, array<string, mixed>>|null  $splits
+     */
     public function __construct(
         public string $payerId,
         public string $category,
@@ -17,6 +20,7 @@ final readonly class CreateExpenseData
         public ?string $itineraryItemId = null,
         public ?string $stayId = null,
         public string $splitType = 'single',
+        public ?array $splits = null,
         public ?string $notes = null,
         public ?string $receiptUrl = null,
     ) {}
@@ -37,6 +41,7 @@ final readonly class CreateExpenseData
             itineraryItemId: isset($data['itinerary_item_id']) ? (string) $data['itinerary_item_id'] : null,
             stayId: isset($data['stay_id']) ? (string) $data['stay_id'] : null,
             splitType: strtolower(trim((string) ($data['split_type'] ?? 'single'))),
+            splits: isset($data['splits']) && is_array($data['splits']) ? $data['splits'] : null,
             notes: isset($data['notes']) ? trim((string) $data['notes']) : null,
             receiptUrl: isset($data['receipt_url']) ? trim((string) $data['receipt_url']) : null,
         );

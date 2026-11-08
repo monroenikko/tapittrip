@@ -7,6 +7,7 @@ import 'package:tapittrip/core/storage/token_storage.dart';
 import 'package:tapittrip/features/expenses/data/expense_repository.dart';
 import 'package:tapittrip/features/expenses/domain/models/expense.dart';
 import 'package:tapittrip/features/expenses/domain/models/expense_summary.dart';
+import 'package:tapittrip/features/expenses/domain/models/group_balances.dart';
 import 'package:tapittrip/features/expenses/domain/models/trip_budget.dart';
 import 'package:tapittrip/features/expenses/presentation/pages/trip_expenses_page.dart';
 import 'package:tapittrip/features/expenses/presentation/providers/expense_provider.dart';
@@ -69,6 +70,42 @@ class FakeExpenseApiClient extends ApiClient {
             },
           };
     }
+    if (path.contains('/settlements')) {
+      return getResponse ??
+          {
+            'data': {
+              'trip_id': 't-1',
+              'base_currency': 'USD',
+              'balances': [
+                {
+                  'user_id': 'u-1',
+                  'name': 'Alice',
+                  'email': 'alice@example.com',
+                  'net_balance_minor': 3000,
+                  'status': 'is_owed',
+                },
+                {
+                  'user_id': 'u-2',
+                  'name': 'Bob',
+                  'email': 'bob@example.com',
+                  'net_balance_minor': -3000,
+                  'status': 'owes',
+                },
+              ],
+              'suggested_settlements': [
+                {
+                  'payer_id': 'u-2',
+                  'payer_name': 'Bob',
+                  'payee_id': 'u-1',
+                  'payee_name': 'Alice',
+                  'amount_minor': 3000,
+                  'currency': 'USD',
+                },
+              ],
+              'settlement_history': [],
+            },
+          };
+    }
     return getResponse ??
         {
           'data': [
@@ -98,6 +135,21 @@ class FakeExpenseApiClient extends ApiClient {
   }) async {
     lastPostPath = path;
     lastPostData = data;
+    if (path.contains('/settlements')) {
+      return postResponse ??
+          {
+            'data': {
+              'id': 'set-1',
+              'trip_id': 't-1',
+              'payer_id': data['payer_id'] ?? 'u-2',
+              'payee_id': data['payee_id'] ?? 'u-1',
+              'amount_minor': data['amount_minor'] ?? 3000,
+              'currency': data['currency'] ?? 'USD',
+              'settled_at': '2026-11-10T12:00:00Z',
+              'notes': data['notes'] ?? 'Settled via cash',
+            },
+          };
+    }
     return postResponse ??
         {
           'data': {
@@ -355,5 +407,148 @@ void main() {
       expect(fakeApi.lastPostData['title'], 'Matcha Latte');
       expect(fakeApi.lastPostData['amount_minor'], 650);
     });
+  });
+
+  group('GroupBalances Model', () {
+    test(
+      'deserializes balances, suggested transfers, and history correctly',
+      () {
+        final json = {
+          'trip_id': 't-1',
+          'base_currency': 'USD',
+          'balances': [
+            {
+              'user_id': 'u-1',
+              'name': 'Alice',
+              'email': 'alice@example.com',
+              'net_balance_minor': 3500,
+              'status': 'is_owed',
+            },
+            {
+              'user_id': 'u-2',
+              'name': 'Bob',
+              'email': 'bob@example.com',
+              'net_balance_minor': -3500,
+              'status': 'owes',
+            },
+          ],
+          'suggested_settlements': [
+            {
+              'payer_id': 'u-2',
+              'payer_name': 'Bob',
+              'payee_id': 'u-1',
+              'payee_name': 'Alice',
+              'amount_minor': 3500,
+              'currency': 'USD',
+            },
+          ],
+          'settlement_history': [
+            {
+              'id': 's-1',
+              'payer_id': 'u-2',
+              'payer_name': 'Bob',
+              'payee_id': 'u-1',
+              'payee_name': 'Alice',
+              'amount_minor': 1000,
+              'currency': 'USD',
+              'settled_at': '2026-11-10T10:00:00Z',
+              'notes': 'Partial cash',
+            },
+          ],
+        };
+
+        final group = GroupBalances.fromJson(json);
+
+        expect(group.tripId, 't-1');
+        expect(group.baseCurrency, 'USD');
+        expect(group.balances.length, 2);
+        expect(group.balances[0].isOwed, true);
+        expect(group.balances[0].formatBalance('USD'), '+\$35.00');
+        expect(group.balances[1].owes, true);
+        expect(group.balances[1].formatBalance('USD'), '-\$35.00');
+        expect(group.suggestedSettlements.length, 1);
+        expect(group.suggestedSettlements[0].formatAmount(), '\$35.00');
+        expect(group.settlementHistory.length, 1);
+        expect(group.isAllSettled, false);
+      },
+    );
+  });
+
+  group('Group Settlement Repository & UI', () {
+    test(
+      'ExpenseRepository getGroupBalances and recordSettlement make correct API calls',
+      () async {
+        final fakeApi = FakeExpenseApiClient();
+        final repo = ExpenseRepository(apiClient: fakeApi);
+
+        final balances = await repo.getGroupBalances('t-1');
+        expect(fakeApi.lastGetPath, '/v1/trips/t-1/settlements');
+        expect(balances.balances.length, 2);
+        expect(balances.suggestedSettlements.first.payerName, 'Bob');
+
+        final settlement = await repo.recordSettlement(
+          't-1',
+          payerId: 'u-2',
+          payeeId: 'u-1',
+          amountMinor: 3000,
+          currency: 'USD',
+          notes: 'Cash payment',
+        );
+        expect(fakeApi.lastPostPath, '/v1/trips/t-1/settlements');
+        expect(fakeApi.lastPostData['amount_minor'], 3000);
+        expect(settlement.notes, 'Cash payment');
+      },
+    );
+
+    testWidgets(
+      'TripExpensesPage renders Balances tab and opens SettleUpDialog',
+      (tester) async {
+        final fakeApi = FakeExpenseApiClient();
+        final repo = ExpenseRepository(apiClient: fakeApi);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [expenseRepositoryProvider.overrideWithValue(repo)],
+            child: const MaterialApp(home: TripExpensesPage(tripId: 't-1')),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Switch to Balances & Settle Tab
+        await tester.tap(find.text('Balances & Settle'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        // Assert member balances
+        expect(find.text('Trip Companion Balances'), findsOneWidget);
+        expect(find.text('Alice'), findsOneWidget);
+        expect(find.text('Bob'), findsOneWidget);
+        expect(find.textContaining('gets back +\$30.00'), findsOneWidget);
+        expect(find.textContaining('owes -\$30.00'), findsOneWidget);
+
+        // Assert suggested settlements and Settle Up button
+        expect(find.text('Bob → Alice'), findsOneWidget);
+        expect(find.text('Settle Up'), findsOneWidget);
+
+        // Tap Settle Up button
+        await tester.tap(find.text('Settle Up'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        // Assert SettleUpDialog is open
+        expect(find.text('Record Settlement'), findsOneWidget);
+        expect(find.text('Confirm Settle'), findsOneWidget);
+
+        // Confirm settlement
+        await tester.tap(find.text('Confirm Settle'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(fakeApi.lastPostPath, '/v1/trips/t-1/settlements');
+        expect(fakeApi.lastPostData['amount_minor'], 3000);
+      },
+    );
   });
 }

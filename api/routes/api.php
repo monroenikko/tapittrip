@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChecklistController;
 use App\Http\Controllers\Api\V1\ChecklistItemController;
 use App\Http\Controllers\Api\V1\DeviceController;
+use App\Http\Controllers\Api\V1\GroupSettlementController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ItineraryItemController;
 use App\Http\Controllers\Api\V1\MediaController;
@@ -73,6 +74,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/expenses/{expense}', [TripExpenseController::class, 'show'])->name('expenses.show');
         Route::patch('/expenses/{expense}', [TripExpenseController::class, 'update'])->name('expenses.update');
         Route::delete('/expenses/{expense}', [TripExpenseController::class, 'destroy'])->name('expenses.destroy');
+
+        Route::get('/trips/{trip}/settlements', [GroupSettlementController::class, 'index'])->name('trips.settlements.index');
+        Route::post('/trips/{trip}/settlements', [GroupSettlementController::class, 'store'])->name('trips.settlements.store');
 
         Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');
         Route::post('/trips/{trip}/checklists', [ChecklistController::class, 'store'])->name('trips.checklists.store');

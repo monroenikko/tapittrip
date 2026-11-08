@@ -2295,6 +2295,72 @@ paths:
         "404":
           description: Expense not found.
 
+  /trips/{trip}/settlements:
+    get:
+      operationId: getTripSettlements
+      summary: Get group companion balances and simplified debt settlement transfers
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Member balances and suggested settlement transfers.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/GroupSettlement"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: recordSettlement
+      summary: Record a debt settlement between two trip members
+      tags:
+        - Expenses
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordSettlementRequest"
+      responses:
+        "201":
+          description: Settlement recorded successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ExpenseSettlement"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation error.
+
 components:
   securitySchemes:
     BearerAuth:
@@ -4375,6 +4441,161 @@ components:
         count:
           type: integer
           example: 5
+
+    RecordSettlementRequest:
+      type: object
+      required:
+        - payer_id
+        - payee_id
+        - amount_minor
+        - currency
+      properties:
+        payer_id:
+          type: string
+          format: uuid
+        payee_id:
+          type: string
+          format: uuid
+        amount_minor:
+          type: integer
+          minimum: 1
+          example: 3000
+        currency:
+          type: string
+          example: USD
+        settled_at:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+          example: Venmo transfer
+
+    ExpenseSettlement:
+      type: object
+      required:
+        - id
+        - trip_id
+        - payer_id
+        - payee_id
+        - amount_minor
+        - currency
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        payer_id:
+          type: string
+          format: uuid
+        payee_id:
+          type: string
+          format: uuid
+        amount_minor:
+          type: integer
+          example: 3000
+        currency:
+          type: string
+          example: USD
+        settled_at:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    GroupSettlement:
+      type: object
+      required:
+        - trip_id
+        - base_currency
+        - balances
+        - suggested_settlements
+        - settlement_history
+      properties:
+        trip_id:
+          type: string
+          format: uuid
+        base_currency:
+          type: string
+          example: USD
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberBalance"
+        suggested_settlements:
+          type: array
+          items:
+            $ref: "#/components/schemas/SuggestedSettlement"
+        settlement_history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseSettlement"
+
+    MemberBalance:
+      type: object
+      required:
+        - user_id
+        - name
+        - email
+        - net_balance_minor
+        - status
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Alice
+        email:
+          type: string
+          example: alice@example.com
+        net_balance_minor:
+          type: integer
+          example: 3000
+        status:
+          type: string
+          enum: [is_owed, owes, settled]
+          example: is_owed
+
+    SuggestedSettlement:
+      type: object
+      required:
+        - payer_id
+        - payer_name
+        - payee_id
+        - payee_name
+        - amount_minor
+        - currency
+      properties:
+        payer_id:
+          type: string
+          format: uuid
+        payer_name:
+          type: string
+          example: Bob
+        payee_id:
+          type: string
+          format: uuid
+        payee_name:
+          type: string
+          example: Alice
+        amount_minor:
+          type: integer
+          example: 3000
+        currency:
+          type: string
+          example: USD
+
 
 
 

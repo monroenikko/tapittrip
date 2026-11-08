@@ -29,6 +29,10 @@ final class CreateExpenseRequest extends FormRequest
             'itinerary_item_id' => ['nullable', 'uuid', 'exists:itinerary_items,id'],
             'stay_id' => ['nullable', 'uuid', 'exists:stays,id'],
             'split_type' => ['nullable', 'string', 'in:single,equal,custom'],
+            'splits' => ['nullable', 'array'],
+            'splits.*.user_id' => ['required_with:splits', 'uuid', 'exists:users,id'],
+            'splits.*.amount_minor' => ['required_with:splits', 'integer', 'min:1'],
+            'splits.*.shares' => ['nullable', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'receipt_url' => ['nullable', 'url', 'max:2048'],
         ];

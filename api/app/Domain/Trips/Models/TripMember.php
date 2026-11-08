@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Trips\Models;
 
 use App\Models\User;
+use Database\Factories\TripMemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 final class TripMember extends Model
 {
     use HasFactory, HasUuids;
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory(): TripMemberFactory
+    {
+        return TripMemberFactory::new();
+    }
 
     /**
      * The trip this membership belongs to.

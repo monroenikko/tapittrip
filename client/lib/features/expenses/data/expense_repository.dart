@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/models/expense.dart';
 import '../domain/models/expense_summary.dart';
+import '../domain/models/group_balances.dart';
 import '../domain/models/trip_budget.dart';
 
 class ExpenseRepository {
@@ -191,5 +192,50 @@ class ExpenseRepository {
       }
       rethrow;
     }
+  }
+
+  Future<GroupBalances> getGroupBalances(String tripId) async {
+    try {
+      final response = await apiClient.get('/v1/trips/$tripId/settlements');
+      final data = response['data'] as Map<String, dynamic>;
+      final balances = GroupBalances.fromJson(data);
+      await _storage.write(
+        key: 'cached_settlements_$tripId',
+        value: jsonEncode(data),
+      );
+      return balances;
+    } catch (_) {
+      final cached = await _storage.read(key: 'cached_settlements_$tripId');
+      if (cached != null) {
+        return GroupBalances.fromJson(
+          jsonDecode(cached) as Map<String, dynamic>,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<SettlementRecord> recordSettlement(
+    String tripId, {
+    required String payerId,
+    required String payeeId,
+    required int amountMinor,
+    required String currency,
+    String? settledAt,
+    String? notes,
+  }) async {
+    final response = await apiClient.post(
+      '/v1/trips/$tripId/settlements',
+      data: {
+        'payer_id': payerId,
+        'payee_id': payeeId,
+        'amount_minor': amountMinor,
+        'currency': currency,
+        'settled_at': ?settledAt,
+        'notes': ?notes,
+      },
+    );
+    final data = response['data'] as Map<String, dynamic>;
+    return SettlementRecord.fromJson(data);
   }
 }

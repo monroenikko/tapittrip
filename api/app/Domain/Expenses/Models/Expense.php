@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -100,5 +101,15 @@ final class Expense extends Model
     public function stay(): BelongsTo
     {
         return $this->belongsTo(Stay::class);
+    }
+
+    /**
+     * Splits of this expense among travelers.
+     *
+     * @return HasMany<ExpenseSplit, $this>
+     */
+    public function splits(): HasMany
+    {
+        return $this->hasMany(ExpenseSplit::class, 'expense_id');
     }
 }

@@ -3,6 +3,7 @@ import '../../../../core/network/api_client.dart';
 import '../../data/expense_repository.dart';
 import '../../domain/models/expense.dart';
 import '../../domain/models/expense_summary.dart';
+import '../../domain/models/group_balances.dart';
 import '../../domain/models/trip_budget.dart';
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
@@ -106,6 +107,7 @@ class TripExpensesNotifier extends AsyncNotifier<List<Expense>> {
     final current = state.asData?.value ?? [];
     state = AsyncData([created, ...current]);
     ref.invalidate(expenseSummaryProvider(tripId));
+    ref.invalidate(groupBalancesProvider(tripId));
   }
 
   Future<void> updateExpense(
@@ -135,6 +137,7 @@ class TripExpensesNotifier extends AsyncNotifier<List<Expense>> {
       current.map((e) => e.id == expenseId ? updated : e).toList(),
     );
     ref.invalidate(expenseSummaryProvider(tripId));
+    ref.invalidate(groupBalancesProvider(tripId));
   }
 
   Future<void> deleteExpense(String expenseId) async {
@@ -144,6 +147,7 @@ class TripExpensesNotifier extends AsyncNotifier<List<Expense>> {
     final current = state.asData?.value ?? [];
     state = AsyncData(current.where((e) => e.id != expenseId).toList());
     ref.invalidate(expenseSummaryProvider(tripId));
+    ref.invalidate(groupBalancesProvider(tripId));
   }
 }
 
@@ -156,4 +160,10 @@ final expenseSummaryProvider =
     FutureProvider.family<ExpenseSummary, String>((ref, tripId) async {
   final repo = ref.watch(expenseRepositoryProvider);
   return repo.getSummary(tripId);
+});
+
+final groupBalancesProvider =
+    FutureProvider.family<GroupBalances, String>((ref, tripId) async {
+  final repo = ref.watch(expenseRepositoryProvider);
+  return repo.getGroupBalances(tripId);
 });

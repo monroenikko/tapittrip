@@ -21,6 +21,7 @@
             <file>tests/Feature/TripAssistantTest.php</file>
             <file>tests/Feature/TripBudgetTest.php</file>
             <file>tests/Feature/TripExpenseTest.php</file>
+            <file>tests/Feature/GroupSettlementTest.php</file>
         </testsuite>
     </testsuites>
     <php>

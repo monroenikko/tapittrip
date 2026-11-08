@@ -50,6 +50,19 @@ final class ExpenseResource extends JsonResource
                 'id' => $this->stay?->id,
                 'name' => $this->stay?->name,
             ]),
+            'splits' => $this->whenLoaded('splits', fn () => $this->splits->map(fn ($s) => [
+                'id' => $s->id,
+                'user_id' => $s->user_id,
+                'amount_minor' => $s->amount_minor,
+                'base_amount_minor' => $s->base_amount_minor,
+                'shares' => $s->shares,
+                'settled' => $s->settled,
+                'user' => $s->relationLoaded('user') && $s->user !== null ? [
+                    'id' => $s->user->id,
+                    'name' => $s->user->name,
+                    'email' => $s->user->email,
+                ] : null,
+            ])->values()->all()),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

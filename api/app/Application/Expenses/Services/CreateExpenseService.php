@@ -6,6 +6,7 @@ namespace App\Application\Expenses\Services;
 
 use App\Application\Expenses\Data\CreateExpenseData;
 use App\Domain\Expenses\Models\Expense;
+use App\Domain\Expenses\Models\ExpenseSplit;
 use App\Domain\Trips\Models\Trip;
 use Illuminate\Support\Facades\DB;
 
@@ -47,7 +48,55 @@ final class CreateExpenseService
                 'version' => 1,
             ]);
 
-            return $expense->load(['payer', 'itineraryItem', 'stay']);
+            // Create splits if provided or if equal
+            if ($data->splits !== null && count($data->splits) > 0) {
+                foreach ($data->splits as $split) {
+                    $splitAmount = (int) $split['amount_minor'];
+                    $splitBase = isset($split['base_amount_minor'])
+                        ? (int) $split['base_amount_minor']
+                        : (int) round($splitAmount * $exchangeRate);
+
+                    ExpenseSplit::create([
+                        'expense_id' => $expense->id,
+                        'user_id' => (string) $split['user_id'],
+                        'amount_minor' => $splitAmount,
+                        'base_amount_minor' => $splitBase,
+                        'shares' => (int) ($split['shares'] ?? 1),
+                        'settled' => (bool) ($split['settled'] ?? false),
+                    ]);
+                }
+            } elseif ($data->splitType === 'equal') {
+                $users = $trip->users()->get();
+                if ($trip->owner !== null && ! $users->contains('id', $trip->owner_id)) {
+                    $users->push($trip->owner);
+                }
+
+                $count = count($users);
+                if ($count > 0) {
+                    $perUserAmount = intdiv($data->amountMinor, $count);
+                    $remainderAmount = $data->amountMinor % $count;
+                    $perUserBase = intdiv($baseAmountMinor, $count);
+                    $remainderBase = $baseAmountMinor % $count;
+
+                    $i = 0;
+                    foreach ($users as $u) {
+                        $uAmount = $perUserAmount + ($i < $remainderAmount ? 1 : 0);
+                        $uBase = $perUserBase + ($i < $remainderBase ? 1 : 0);
+
+                        ExpenseSplit::create([
+                            'expense_id' => $expense->id,
+                            'user_id' => $u->id,
+                            'amount_minor' => $uAmount,
+                            'base_amount_minor' => $uBase,
+                            'shares' => 1,
+                            'settled' => false,
+                        ]);
+                        $i++;
+                    }
+                }
+            }
+
+            return $expense->load(['payer', 'itineraryItem', 'stay', 'splits.user']);
         });
     }
 }

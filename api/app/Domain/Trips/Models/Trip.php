@@ -7,6 +7,7 @@ namespace App\Domain\Trips\Models;
 use App\Domain\Checklists\Models\Checklist;
 use App\Domain\Checklists\Models\ChecklistItem;
 use App\Domain\Expenses\Models\Expense;
+use App\Domain\Expenses\Models\ExpenseSettlement;
 use App\Domain\Expenses\Models\TripBudget;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
@@ -221,5 +222,16 @@ final class Trip extends Model
         return $this->hasMany(Expense::class)
             ->orderBy('expense_date', 'desc')
             ->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * All debt settlements recorded for this trip.
+     *
+     * @return HasMany<ExpenseSettlement, $this>
+     */
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(ExpenseSettlement::class)
+            ->orderBy('settled_at', 'desc');
     }
 }

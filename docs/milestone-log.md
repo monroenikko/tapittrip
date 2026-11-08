@@ -3,12 +3,54 @@
 ## Current milestone
 
 - Milestone: **M8 — Multi-Currency Expenses & Group Budget Tracker**
-- Status: **In Progress (Slice 1 Completed)**
-- Basis: Approved Milestone M8 plan (`m8-expenses-and-budget-plan.md`). Core trip budget target setting, multi-currency integer minor-unit expenses, categorization, daily spending analytics, and encrypted offline caching implemented and verified across backend and mobile client.
+- Status: **In Progress (Slice 1 & 2 Completed)**
+- Basis: Approved Milestone M8 plan (`m8-expenses-and-budget-plan.md`). Core trip budget target setting, multi-currency integer minor-unit expenses, categorization, daily spending analytics, Trip Circles group expense splitting, greedy cash-flow simplification, and debt settlement implemented and verified across backend and mobile client.
 - Boundary:
   - Slice 1: Core Trip Budget & Categorized Expense Tracking — **Completed**.
-  - Slice 2: Trip Circles Group Expense Splitting & Debt Settlement — **Planned**.
+  - Slice 2: Trip Circles Group Expense Splitting & Debt Settlement — **Completed**.
   - Slice 3: Offline Sync, Currency Exchange Cache & Receipt Capture — **Planned**.
+
+## 2026-11-08 — Milestone M8 (Slice 2): Trip Circles Group Expense Splitting & Debt Settlement
+
+### Completed
+
+- **Database Migrations & Schema**:
+  - `expense_splits`: UUID primary key, `expense_id` FK cascade (`expenses.id`), `user_id` FK cascade (`users.id`), `amount_minor` integer, `base_amount_minor` integer nullable, `shares` integer default 1, `settled` boolean default false, timestamps. Unique on `[expense_id, user_id]`.
+  - `expense_settlements`: UUID primary key, `trip_id` FK cascade (`trips.id`), `payer_id` FK cascade (`users.id`), `payee_id` FK cascade (`users.id`), `amount_minor` integer, `currency` char(3), `settled_at` timestamp, `notes` text nullable, timestamps. Indexed on `[trip_id, settled_at]`, `[trip_id, payer_id]`, `[trip_id, payee_id]`.
+  - Applied on dev (`tapittrip`) and test (`tapittrip_test`) PostgreSQL databases with privileged migrator tools container.
+- **Backend Application Services & Domain Architecture**:
+  - Domain models: `ExpenseSplit`, `ExpenseSettlement` under `App\Domain\Expenses\Models`.
+  - Relations: `splits(): HasMany` on `Expense`, `settlements(): HasMany` on `Trip`.
+  - Factories: `ExpenseSplitFactory`, `ExpenseSettlementFactory`, `TripMemberFactory`.
+  - DTOs: `RecordSettlementData`, `GroupSettlementResult` under `App\Application\Expenses\Data`.
+  - Application Services:
+    - `CalculateGroupSettlementService`: Calculates net spending balances for every trip companion in base currency; runs a **Greedy Cash-Flow Minimization Algorithm** reducing mutual debts into minimal suggested transfers (`payer_id`, `payee_id`, `amount_minor`); includes past settlement history.
+    - `RecordSettlementService`: Validates companion membership, ensures distinct non-self payer/payee, verifies positive amounts, and records `ExpenseSettlement` within `TripPolicy` bounds.
+    - Enhanced `CreateExpenseService`: Automatic equal splitting across all trip members with remainder distribution or custom split arrays.
+- **Backend API & Route Registration**:
+  - Form Requests: `RecordSettlementRequest`, enhanced `CreateExpenseRequest` with `splits` array.
+  - API Resources: `ExpenseSettlementResource`, `GroupSettlementResource`.
+  - Controller: `GroupSettlementController` registering `GET /api/v1/trips/{trip}/settlements` and `POST /api/v1/trips/{trip}/settlements`.
+  - OpenAPI Specification: Documented settlement endpoints and schemas in `docs/api/openapi.yaml`.
+- **Mobile Client Balances & Settle Up UI**:
+  - Models: `GroupBalances`, `MemberBalance`, `SuggestedSettlement`, `SettlementRecord` with JSON serialization, balance getters, and multi-currency formatting.
+  - `ExpenseRepository`: Added `getGroupBalances(tripId)` with encrypted local cache fallback (`cached_settlements_{tripId}`) and `recordSettlement(...)`.
+  - Providers: Added `groupBalancesProvider(tripId)` and cache invalidation on expense mutations.
+  - Widgets & UI:
+    - `TripExpensesPage`: Tabbed interface with `Expenses` and `Balances & Settle` tabs.
+    - "Balances & Settle" tab:
+      - Member balances list with colored status pills (`is_owed`, `owes`, `settled`).
+      - Suggested settlement transfers with "Settle Up" action button.
+      - "All Settled Up!" green card when zero debts exist.
+      - Past settlement history records.
+    - `SettleUpDialog`: Interactive modal dialog to review payer, payee, pre-filled amount, and payment notes with real-time settlement submission.
+    - `AddExpenseBottomSheet`: Added split-type selection (`Just me` vs `Split equally`).
+- **Automated Verification**:
+  - Backend PHPUnit: Added `GroupSettlementTest.php` (5 tests). Full suite passes: 113/113 tests, 624 assertions.
+  - Backend Pint: 0 style issues.
+  - Mobile Flutter Tests: Added GroupBalances and UI settlement tests to `expense_test.dart` (9 tests). Full suite passes: 117/117 tests.
+  - Mobile Analyzer: 0 issues.
+  - Documentation: Updated `docs/features/expenses-and-budgeting.md` and `docs/api/openapi.yaml`.
 
 ## 2026-11-08 — Milestone M8 (Slice 1): Core Trip Budget & Categorized Expense Tracking
 

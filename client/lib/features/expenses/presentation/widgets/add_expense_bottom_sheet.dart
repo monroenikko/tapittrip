@@ -45,6 +45,7 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
   late final TextEditingController _notesController;
   late String _category;
   late String _currency;
+  late String _splitType;
   late DateTime _selectedDate;
   bool _isLoading = false;
   String? _errorMessage;
@@ -87,6 +88,7 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
     _notesController = TextEditingController(text: expense?.notes ?? '');
     _category = expense?.category ?? 'dining';
     _currency = expense?.currency ?? widget.defaultCurrency;
+    _splitType = expense?.splitType ?? 'single';
     _selectedDate = expense != null
         ? (DateTime.tryParse(expense.expenseDate) ?? DateTime.now())
         : DateTime.now();
@@ -152,6 +154,7 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
               amountMinor: amountMinor,
               currency: _currency,
               expenseDate: dateStr,
+              splitType: _splitType,
               notes: _notesController.text.trim().isNotEmpty
                   ? _notesController.text.trim()
                   : null,
@@ -336,6 +339,40 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
                     },
                   );
                 }).toList(),
+              ),
+              const SizedBox(height: 16),
+
+              // Split Type Selector
+              Text(
+                'Split with group',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Center(child: Text('Just me')),
+                      selected: _splitType == 'single',
+                      onSelected: (selected) {
+                        if (selected) setState(() => _splitType = 'single');
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Center(child: Text('Split equally')),
+                      selected: _splitType == 'equal',
+                      onSelected: (selected) {
+                        if (selected) setState(() => _splitType = 'equal');
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
