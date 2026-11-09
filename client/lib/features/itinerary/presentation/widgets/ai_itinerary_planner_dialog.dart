@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_exceptions.dart';
 import '../providers/itinerary_provider.dart';
 import 'ai_itinerary_preview_sheet.dart';
 
@@ -26,7 +27,7 @@ class _AiItineraryPlannerDialogState
   late final TextEditingController _destinationController;
   late int _durationDays;
   String _budgetTier = 'moderate';
-  String _travelParty = 'family';
+  String _travelParty = 'family_kids';
   String _travelPace = 'balanced';
   final Set<String> _selectedInterests = {'food', 'culture'};
   bool _isLoading = false;
@@ -83,13 +84,16 @@ class _AiItineraryPlannerDialogState
       }
     } catch (e) {
       if (mounted) {
+        final message = e is ApiException
+            ? e.toString()
+            : 'Failed to generate itinerary: $e';
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to generate itinerary: $e';
+          _errorMessage = message;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to generate itinerary: $e'),
+            content: Text(message),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -245,10 +249,11 @@ class _AiItineraryPlannerDialogState
                       children: [
                         _buildChoiceChip(
                           label: 'Budget',
-                          value: 'budget',
-                          selected: _budgetTier == 'budget',
+                          value: 'low',
+                          selected:
+                              _budgetTier == 'low' || _budgetTier == 'budget',
                           onSelected: (val) =>
-                              setState(() => _budgetTier = 'budget'),
+                              setState(() => _budgetTier = 'low'),
                         ),
                         _buildChoiceChip(
                           label: 'Moderate',
@@ -295,10 +300,12 @@ class _AiItineraryPlannerDialogState
                         ),
                         _buildChoiceChip(
                           label: 'Family / Kids',
-                          value: 'family',
-                          selected: _travelParty == 'family',
+                          value: 'family_kids',
+                          selected:
+                              _travelParty == 'family_kids' ||
+                              _travelParty == 'family',
                           onSelected: (val) =>
-                              setState(() => _travelParty = 'family'),
+                              setState(() => _travelParty = 'family_kids'),
                         ),
                         _buildChoiceChip(
                           label: 'Friends',
@@ -345,10 +352,11 @@ class _AiItineraryPlannerDialogState
                         ),
                         _buildChoiceChip(
                           label: 'High Energy (4+ stops)',
-                          value: 'fast',
-                          selected: _travelPace == 'fast',
+                          value: 'packed',
+                          selected:
+                              _travelPace == 'packed' || _travelPace == 'fast',
                           onSelected: (val) =>
-                              setState(() => _travelPace = 'fast'),
+                              setState(() => _travelPace = 'packed'),
                         ),
                       ],
                     ),

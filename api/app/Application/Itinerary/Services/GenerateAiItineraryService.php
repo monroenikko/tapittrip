@@ -22,7 +22,7 @@ final class GenerateAiItineraryService
     {
         $destination = $data->destination !== '' ? $data->destination : ($trip->destination_country ?? $trip->title);
         $duration = max(1, min(14, $data->durationDays));
-        $isFamily = in_array($data->travelParty, ['family_kids', 'seniors'], true);
+        $isFamily = in_array($data->travelParty, ['family', 'family_kids', 'seniors'], true);
         $isRelaxed = $data->pace === 'relaxed' || $isFamily;
         $currency = $this->resolveCurrency($destination);
 

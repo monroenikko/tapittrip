@@ -162,4 +162,30 @@ final class AiItineraryTest extends TestCase
             ],
         ])->assertStatus(403);
     }
+
+    public function test_user_can_generate_ai_itinerary_with_common_aliases_and_unicode_destination(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $trip = Trip::factory()->create([
+            'owner_id' => $user->id,
+            'title' => 'Hong Kong Trip',
+            'destination_country' => 'HK',
+        ]);
+
+        $response = $this->postJson("/api/v1/trips/{$trip->id}/ai-plan/generate", [
+            'destination' => 'Hong Kong Trip, 迪士尼 Disney',
+            'duration_days' => 4,
+            'budget_tier' => 'budget',
+            'travel_party' => 'family',
+            'pace' => 'fast',
+            'interests' => ['food', 'culture', 'theme_parks'],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.travel_party', 'family_kids')
+            ->assertJsonPath('data.pace', 'packed')
+            ->assertJsonCount(4, 'data.days');
+    }
 }
