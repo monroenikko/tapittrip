@@ -29,6 +29,7 @@ final class UserResource extends JsonResource
             'locale' => $this->locale ?? 'en',
             'home_timezone' => $this->home_timezone ?? 'UTC',
             'home_country' => $this->home_country,
+            'permanent_address' => $this->permanent_address,
             'home_currency' => $this->home_currency,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

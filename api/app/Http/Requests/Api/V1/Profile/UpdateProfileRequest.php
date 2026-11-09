@@ -20,8 +20,9 @@ final class UpdateProfileRequest extends FormRequest
     {
         return [
             'display_name' => ['nullable', 'string', 'max:255'],
-            'home_country' => ['nullable', 'string', 'size:2'],
-            'home_currency' => ['nullable', 'string', 'size:3'],
+            'permanent_address' => ['nullable', 'string', 'max:255'],
+            'home_country' => ['nullable', 'string', 'max:100'],
+            'home_currency' => ['nullable', 'string', 'max:10'],
             'home_timezone' => ['nullable', 'string', 'max:64'],
             'locale' => ['nullable', 'string', 'max:12'],
         ];

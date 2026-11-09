@@ -32,6 +32,9 @@ final class RegisterRequest extends FormRequest
             'display_name' => ['nullable', 'string', 'max:255'],
             'locale' => ['nullable', 'string', 'max:12'],
             'home_timezone' => ['nullable', 'string', 'timezone:all'],
+            'permanent_address' => ['nullable', 'string', 'max:255'],
+            'home_country' => ['nullable', 'string', 'max:100'],
+            'home_currency' => ['nullable', 'string', 'max:10'],
         ];
     }
 }

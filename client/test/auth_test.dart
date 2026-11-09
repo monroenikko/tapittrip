@@ -42,11 +42,21 @@ class FakeAuthRepository implements AuthRepository {
     required String password,
     required String passwordConfirmation,
     String? deviceName,
+    String? permanentAddress,
+    String? homeCountry,
+    String? homeCurrency,
   }) async {
     if (shouldFail) {
       throw ApiException(code: 'validation_failed', message: failureMessage);
     }
-    return (user: testUser, token: 'mock-bearer-token');
+    return (
+      user: testUser.copyWith(
+        permanentAddress: permanentAddress,
+        homeCountry: homeCountry,
+        homeCurrency: homeCurrency,
+      ),
+      token: 'mock-bearer-token',
+    );
   }
 
   @override
@@ -60,6 +70,7 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<AuthUser> updateProfile({
     String? displayName,
+    String? permanentAddress,
     String? homeCountry,
     String? homeCurrency,
     String? homeTimezone,
@@ -70,6 +81,7 @@ class FakeAuthRepository implements AuthRepository {
     }
     return testUser.copyWith(
       displayName: displayName,
+      permanentAddress: permanentAddress,
       homeCountry: homeCountry,
       homeCurrency: homeCurrency,
       homeTimezone: homeTimezone,
@@ -194,6 +206,76 @@ void main() {
 
       await container.read(authProvider.notifier).logout();
       expect(container.read(authProvider), isA<Unauthenticated>());
+    });
+
+    test('register with permanentAddress, homeCountry, and homeCurrency preserves fields', () async {
+      final fakeTokenStorage = InMemoryTokenStorage();
+      final fakeRepo = FakeAuthRepository();
+
+      final container = ProviderContainer(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(fakeTokenStorage),
+          authRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final success = await container
+          .read(authProvider.notifier)
+          .register(
+            name: 'Maria Santos',
+            email: 'maria@tapittrip.local',
+            password: 'secretPassword123!',
+            passwordConfirmation: 'secretPassword123!',
+            permanentAddress: 'Taguig, Metro Manila, Philippines',
+            homeCountry: 'PH',
+            homeCurrency: 'PHP',
+          );
+
+      expect(success, isTrue);
+      final state = container.read(authProvider);
+      expect(state, isA<Authenticated>());
+      final user = (state as Authenticated).user;
+      expect(user.permanentAddress, 'Taguig, Metro Manila, Philippines');
+      expect(user.homeCountry, 'PH');
+      expect(user.homeCurrency, 'PHP');
+    });
+
+    test('updateProfile updates permanentAddress and homeCurrency', () async {
+      final fakeTokenStorage = InMemoryTokenStorage('mock-token');
+      final fakeRepo = FakeAuthRepository();
+
+      final container = ProviderContainer(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(fakeTokenStorage),
+          authRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Initialize with authenticated user
+      await container.read(authProvider.notifier).register(
+        name: 'Maria Santos',
+        email: 'maria@tapittrip.local',
+        password: 'password123',
+        passwordConfirmation: 'password123',
+      );
+
+      final success = await container.read(authProvider.notifier).updateProfile(
+        displayName: 'Maria S.',
+        permanentAddress: 'Cebu City, Philippines',
+        homeCountry: 'PH',
+        homeCurrency: 'PHP',
+      );
+
+      expect(success, isTrue);
+      final state = container.read(authProvider);
+      expect(state, isA<Authenticated>());
+      final user = (state as Authenticated).user;
+      expect(user.displayName, 'Maria S.');
+      expect(user.permanentAddress, 'Cebu City, Philippines');
+      expect(user.homeCountry, 'PH');
+      expect(user.homeCurrency, 'PHP');
     });
   });
 }

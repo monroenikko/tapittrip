@@ -17,12 +17,16 @@ abstract interface class AuthRepository {
     required String password,
     required String passwordConfirmation,
     String? deviceName,
+    String? permanentAddress,
+    String? homeCountry,
+    String? homeCurrency,
   });
 
   Future<AuthUser> getProfile();
 
   Future<AuthUser> updateProfile({
     String? displayName,
+    String? permanentAddress,
     String? homeCountry,
     String? homeCurrency,
     String? homeTimezone,
@@ -73,6 +77,9 @@ class RemoteAuthRepository implements AuthRepository {
     required String password,
     required String passwordConfirmation,
     String? deviceName,
+    String? permanentAddress,
+    String? homeCountry,
+    String? homeCurrency,
   }) async {
     final response = await apiClient.post(
       '/auth/register',
@@ -82,6 +89,12 @@ class RemoteAuthRepository implements AuthRepository {
         'password': password,
         'password_confirmation': passwordConfirmation,
         'device_name': deviceName ?? 'TapItTrip Mobile',
+        if (permanentAddress != null && permanentAddress.isNotEmpty)
+          'permanent_address': permanentAddress,
+        if (homeCountry != null && homeCountry.isNotEmpty)
+          'home_country': homeCountry,
+        if (homeCurrency != null && homeCurrency.isNotEmpty)
+          'home_currency': homeCurrency,
       },
     );
 
@@ -102,6 +115,7 @@ class RemoteAuthRepository implements AuthRepository {
   @override
   Future<AuthUser> updateProfile({
     String? displayName,
+    String? permanentAddress,
     String? homeCountry,
     String? homeCurrency,
     String? homeTimezone,
@@ -109,6 +123,9 @@ class RemoteAuthRepository implements AuthRepository {
   }) async {
     final payload = <String, dynamic>{};
     if (displayName != null) payload['display_name'] = displayName;
+    if (permanentAddress != null) {
+      payload['permanent_address'] = permanentAddress;
+    }
     if (homeCountry != null) payload['home_country'] = homeCountry;
     if (homeCurrency != null) payload['home_currency'] = homeCurrency;
     if (homeTimezone != null) payload['home_timezone'] = homeTimezone;

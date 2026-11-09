@@ -53,6 +53,9 @@ class AuthNotifier extends Notifier<AuthState> {
     required String email,
     required String password,
     required String passwordConfirmation,
+    String? permanentAddress,
+    String? homeCountry,
+    String? homeCurrency,
   }) async {
     state = const AuthLoading('Creating your account...');
     try {
@@ -61,6 +64,9 @@ class AuthNotifier extends Notifier<AuthState> {
         email: email,
         password: password,
         passwordConfirmation: passwordConfirmation,
+        permanentAddress: permanentAddress,
+        homeCountry: homeCountry,
+        homeCurrency: homeCurrency,
       );
       state = Authenticated(user: result.user, token: result.token);
       return true;
@@ -96,6 +102,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<bool> updateProfile({
     String? displayName,
+    String? permanentAddress,
     String? homeCountry,
     String? homeCurrency,
     String? homeTimezone,
@@ -107,6 +114,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final updatedUser = await _repository.updateProfile(
         displayName: displayName,
+        permanentAddress: permanentAddress,
         homeCountry: homeCountry,
         homeCurrency: homeCurrency,
         homeTimezone: homeTimezone,

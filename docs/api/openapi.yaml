@@ -195,6 +195,9 @@ paths:
               properties:
                 display_name:
                   type: string
+                permanent_address:
+                  type: string
+                  description: Traveler's home or permanent address (e.g. Taguig City, Philippines)
                 home_country:
                   type: string
                   description: ISO 3166-1 alpha-2 country code (e.g. PH, US, JP, SG)
@@ -2845,6 +2848,15 @@ components:
           maxLength: 12
         home_timezone:
           type: string
+        permanent_address:
+          type: string
+          maxLength: 255
+        home_country:
+          type: string
+          maxLength: 100
+        home_currency:
+          type: string
+          maxLength: 10
     LoginRequest:
       type: object
       additionalProperties: false
@@ -2894,6 +2906,10 @@ components:
           type: string
           nullable: true
           description: ISO 3166-1 alpha-2 country code (e.g. PH, US, JP)
+        permanent_address:
+          type: string
+          nullable: true
+          description: Traveler's permanent home address
         home_currency:
           type: string
           nullable: true

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/countries.dart';
 import '../../../auth/domain/models/auth_state.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../auth/presentation/widgets/country_residence_dialog.dart';
 import '../../../trips/presentation/providers/trip_list_provider.dart';
 import '../../data/currency_repository.dart';
 import '../../domain/models/expense.dart';
@@ -74,7 +74,7 @@ class TripExpensesPage extends ConsumerWidget {
                 SetBudgetDialog.show(
                   context,
                   tripId: tripId,
-                  initialCurrency: budget?.currency ?? homeCurrency,
+                  initialCurrency: budget?.currency ?? destinationCurrency,
                   initialTotalBudgetMinor: budget?.totalBudgetMinor,
                   initialDailyBudgetMinor: budget?.dailyBudgetMinor,
                 );
@@ -104,8 +104,8 @@ class TripExpensesPage extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Country Residence Prompt Banner if not set
-                  if (homeCountry == null)
+                  // Permanent Address & Home Currency Prompt Banner if not set
+                  if (homeCountry == null || authUser?.permanentAddress == null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.symmetric(
@@ -114,11 +114,11 @@ class TripExpensesPage extends ConsumerWidget {
                       ),
                       decoration: BoxDecoration(
                         color: colorScheme.secondaryContainer.withValues(
-                          alpha: 0.4,
+                          alpha: 0.45,
                         ),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: colorScheme.secondary.withValues(alpha: 0.2),
+                          color: colorScheme.secondary.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
@@ -130,25 +130,25 @@ class TripExpensesPage extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Set your home country',
+                                  'Set your permanent address',
                                   style: theme.textTheme.labelMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: colorScheme.onSecondaryContainer,
                                   ),
                                 ),
+                                const SizedBox(height: 2),
                                 Text(
-                                  'Auto-converts $destinationCurrency to your home currency',
+                                  'Helps TapItTrip automatically convert destination expenses ($destinationCurrency) to your home currency',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSecondaryContainer
-                                        .withValues(alpha: 0.8),
+                                        .withValues(alpha: 0.85),
                                   ),
                                 ),
                               ],
                             ),
                           ),
                           FilledButton.tonal(
-                            onPressed: () =>
-                                CountryResidenceDialog.show(context),
+                            onPressed: () => context.push('/profile'),
                             style: FilledButton.styleFrom(
                               visualDensity: VisualDensity.compact,
                               padding: const EdgeInsets.symmetric(
@@ -352,7 +352,7 @@ class TripExpensesPage extends ConsumerWidget {
                                     SetBudgetDialog.show(
                                       context,
                                       tripId: tripId,
-                                      initialCurrency: authUser?.homeCurrency ?? summary.baseCurrency,
+                                      initialCurrency: destinationCurrency,
                                     );
                                   },
                                   icon: const Icon(Icons.add, size: 16),

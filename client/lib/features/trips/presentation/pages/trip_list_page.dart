@@ -45,23 +45,37 @@ class _TripListPageState extends ConsumerState<TripListPage> {
               borderRadius: 10,
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'TapItTrip',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => context.push('/profile'),
+              child: Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'TapItTrip',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Hello, $userName',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                Text(
-                  'Hello, $userName',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -75,7 +89,9 @@ class _TripListPageState extends ConsumerState<TripListPage> {
             icon: const Icon(Icons.more_vert),
             tooltip: 'Account menu',
             onSelected: (value) async {
-              if (value == 'logout') {
+              if (value == 'profile') {
+                context.push('/profile');
+              } else if (value == 'logout') {
                 await ref.read(authProvider.notifier).logout();
               } else if (value == 'delete') {
                 final confirm = await showDialog<bool>(
@@ -114,6 +130,16 @@ class _TripListPageState extends ConsumerState<TripListPage> {
                 ),
               ),
               const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 18),
+                    SizedBox(width: 8),
+                    Text('Profile & Currency'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'logout',
                 child: Row(

@@ -10,6 +10,36 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — Destination Forex Currency Alignment & Permanent Address in Profile & Registration
+
+### Completed
+
+- **Database & Identity Schema (`users` table, `UserResource`)**:
+  - Added migration `2026_11_09_142647_add_permanent_address_to_users_table.php` adding `permanent_address` to `users`.
+  - Added `permanent_address` to `$fillable` in `User.php` and serialized in `UserResource.php`.
+- **Registration & Profile API (`RegisterRequest`, `RegisterUserService`, `UpdateProfileRequest`, `UpdateProfileService`)**:
+  - Enhanced `RegisterRequest` and `RegisterUserService` to accept and persist `permanent_address`, `home_country`, and `home_currency`.
+  - Auto-resolves `home_currency` via `CountryCurrencyResolver` from permanent address or country if not explicitly specified.
+  - Enhanced `UpdateProfileRequest` and `UpdateProfileService` to support updating `permanent_address`, `home_country` (string), and `home_currency`.
+  - Added feature tests `test_user_can_register_with_permanent_address_and_auto_resolved_currency` and `test_authenticated_user_can_update_profile_permanent_address` in `AuthTest.php` (15/15 passed, 97 assertions).
+  - Updated `docs/api/openapi.yaml` with `permanent_address` in `User`, `RegisterRequest`, and `PATCH /me`.
+- **Mobile Registration Flow (`RegisterPage`)**:
+  - Added Permanent Address text field (`_permanentAddressController`) with real-time country & currency matching.
+  - Added Country of Residence & Home Currency selector tile with country flag and detected home currency badge.
+  - Added prominent advisory/warning card: *"Setting your permanent address helps TapItTrip automatically detect your home currency and convert prices accurately based on your travel destinations."*
+- **Mobile Profile & Settings Flow (`ProfilePage`)**:
+  - Created dedicated `ProfilePage` (`/profile`) accessible from the account popup menu on `TripListPage` and by tapping the traveler greeting.
+  - Displays user avatar, display name, email, editable permanent address, country selector dialog, and home currency dropdown.
+  - Features dedicated forex conversion explainer banner highlighting how permanent address sets base currency for automated travel conversion.
+- **Expense & Budget Forex Alignment (`TripExpensesPage`, `SetBudgetDialog`)**:
+  - Aligned default budget currency with `destinationCurrency` so trip budgets directly reflect the destination country (e.g. PHP in Philippines, JPY in Japan, HKD in Hong Kong), while allowing travelers to select their home currency if preferred.
+  - Added prominent permanent address setup banner with a 1-tap shortcut to `/profile` when permanent address is unset.
+- **Verification**:
+  - Backend PHPUnit `AuthTest.php`, `CurrencyTest.php`, `TripExpenseTest.php`: 27/27 tests passed (166 assertions).
+  - Pint code styling: 327 files passed cleanly.
+  - Client Flutter test suite: 165/165 tests passed.
+  - `flutter analyze`: 0 issues found.
+
 ## 2026-11-09 — Itinerary Activity Stop Weather Forecasts & Location Resolution
 
 ### Completed

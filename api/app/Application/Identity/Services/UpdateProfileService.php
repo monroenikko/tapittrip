@@ -20,6 +20,12 @@ final class UpdateProfileService
             $attributes['display_name'] = trim((string) $data['display_name']);
         }
 
+        if (array_key_exists('permanent_address', $data)) {
+            $attributes['permanent_address'] = $data['permanent_address'] !== null
+                ? trim((string) $data['permanent_address'])
+                : null;
+        }
+
         if (array_key_exists('home_country', $data) && $data['home_country'] !== null) {
             $homeCountry = strtoupper(trim((string) $data['home_country']));
             $attributes['home_country'] = $homeCountry;
@@ -28,6 +34,8 @@ final class UpdateProfileService
             if (empty($data['home_currency'])) {
                 $attributes['home_currency'] = CountryCurrencyResolver::resolve($homeCountry);
             }
+        } elseif (! empty($attributes['permanent_address']) && empty($data['home_currency'])) {
+            $attributes['home_currency'] = CountryCurrencyResolver::resolve($attributes['permanent_address']);
         }
 
         if (array_key_exists('home_currency', $data) && ! empty($data['home_currency'])) {

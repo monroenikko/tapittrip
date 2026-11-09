@@ -14,6 +14,9 @@ final readonly class RegisterUserData
         public ?string $displayName = null,
         public ?string $locale = null,
         public ?string $homeTimezone = null,
+        public ?string $permanentAddress = null,
+        public ?string $homeCountry = null,
+        public ?string $homeCurrency = null,
     ) {}
 
     /**
@@ -29,6 +32,9 @@ final readonly class RegisterUserData
             displayName: isset($data['display_name']) ? (string) $data['display_name'] : null,
             locale: isset($data['locale']) ? (string) $data['locale'] : null,
             homeTimezone: isset($data['home_timezone']) ? (string) $data['home_timezone'] : null,
+            permanentAddress: isset($data['permanent_address']) ? (string) $data['permanent_address'] : null,
+            homeCountry: isset($data['home_country']) ? (string) $data['home_country'] : null,
+            homeCurrency: isset($data['home_currency']) ? (string) $data['home_currency'] : null,
         );
     }
 }

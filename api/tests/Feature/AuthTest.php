@@ -333,4 +333,58 @@ final class AuthTest extends TestCase
             'id' => $token2->accessToken->id,
         ]);
     }
+
+    public function test_user_can_register_with_permanent_address_and_auto_resolved_currency(): void
+    {
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Maria Santos',
+            'email' => 'maria.santos@example.com',
+            'password' => 'secret-pass-123',
+            'password_confirmation' => 'secret-pass-123',
+            'permanent_address' => 'Taguig, Metro Manila, Philippines',
+            'home_country' => 'PH',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.user.name', 'Maria Santos')
+            ->assertJsonPath('data.user.permanent_address', 'Taguig, Metro Manila, Philippines')
+            ->assertJsonPath('data.user.home_country', 'PH')
+            ->assertJsonPath('data.user.home_currency', 'PHP');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'maria.santos@example.com',
+            'permanent_address' => 'Taguig, Metro Manila, Philippines',
+            'home_country' => 'PH',
+            'home_currency' => 'PHP',
+        ]);
+    }
+
+    public function test_authenticated_user_can_update_profile_permanent_address(): void
+    {
+        $user = User::factory()->create([
+            'home_country' => 'US',
+            'home_currency' => 'USD',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->patchJson('/api/v1/me', [
+            'permanent_address' => 'Cebu City, Philippines',
+            'home_country' => 'PH',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.permanent_address', 'Cebu City, Philippines')
+            ->assertJsonPath('data.home_country', 'PH')
+            ->assertJsonPath('data.home_currency', 'PHP');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'permanent_address' => 'Cebu City, Philippines',
+            'home_country' => 'PH',
+            'home_currency' => 'PHP',
+        ]);
+    }
 }

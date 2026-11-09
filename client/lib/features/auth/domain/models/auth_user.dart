@@ -9,6 +9,7 @@ class AuthUser {
     this.homeTimezone = 'UTC',
     this.homeCountry,
     this.homeCurrency,
+    this.permanentAddress,
     this.createdAt,
     this.updatedAt,
   });
@@ -22,6 +23,7 @@ class AuthUser {
   final String homeTimezone;
   final String? homeCountry;
   final String? homeCurrency;
+  final String? permanentAddress;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -35,6 +37,7 @@ class AuthUser {
     String? homeTimezone,
     String? homeCountry,
     String? homeCurrency,
+    String? permanentAddress,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -48,6 +51,7 @@ class AuthUser {
       homeTimezone: homeTimezone ?? this.homeTimezone,
       homeCountry: homeCountry ?? this.homeCountry,
       homeCurrency: homeCurrency ?? this.homeCurrency,
+      permanentAddress: permanentAddress ?? this.permanentAddress,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -65,6 +69,7 @@ class AuthUser {
       homeTimezone: (json['home_timezone'] as String?) ?? 'UTC',
       homeCountry: json['home_country'] as String?,
       homeCurrency: json['home_currency'] as String?,
+      permanentAddress: json['permanent_address'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -84,6 +89,7 @@ class AuthUser {
     'home_timezone': homeTimezone,
     'home_country': homeCountry,
     'home_currency': homeCurrency,
+    'permanent_address': permanentAddress,
     'created_at': createdAt?.toIso8601String(),
     'updated_at': updatedAt?.toIso8601String(),
   };

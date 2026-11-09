@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/countries.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../providers/auth_provider.dart';
 import '../../domain/models/auth_state.dart';
+import '../widgets/country_residence_dialog.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -17,8 +19,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _permanentAddressController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  CountryItem _selectedCountry =
+      CountryCurrencyHelper.findByCode('PH') ??
+      CountryCurrencyHelper.supportedCountries.first;
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -27,6 +34,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _permanentAddressController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -42,6 +50,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
           passwordConfirmation: _confirmPasswordController.text,
+          permanentAddress: _permanentAddressController.text.trim(),
+          homeCountry: _selectedCountry.code,
+          homeCurrency: _selectedCountry.currency,
         );
 
     if (success && mounted) {
@@ -127,6 +138,166 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Permanent Address / Home City
+                  TextFormField(
+                    controller: _permanentAddressController,
+                    decoration: const InputDecoration(
+                      labelText: 'Permanent Address / Home City',
+                      hintText: 'e.g. Taguig City, Philippines',
+                      prefixIcon: Icon(Icons.home_outlined),
+                      helperText: 'Your residence determines your base home currency',
+                    ),
+                    textInputAction: TextInputAction.next,
+                    onChanged: (val) {
+                      // Attempt to auto-match country from address input
+                      final resolvedCode = CountryCurrencyHelper.resolveCurrency(val);
+                      for (final c in CountryCurrencyHelper.supportedCountries) {
+                        if (c.currency == resolvedCode && c != _selectedCountry) {
+                          setState(() => _selectedCountry = c);
+                          break;
+                        }
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Country of Residence & Home Currency Selector Tile
+                  InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      final picked = await CountryResidenceDialog.show(
+                        context,
+                        currentCountryCode: _selectedCountry.code,
+                      );
+                      if (picked != null) {
+                        setState(() => _selectedCountry = picked);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.45,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.6,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            _selectedCountry.flag,
+                            style: const TextStyle(fontSize: 26),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Country of Residence',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _selectedCountry.name,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Base: ${_selectedCountry.currency}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onPrimaryContainer,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.edit,
+                                  size: 13,
+                                  color: colorScheme.onPrimaryContainer,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Forex Conversion Advisory / Warning Card
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.currency_exchange_rounded,
+                          size: 20,
+                          color: colorScheme.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Automatic Travel Currency Conversion',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Your permanent address sets your base home currency (${_selectedCountry.currency}). '
+                                'When traveling to destinations with different currencies, TapItTrip will automatically convert prices and budgets so you always know what you spend.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  height: 1.35,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

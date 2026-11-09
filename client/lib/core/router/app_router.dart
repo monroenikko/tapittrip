@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/domain/models/auth_state.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/profile_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/expenses/presentation/pages/trip_expenses_page.dart';
@@ -55,6 +56,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications/preferences',
         builder: (context, state) => const NotificationPreferencesPage(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfilePage(),
       ),
       GoRoute(
         path: '/lounges',
