@@ -118,7 +118,7 @@ class ApiClient {
     try {
       final response = await call();
       final body = response.data;
-      if (body is Map<String, dynamic> && body.containsKey('data')) {
+      if (body is Map && body.containsKey('data')) {
         return body['data'];
       }
       return body;

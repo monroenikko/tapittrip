@@ -8,11 +8,26 @@ class AiItineraryRepository {
 
   final ApiClient apiClient;
 
-  dynamic _extractData(dynamic response) {
-    if (response is Map<String, dynamic> && response.containsKey('data')) {
-      return response['data'];
+  Map<String, dynamic> _extractMap(dynamic response) {
+    if (response is Map) {
+      if (response.containsKey('data') && response['data'] is Map) {
+        return Map<String, dynamic>.from(response['data'] as Map);
+      }
+      return Map<String, dynamic>.from(response);
     }
-    return response;
+    return <String, dynamic>{};
+  }
+
+  List<dynamic> _extractList(dynamic response) {
+    if (response is List) {
+      return response;
+    }
+    if (response is Map &&
+        response.containsKey('data') &&
+        response['data'] is List) {
+      return response['data'] as List<dynamic>;
+    }
+    return const [];
   }
 
   Future<AiItineraryPlan> generatePlan(
@@ -48,7 +63,7 @@ class AiItineraryRepository {
       '/trips/$tripId/ai-plan/generate',
       data: payload,
     );
-    final data = _extractData(response) as Map<String, dynamic>;
+    final data = _extractMap(response);
     return AiItineraryPlan.fromJson(data);
   }
 
@@ -62,9 +77,10 @@ class AiItineraryRepository {
       '/trips/$tripId/ai-plan/apply',
       data: payload,
     );
-    final data = _extractData(response) as List<dynamic>;
-    return data
-        .map((e) => ItineraryItem.fromJson(Map<String, dynamic>.from(e as Map)))
+    final list = _extractList(response);
+    return list
+        .whereType<Map>()
+        .map((e) => ItineraryItem.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -86,7 +102,7 @@ class AiItineraryRepository {
       '/trips/$tripId/assistant/query',
       data: payload,
     );
-    final data = _extractData(response) as Map<String, dynamic>;
+    final data = _extractMap(response);
     return TripAssistantResponse.fromJson(data);
   }
 }

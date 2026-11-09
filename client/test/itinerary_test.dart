@@ -209,6 +209,65 @@ void main() {
       },
     );
 
+    testWidgets(
+      'ActivityTimelineCard renders weather badge with forecast and triggers onWeatherTap',
+      (tester) async {
+        bool weatherTapped = false;
+        const testWeather = TripWeather(
+          destination: 'Tokyo',
+          latitude: 35.7147,
+          longitude: 139.7967,
+          timezone: 'Asia/Tokyo',
+          current: WeatherCondition(
+            temperatureC: 22.0,
+            temperatureF: 71.6,
+            condition: 'Sunny',
+            icon: 'sunny',
+            humidity: 50,
+            windKph: 10,
+            precipitationProbability: 5,
+            advisory: 'Clear skies',
+          ),
+          forecast: [
+            DailyForecast(
+              date: '2026-11-10',
+              dayName: 'Tue',
+              tempMaxC: 24.0,
+              tempMinC: 16.0,
+              tempMaxF: 75.2,
+              tempMinF: 60.8,
+              condition: 'Partly Cloudy',
+              icon: 'partly_cloudy',
+              precipitationProbability: 25,
+            ),
+          ],
+        );
+
+        final itemWithDate = sampleItem.copyWith(
+          startsAtUtc: '2026-11-10T09:00:00Z',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: ActivityTimelineCard(
+                item: itemWithDate,
+                weather: testWeather,
+                onWeatherTap: () => weatherTapped = true,
+              ),
+            ),
+          ),
+        );
+
+        expect(find.textContaining('Tue: 24°C • Partly Cloudy'), findsOneWidget);
+        expect(find.textContaining('25%'), findsOneWidget);
+
+        await tester.tap(find.textContaining('Tue: 24°C • Partly Cloudy'));
+        expect(weatherTapped, isTrue);
+      },
+    );
+
     testWidgets('PlaceAutocompleteField renders label and text input', (
       tester,
     ) async {

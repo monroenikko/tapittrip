@@ -87,6 +87,12 @@ class _AiItineraryPlannerDialogState
           _isLoading = false;
           _errorMessage = 'Failed to generate itinerary: $e';
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate itinerary: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     }
   }
@@ -393,26 +399,44 @@ class _AiItineraryPlannerDialogState
                       ],
                     ),
                     const SizedBox(height: 12),
-
-                    if (_errorMessage != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: colorScheme.errorContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                  ],
+                ),
+              ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: colorScheme.error.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 16,
+                        color: colorScheme.error,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(
                           _errorMessage!,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onErrorContainer,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
                     ],
-                  ],
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
 
               // Action buttons

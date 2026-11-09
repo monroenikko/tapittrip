@@ -127,6 +127,9 @@ final class GenerateAiItineraryService
         if (str_contains($lower, 'philippines') || str_contains($lower, 'manila') || $lower === 'ph') {
             return 'PHP';
         }
+        if (str_contains($lower, 'hong kong') || str_contains($lower, 'hongkong') || $lower === 'hk') {
+            return 'HKD';
+        }
         if (str_contains($lower, 'singapore') || $lower === 'sg') {
             return 'SGD';
         }
@@ -161,6 +164,83 @@ final class GenerateAiItineraryService
     private function getNeighborhoodClusters(string $destination): array
     {
         $lower = strtolower($destination);
+
+        if (str_contains($lower, 'hong kong') || str_contains($lower, 'hongkong') || $lower === 'hk') {
+            return [
+                [
+                    'neighborhood' => 'Central & Victoria Peak',
+                    'theme' => 'Skyline Panoramas & Historic Trams',
+                    'stops' => [
+                        [
+                            'title' => 'Peak Tram to Victoria Peak Sky Terrace',
+                            'kind' => 'sightseeing',
+                            'place_name' => 'Victoria Peak',
+                            'description' => 'Historic funicular railway ride offering iconic 360-degree views of Victoria Harbour.',
+                            'start_time' => '09:30',
+                            'end_time' => '11:30',
+                            'lat' => 22.2759,
+                            'lng' => 114.1455,
+                        ],
+                        [
+                            'title' => 'Traditional Dim Sum Lunch in Central',
+                            'kind' => 'dining',
+                            'place_name' => 'Lin Heung Tea House / Luk Yu',
+                            'description' => 'Classic trolley-cart dim sum, har gow dumplings, and fragrant jasmine tea.',
+                            'start_time' => '12:00',
+                            'end_time' => '13:30',
+                            'lat' => 22.2842,
+                            'lng' => 114.1528,
+                        ],
+                        [
+                            'title' => 'Central-Mid-Levels Escalator & Tai Kwun Heritage',
+                            'kind' => 'sightseeing',
+                            'place_name' => 'Tai Kwun Heritage Arts Centre',
+                            'description' => 'World-famous covered outdoor escalator system and revitalized colonial police compound.',
+                            'start_time' => '14:30',
+                            'end_time' => '16:30',
+                            'lat' => 22.2817,
+                            'lng' => 114.1542,
+                        ],
+                    ],
+                ],
+                [
+                    'neighborhood' => 'Tsim Sha Tsui & Harbour Promenade',
+                    'theme' => 'Harbour Views, Star Ferry & Street Markets',
+                    'stops' => [
+                        [
+                            'title' => 'Historic Star Ferry Harbour Crossing',
+                            'kind' => 'transport',
+                            'place_name' => 'Tsim Sha Tsui Star Ferry Pier',
+                            'description' => 'Gentle harbour crossing between Central and Kowloon with panoramic sea breezes.',
+                            'start_time' => '10:00',
+                            'end_time' => '10:45',
+                            'lat' => 22.2938,
+                            'lng' => 114.1687,
+                        ],
+                        [
+                            'title' => 'Avenue of Stars & Tsim Sha Tsui Promenade',
+                            'kind' => 'sightseeing',
+                            'place_name' => 'Avenue of Stars',
+                            'description' => 'Stroll along the world-renowned harbourfront paying homage to cinematic legends.',
+                            'start_time' => '11:00',
+                            'end_time' => '12:30',
+                            'lat' => 22.2932,
+                            'lng' => 114.1738,
+                        ],
+                        [
+                            'title' => 'Temple Street Night Market & Claypot Rice',
+                            'kind' => 'dining',
+                            'place_name' => 'Temple Street Night Market',
+                            'description' => 'Vibrant night bazaar with open-air dai pai dong stalls, crispy seafood, and claypot rice.',
+                            'start_time' => '18:00',
+                            'end_time' => '20:00',
+                            'lat' => 22.3089,
+                            'lng' => 114.1694,
+                        ],
+                    ],
+                ],
+            ];
+        }
 
         if (str_contains($lower, 'tokyo') || str_contains($lower, 'japan')) {
             return [

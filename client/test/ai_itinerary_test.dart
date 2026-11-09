@@ -139,6 +139,46 @@ void main() {
       expect(plan.days.length, 1);
     });
 
+    test(
+      'generatePlan parses untyped Map<dynamic, dynamic> with data envelope without casting error',
+      () async {
+        final fakeApi = FakeAiApiClient();
+        fakeApi.postResponse = <dynamic, dynamic>{
+          'data': <dynamic, dynamic>{
+            'destination': 'Hong Kong',
+            'summary': '3-day Hong Kong family trip',
+            'travel_party': 'family_kids',
+            'pace': 'balanced',
+            'days': <dynamic>[
+              <dynamic, dynamic>{
+                'day_number': 1,
+                'title': 'Day 1: Island Magic',
+                'theme': 'Island Magic',
+                'primary_neighborhood': 'Central',
+                'activities': <dynamic>[
+                  <dynamic, dynamic>{
+                    'title': 'Victoria Peak',
+                    'kind': 'sightseeing',
+                    'neighborhood': 'Central',
+                    'place_name': 'Victoria Peak',
+                  },
+                ],
+              },
+            ],
+          },
+        };
+        final repo = AiItineraryRepository(apiClient: fakeApi);
+
+        final plan = await repo.generatePlan(
+          'trip-hk',
+          destination: 'Hong Kong',
+        );
+        expect(plan.destination, 'Hong Kong');
+        expect(plan.days.length, 1);
+        expect(plan.days.first.activities.first.title, 'Victoria Peak');
+      },
+    );
+
     test('applyPlan posts structured days to apply endpoint', () async {
       final fakeApi = FakeAiApiClient();
       fakeApi.postResponse = {'data': []};
