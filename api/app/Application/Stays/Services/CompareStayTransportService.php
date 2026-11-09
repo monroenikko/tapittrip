@@ -10,6 +10,12 @@ use App\Domain\Stays\Models\Stay;
 
 final class CompareStayTransportService
 {
+    public function __construct(
+        private ?GeminiTransitService $geminiTransitService = null,
+    ) {
+        $this->geminiTransitService = $geminiTransitService ?? new GeminiTransitService;
+    }
+
     /**
      * Compare luggage-aware airport/origin to stay transportation options.
      *
@@ -53,14 +59,36 @@ final class CompareStayTransportService
             $stay->trip?->destination_country ?? $stay->address ?? $stay->name ?? 'USD'
         );
 
-        $options = $this->generateAiTransportOptions(
-            stay: $stay,
-            data: $data,
-            transitInfo: $transitInfo,
-            origin: $origin,
-            destinationCurrency: $destinationCurrency,
-            isHeavyLuggage: $isHeavyLuggage,
-        );
+        $options = null;
+        $attribution = 'AI Transit Intelligence (TapItTrip Verified Regional Advisory)';
+
+        // 1. Try Live Internet AI Transit Intelligence via Google Gemini (when configured)
+        if ($this->geminiTransitService !== null && ! app()->runningUnitTests()) {
+            $liveOptions = $this->geminiTransitService->getLiveTransportOptions(
+                stay: $stay,
+                data: $data,
+                transitInfo: $transitInfo,
+                origin: $origin,
+                destinationCurrency: $destinationCurrency,
+                isHeavyLuggage: $isHeavyLuggage,
+            );
+            if ($liveOptions !== null && count($liveOptions) > 0) {
+                $options = $liveOptions;
+                $attribution = 'AI Transit Intelligence via Google Gemini (Live Internet Sourced)';
+            }
+        }
+
+        // 2. Deterministic Regional Heuristics fallback
+        if ($options === null) {
+            $options = $this->generateAiTransportOptions(
+                stay: $stay,
+                data: $data,
+                transitInfo: $transitInfo,
+                origin: $origin,
+                destinationCurrency: $destinationCurrency,
+                isHeavyLuggage: $isHeavyLuggage,
+            );
+        }
 
         return [
             'verified' => true,
@@ -73,7 +101,7 @@ final class CompareStayTransportService
             'luggage_preset' => $data->luggagePreset,
             'party_size' => $data->partySize,
             'options' => $options,
-            'provider_attribution' => 'AI Transit Intelligence (TapItTrip Verified Regional Advisory)',
+            'provider_attribution' => $attribution,
             'last_refreshed_at' => now()->toIso8601String(),
         ];
     }

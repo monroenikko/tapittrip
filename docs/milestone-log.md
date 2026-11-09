@@ -10,6 +10,26 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — Live Internet Gemini AI Travel & Ground Transit Intelligence
+
+### Completed
+
+- **Live Internet AI Integration (`GeminiTransitService`, `GeminiItineraryService`)**:
+  - Implemented `GeminiTransitService` connecting to Google Gemini API (`models/gemini-flash-lite-latest`) with JSON mode schema enforcement.
+  - Dynamically evaluates ANY airport and destination worldwide (e.g. Zurich ZRH -> SBB train & tram in CHF; Manila NAIA -> Grab & UBE Express in PHP; BGC Taguig -> local rideshare).
+  - Normalizes and sanitizes untrusted AI output: validates transit modes, sets luggage-aware convenience scores (`isHeavyLuggage`, strollers, party size), checks step-free accessibility, and accurately calculates lowest-fare and fastest routes.
+  - Transparent attribution: tags live results with `'provider_attribution' => 'AI Transit Intelligence via Google Gemini (Live Internet Sourced)'`.
+  - Implemented `GeminiItineraryService` dynamically generating multi-day neighborhood-clustered itineraries with verified places, coordinates, start/end times, and local currency estimates.
+  - Preserved offline-first resilience: if offline, rate-limited, or unconfigured, gracefully falls back to deterministic regional heuristic analyzers.
+- **Configuration & Environment**:
+  - Updated `api/config/services.php` with `gemini` config block (`api_key`, `model` defaulting to `gemini-flash-lite-latest`).
+  - Documented `GEMINI_API_KEY=` and `GEMINI_MODEL=` in `api/.env.example`.
+- **Automated Verification**:
+  - Added unit test suite `tests/Unit/GeminiTransitServiceTest.php` testing API key absence, response parsing, scoring, and timeout handling.
+  - Added unit test suite `tests/Unit/GeminiItineraryServiceTest.php` testing live itinerary JSON mapping.
+  - Full backend test suite passing: 132/132 tests, 741 assertions. Pint clean across 316 files.
+  - Mobile Flutter Analyzer: 0 issues.
+
 ## 2026-11-09 — AI Arrival Transport Intelligence, Non-Rail Regional Hubs & Client Currency Hardening
 
 ### Completed

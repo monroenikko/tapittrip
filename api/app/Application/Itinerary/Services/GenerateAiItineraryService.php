@@ -12,6 +12,12 @@ use App\Domain\Trips\Models\Trip;
 
 final class GenerateAiItineraryService
 {
+    public function __construct(
+        private ?GeminiItineraryService $geminiItineraryService = null,
+    ) {
+        $this->geminiItineraryService = $geminiItineraryService ?? new GeminiItineraryService;
+    }
+
     public function execute(Trip $trip, GenerateAiItineraryData $data): AiItineraryPlanResult
     {
         $destination = $data->destination !== '' ? $data->destination : ($trip->destination_country ?? $trip->title);
@@ -20,57 +26,77 @@ final class GenerateAiItineraryService
         $isRelaxed = $data->pace === 'relaxed' || $isFamily;
         $currency = $this->resolveCurrency($destination);
 
-        $clusterTemplates = $this->getNeighborhoodClusters($destination);
-        $days = [];
+        $days = null;
 
-        for ($dayNum = 1; $dayNum <= $duration; $dayNum++) {
-            $templateIndex = ($dayNum - 1) % count($clusterTemplates);
-            $cluster = $clusterTemplates[$templateIndex];
+        // 1. Try Live Internet AI Generation via Google Gemini
+        if ($this->geminiItineraryService !== null && ! app()->runningUnitTests()) {
+            $liveDays = $this->geminiItineraryService->generatePlan(
+                trip: $trip,
+                data: $data,
+                destination: $destination,
+                duration: $duration,
+                currency: $currency,
+                isFamily: $isFamily,
+            );
+            if ($liveDays !== null && count($liveDays) > 0) {
+                $days = $liveDays;
+            }
+        }
 
-            $activities = [];
-            $stops = $isRelaxed ? array_slice($cluster['stops'], 0, 2) : $cluster['stops'];
+        // 2. Curated Heuristic clusters fallback
+        if ($days === null) {
+            $clusterTemplates = $this->getNeighborhoodClusters($destination);
+            $days = [];
 
-            foreach ($stops as $idx => $stop) {
-                $activities[] = new AiActivitySuggestionData(
-                    title: $stop['title'],
-                    kind: $stop['kind'],
-                    neighborhood: $cluster['neighborhood'],
-                    description: $stop['description'],
-                    plannedStartTime: $stop['start_time'],
-                    plannedEndTime: $stop['end_time'],
-                    placeName: $stop['place_name'],
-                    placeAddress: "{$stop['place_name']}, {$cluster['neighborhood']}, {$destination}",
-                    latitude: $stop['lat'] ?? null,
-                    longitude: $stop['lng'] ?? null,
-                    costEstimate: [
-                        'amount_cents' => $this->calculateActivityCost($stop['kind'], $data->budgetTier),
+            for ($dayNum = 1; $dayNum <= $duration; $dayNum++) {
+                $templateIndex = ($dayNum - 1) % count($clusterTemplates);
+                $cluster = $clusterTemplates[$templateIndex];
+
+                $activities = [];
+                $stops = $isRelaxed ? array_slice($cluster['stops'], 0, 2) : $cluster['stops'];
+
+                foreach ($stops as $idx => $stop) {
+                    $activities[] = new AiActivitySuggestionData(
+                        title: $stop['title'],
+                        kind: $stop['kind'],
+                        neighborhood: $cluster['neighborhood'],
+                        description: $stop['description'],
+                        plannedStartTime: $stop['start_time'],
+                        plannedEndTime: $stop['end_time'],
+                        placeName: $stop['place_name'],
+                        placeAddress: "{$stop['place_name']}, {$cluster['neighborhood']}, {$destination}",
+                        latitude: $stop['lat'] ?? null,
+                        longitude: $stop['lng'] ?? null,
+                        costEstimate: [
+                            'amount_cents' => $this->calculateActivityCost($stop['kind'], $data->budgetTier),
+                            'currency' => $currency,
+                        ],
+                        accessibilityNote: $isFamily
+                            ? 'Stroller and step-free access available near primary station exits.'
+                            : 'Standard pedestrian route with public transit access.',
+                    );
+                }
+
+                $dailyBudget = array_sum(array_map(
+                    static fn (AiActivitySuggestionData $a): int => (int) ($a->costEstimate['amount_cents'] ?? 0),
+                    $activities
+                ));
+
+                $days[] = new AiDaySuggestionData(
+                    dayNumber: $dayNum,
+                    title: "Day {$dayNum}: {$cluster['theme']}",
+                    theme: $cluster['theme'],
+                    primaryNeighborhood: $cluster['neighborhood'],
+                    activities: $activities,
+                    budgetEstimate: [
+                        'amount_cents' => $dailyBudget,
                         'currency' => $currency,
                     ],
-                    accessibilityNote: $isFamily
-                        ? 'Stroller and step-free access available near primary station exits.'
-                        : 'Standard pedestrian route with public transit access.',
+                    familyTip: $isFamily
+                        ? 'Allow 30-minute rest buffers between morning and afternoon walking stops.'
+                        : null,
                 );
             }
-
-            $dailyBudget = array_sum(array_map(
-                static fn (AiActivitySuggestionData $a): int => (int) ($a->costEstimate['amount_cents'] ?? 0),
-                $activities
-            ));
-
-            $days[] = new AiDaySuggestionData(
-                dayNumber: $dayNum,
-                title: "Day {$dayNum}: {$cluster['theme']}",
-                theme: $cluster['theme'],
-                primaryNeighborhood: $cluster['neighborhood'],
-                activities: $activities,
-                budgetEstimate: [
-                    'amount_cents' => $dailyBudget,
-                    'currency' => $currency,
-                ],
-                familyTip: $isFamily
-                    ? 'Allow 30-minute rest buffers between morning and afternoon walking stops.'
-                    : null,
-            );
         }
 
         $totalBudget = array_sum(array_map(
