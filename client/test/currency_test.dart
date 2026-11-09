@@ -70,8 +70,71 @@ void main() {
       expect(CountryCurrencyHelper.resolveCurrency('SG'), 'SGD');
       expect(CountryCurrencyHelper.resolveCurrency('Singapore'), 'SGD');
 
+      expect(CountryCurrencyHelper.resolveCurrency('Myeongdong'), 'KRW');
+      expect(CountryCurrencyHelper.resolveCurrency('Korea'), 'KRW');
+      expect(CountryCurrencyHelper.resolveCurrency('Seoul'), 'KRW');
+
+      expect(CountryCurrencyHelper.resolveCurrency('Hong Kong'), 'HKD');
+      expect(CountryCurrencyHelper.resolveCurrency('迪士尼 Disney'), 'HKD');
+
+      expect(CountryCurrencyHelper.resolveCurrency('BGC Taguig'), 'PHP');
+
       expect(CountryCurrencyHelper.resolveCurrency(null), 'USD');
       expect(CountryCurrencyHelper.resolveCurrency(''), 'USD');
+    });
+
+    test('resolves trip currency dynamically with title, destination, and expense fallbacks', () {
+      expect(
+        CountryCurrencyHelper.resolveTripCurrency(
+          destinationCountry: 'Myeongdong',
+          title: 'Korea',
+        ),
+        'KRW',
+      );
+
+      expect(
+        CountryCurrencyHelper.resolveTripCurrency(
+          destinationCountry: 'Taguig',
+          title: 'BGC Staycation',
+        ),
+        'PHP',
+      );
+
+      expect(
+        CountryCurrencyHelper.resolveTripCurrency(
+          destinationCountry: 'Disneyland',
+          title: 'Hong Kong Trip',
+        ),
+        'HKD',
+      );
+
+      // Falls back to title when destination is generic or empty
+      expect(
+        CountryCurrencyHelper.resolveTripCurrency(
+          destinationCountry: 'Grand Hotel',
+          title: 'South Korea Winter Tour',
+        ),
+        'KRW',
+      );
+
+      // Falls back to existing logged expenses when country/title are ambiguous
+      expect(
+        CountryCurrencyHelper.resolveTripCurrency(
+          destinationCountry: 'Resort',
+          title: 'Summer Getaway',
+          expenseCurrencies: ['KRW', 'KRW', 'PHP'],
+        ),
+        'KRW',
+      );
+
+      expect(
+        CountryCurrencyHelper.resolveTripCurrency(
+          explicitCurrency: 'EUR',
+          destinationCountry: null,
+          title: null,
+        ),
+        'EUR',
+      );
     });
 
     test('findByCode returns matching country item', () {
@@ -112,7 +175,10 @@ void main() {
       expect(CountryCurrencyHelper.resolveFlag('AU'), '🇦🇺');
       expect(CountryCurrencyHelper.resolveFlag('Sydney'), '🇦🇺');
 
-      expect(CountryCurrencyHelper.resolveFlag('NZ'), '🇳🇿'); // Arbitrary ISO code converts to emoji
+      expect(
+        CountryCurrencyHelper.resolveFlag('NZ'),
+        '🇳🇿',
+      ); // Arbitrary ISO code converts to emoji
       expect(CountryCurrencyHelper.resolveFlag(null), isNull);
       expect(CountryCurrencyHelper.resolveFlag(''), isNull);
     });

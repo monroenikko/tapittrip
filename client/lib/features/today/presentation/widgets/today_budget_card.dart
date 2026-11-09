@@ -26,12 +26,13 @@ class TodayBudgetCard extends ConsumerWidget {
     final authUser = authState is Authenticated ? authState.user : null;
     final homeCurrency = authUser?.homeCurrency ?? 'PHP';
 
-    final destCurrency =
-        summary.trip.destinationCurrency ??
-        CountryCurrencyHelper.resolveCurrency(
-          summary.trip.destinationCountry ?? summary.trip.title,
-          defaultCurrency: 'USD',
-        );
+    final destCurrency = CountryCurrencyHelper.resolveTripCurrency(
+      explicitCurrency: summary.trip.destinationCurrency,
+      destinationCountry: summary.trip.destinationCountry,
+      title: summary.trip.title,
+      budgetCurrency: pacing?.currency,
+      defaultCurrency: 'USD',
+    );
 
     final displayCurrency = pacing?.currency ?? homeCurrency;
 

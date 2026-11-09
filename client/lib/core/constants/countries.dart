@@ -59,67 +59,298 @@ class CountryCurrencyHelper {
     final trimmed = input.trim();
     final upper = trimmed.toUpperCase();
 
-    // Check code directly
+    // 1. Check exact 2-letter ISO code
     for (final c in supportedCountries) {
       if (c.code == upper) return c.currency;
     }
 
-    // If it's already a 3-letter currency code
+    // 2. If it's already a 3-letter currency code
     if (upper.length == 3) {
       for (final c in supportedCountries) {
         if (c.currency == upper) return upper;
       }
     }
 
-    // Check keyword
+    // 3. Check full country name match
     final lower = trimmed.toLowerCase();
     for (final c in supportedCountries) {
-      if (lower.contains(c.name.toLowerCase()) ||
-          lower.contains(c.code.toLowerCase())) {
+      if (lower.contains(c.name.toLowerCase())) {
         return c.currency;
       }
     }
 
-    // Common city/island keywords
-    if (lower.contains('tokyo') ||
+    // 4. Common city, district, and destination keywords
+    // South Korea
+    if (lower.contains('korea') ||
+        lower.contains('seoul') ||
+        lower.contains('busan') ||
+        lower.contains('incheon') ||
+        lower.contains('jeju') ||
+        lower.contains('myeongdong') ||
+        lower.contains('gangnam') ||
+        lower.contains('hongdae') ||
+        lower.contains('itaewon')) {
+      return 'KRW';
+    }
+
+    // Japan
+    if (lower.contains('japan') ||
+        lower.contains('tokyo') ||
         lower.contains('osaka') ||
-        lower.contains('kyoto')) {
+        lower.contains('kyoto') ||
+        lower.contains('hokkaido') ||
+        lower.contains('sapporo') ||
+        lower.contains('fukuoka') ||
+        lower.contains('hakone') ||
+        lower.contains('okinawa') ||
+        lower.contains('shibuya') ||
+        lower.contains('shinjuku') ||
+        lower.contains('asakusa')) {
       return 'JPY';
     }
-    if (lower.contains('manila') ||
+
+    // Hong Kong
+    if (lower.contains('hong kong') ||
+        lower.contains('hongkong') ||
+        lower.contains('kowloon') ||
+        lower.contains('tsim sha tsui') ||
+        lower.contains('disneyland') ||
+        lower.contains('disney') ||
+        lower.contains('迪士尼') ||
+        lower.contains('mong kok')) {
+      return 'HKD';
+    }
+
+    // Philippines
+    if (lower.contains('philippines') ||
+        lower.contains('manila') ||
         lower.contains('taguig') ||
         lower.contains('bgc') ||
+        lower.contains('bonifacio') ||
         lower.contains('makati') ||
         lower.contains('cebu') ||
         lower.contains('boracay') ||
         lower.contains('palawan') ||
+        lower.contains('el nido') ||
+        lower.contains('coron') ||
         lower.contains('davao') ||
         lower.contains('siargao') ||
         lower.contains('bohol') ||
+        lower.contains('panglao') ||
         lower.contains('baguio') ||
-        lower.contains('pasig')) {
+        lower.contains('pasig') ||
+        lower.contains('quezon city')) {
       return 'PHP';
     }
-    if (lower.contains('paris') ||
-        lower.contains('rome') ||
-        lower.contains('madrid') ||
-        lower.contains('berlin')) {
-      return 'EUR';
+
+    // Singapore
+    if (lower.contains('singapore') ||
+        lower.contains('changi') ||
+        lower.contains('sentosa') ||
+        lower.contains('marina bay')) {
+      return 'SGD';
     }
-    if (lower.contains('london')) {
-      return 'GBP';
+
+    // Taiwan
+    if (lower.contains('taiwan') ||
+        lower.contains('taipei') ||
+        lower.contains('kaohsiung') ||
+        lower.contains('taichung')) {
+      return 'TWD';
     }
-    if (lower.contains('bangkok') || lower.contains('phuket')) {
+
+    // Thailand
+    if (lower.contains('thailand') ||
+        lower.contains('bangkok') ||
+        lower.contains('phuket') ||
+        lower.contains('chiang mai') ||
+        lower.contains('pattaya') ||
+        lower.contains('krabi')) {
       return 'THB';
     }
-    if (lower.contains('seoul')) {
-      return 'KRW';
+
+    // Indonesia
+    if (lower.contains('indonesia') ||
+        lower.contains('bali') ||
+        lower.contains('jakarta') ||
+        lower.contains('ubud') ||
+        lower.contains('seminyak') ||
+        lower.contains('canggu')) {
+      return 'IDR';
     }
-    if (lower.contains('sydney') || lower.contains('melbourne')) {
+
+    // Malaysia
+    if (lower.contains('malaysia') ||
+        lower.contains('kuala lumpur') ||
+        lower.contains('penang')) {
+      return 'MYR';
+    }
+
+    // United States
+    if (lower.contains('united states') ||
+        lower.contains('usa') ||
+        lower.contains('new york') ||
+        lower.contains('los angeles') ||
+        lower.contains('san francisco') ||
+        lower.contains('hawaii') ||
+        lower.contains('california') ||
+        lower.contains('las vegas') ||
+        lower.contains('orlando')) {
+      return 'USD';
+    }
+
+    // United Kingdom
+    if (lower.contains('united kingdom') ||
+        lower.contains('great britain') ||
+        lower.contains('england') ||
+        lower.contains('london') ||
+        lower.contains('scotland') ||
+        lower.contains('edinburgh') ||
+        lower.contains('manchester')) {
+      return 'GBP';
+    }
+
+    // Australia
+    if (lower.contains('australia') ||
+        lower.contains('sydney') ||
+        lower.contains('melbourne') ||
+        lower.contains('brisbane') ||
+        lower.contains('perth')) {
       return 'AUD';
     }
-    if (lower.contains('bali') || lower.contains('jakarta')) {
-      return 'IDR';
+
+    // UAE
+    if (lower.contains('united arab emirates') ||
+        lower.contains('uae') ||
+        lower.contains('dubai') ||
+        lower.contains('abu dhabi')) {
+      return 'AED';
+    }
+
+    // Vietnam
+    if (lower.contains('vietnam') ||
+        lower.contains('hanoi') ||
+        lower.contains('ho chi minh') ||
+        lower.contains('saigon') ||
+        lower.contains('da nang')) {
+      return 'VND';
+    }
+
+    // Europe
+    if (lower.contains('france') ||
+        lower.contains('paris') ||
+        lower.contains('nice') ||
+        lower.contains('germany') ||
+        lower.contains('berlin') ||
+        lower.contains('munich') ||
+        lower.contains('frankfurt') ||
+        lower.contains('italy') ||
+        lower.contains('rome') ||
+        lower.contains('milan') ||
+        lower.contains('florence') ||
+        lower.contains('venice') ||
+        lower.contains('spain') ||
+        lower.contains('madrid') ||
+        lower.contains('barcelona') ||
+        lower.contains('netherlands') ||
+        lower.contains('amsterdam') ||
+        lower.contains('europe') ||
+        lower.contains('austria') ||
+        lower.contains('vienna')) {
+      return 'EUR';
+    }
+
+    // Switzerland
+    if (lower.contains('switzerland') ||
+        lower.contains('zurich') ||
+        lower.contains('geneva')) {
+      return 'CHF';
+    }
+
+    // Canada
+    if (lower.contains('canada') ||
+        lower.contains('toronto') ||
+        lower.contains('vancouver')) {
+      return 'CAD';
+    }
+
+    return defaultCurrency;
+  }
+
+  /// Dynamically resolves the primary trip currency, giving precedence to destination
+  /// country/district keywords, trip title, existing expense currencies, and explicit currency.
+  static String resolveTripCurrency({
+    String? explicitCurrency,
+    String? destinationCountry,
+    String? title,
+    String? budgetCurrency,
+    List<String>? expenseCurrencies,
+    String defaultCurrency = 'USD',
+  }) {
+    // 1. Try resolving destinationCountry first (without falling back to default)
+    if (destinationCountry != null && destinationCountry.trim().isNotEmpty) {
+      final fromDest = resolveCurrency(destinationCountry, defaultCurrency: '');
+      if (fromDest.isNotEmpty && fromDest != defaultCurrency) {
+        return fromDest;
+      }
+    }
+
+    // 2. Try resolving trip title next
+    if (title != null && title.trim().isNotEmpty) {
+      final fromTitle = resolveCurrency(title, defaultCurrency: '');
+      if (fromTitle.isNotEmpty && fromTitle != defaultCurrency) {
+        return fromTitle;
+      }
+    }
+
+    // 3. If expenses exist in the trip, inspect what currencies were used
+    if (expenseCurrencies != null && expenseCurrencies.isNotEmpty) {
+      final counts = <String, int>{};
+      for (final cur in expenseCurrencies) {
+        final clean = cur.trim().toUpperCase();
+        if (clean.isNotEmpty) {
+          counts[clean] = (counts[clean] ?? 0) + 1;
+        }
+      }
+      if (counts.isNotEmpty) {
+        final sorted = counts.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+        if (sorted.first.key.isNotEmpty &&
+            sorted.first.key != defaultCurrency) {
+          return sorted.first.key;
+        }
+      }
+    }
+
+    // 4. If explicitCurrency is non-empty and non-default, use it
+    if (explicitCurrency != null &&
+        explicitCurrency.trim().isNotEmpty &&
+        explicitCurrency.toUpperCase() != defaultCurrency) {
+      return explicitCurrency.toUpperCase();
+    }
+
+    // 5. If budget currency is set and non-default, use it
+    if (budgetCurrency != null &&
+        budgetCurrency.trim().isNotEmpty &&
+        budgetCurrency.toUpperCase() != defaultCurrency) {
+      return budgetCurrency.toUpperCase();
+    }
+
+    // 6. If destinationCountry resolved to something (even if USD for US destinations)
+    if (destinationCountry != null && destinationCountry.trim().isNotEmpty) {
+      final fromDest = resolveCurrency(destinationCountry, defaultCurrency: '');
+      if (fromDest.isNotEmpty) return fromDest;
+    }
+
+    // 7. If title resolved to something
+    if (title != null && title.trim().isNotEmpty) {
+      final fromTitle = resolveCurrency(title, defaultCurrency: '');
+      if (fromTitle.isNotEmpty) return fromTitle;
+    }
+
+    // 8. If explicitCurrency was provided at all
+    if (explicitCurrency != null && explicitCurrency.trim().isNotEmpty) {
+      return explicitCurrency.toUpperCase();
     }
 
     return defaultCurrency;
@@ -153,7 +384,7 @@ class CountryCurrencyHelper {
 
     final lower = trimmed.toLowerCase();
 
-    // 2. Direct exact or substring match in supported countries
+    // 2. Direct exact match in supported countries
     for (final c in supportedCountries) {
       if (lower == c.name.toLowerCase() || lower == c.code.toLowerCase()) {
         return c.flag;
@@ -172,32 +403,59 @@ class CountryCurrencyHelper {
         lower.contains('hokkaido') ||
         lower.contains('fukuoka') ||
         lower.contains('hakone') ||
+        lower.contains('sapporo') ||
+        lower.contains('okinawa') ||
+        lower.contains('shibuya') ||
+        lower.contains('shinjuku') ||
+        lower.contains('asakusa') ||
         lower.contains('japan')) {
       return '🇯🇵';
     }
     if (lower.contains('hong kong') ||
         lower.contains('hongkong') ||
         lower.contains('kowloon') ||
-        lower.contains('disney')) {
+        lower.contains('tsim sha tsui') ||
+        lower.contains('disneyland') ||
+        lower.contains('disney') ||
+        lower.contains('迪士尼') ||
+        lower.contains('mong kok')) {
       return '🇭🇰';
     }
     if (lower.contains('manila') ||
         lower.contains('taguig') ||
         lower.contains('bgc') ||
+        lower.contains('bonifacio') ||
         lower.contains('makati') ||
         lower.contains('cebu') ||
         lower.contains('boracay') ||
         lower.contains('palawan') ||
+        lower.contains('el nido') ||
+        lower.contains('coron') ||
         lower.contains('davao') ||
         lower.contains('siargao') ||
         lower.contains('bohol') ||
+        lower.contains('panglao') ||
         lower.contains('baguio') ||
         lower.contains('pasig') ||
+        lower.contains('quezon city') ||
         lower.contains('philippines')) {
       return '🇵🇭';
     }
-    if (lower.contains('singapore') || lower.contains('changi')) {
+    if (lower.contains('singapore') ||
+        lower.contains('changi') ||
+        lower.contains('sentosa')) {
       return '🇸🇬';
+    }
+    if (lower.contains('seoul') ||
+        lower.contains('busan') ||
+        lower.contains('korea') ||
+        lower.contains('incheon') ||
+        lower.contains('jeju') ||
+        lower.contains('myeongdong') ||
+        lower.contains('gangnam') ||
+        lower.contains('hongdae') ||
+        lower.contains('itaewon')) {
+      return '🇰🇷';
     }
     if (lower.contains('paris') ||
         lower.contains('france') ||
@@ -208,28 +466,28 @@ class CountryCurrencyHelper {
     if (lower.contains('london') ||
         lower.contains('uk') ||
         lower.contains('england') ||
-        lower.contains('scotland')) {
+        lower.contains('scotland') ||
+        lower.contains('edinburgh') ||
+        lower.contains('manchester')) {
       return '🇬🇧';
     }
     if (lower.contains('bangkok') ||
         lower.contains('phuket') ||
         lower.contains('chiang mai') ||
+        lower.contains('pattaya') ||
+        lower.contains('krabi') ||
         lower.contains('thailand')) {
       return '🇹🇭';
     }
-    if (lower.contains('seoul') ||
-        lower.contains('busan') ||
-        lower.contains('korea') ||
-        lower.contains('incheon')) {
-      return '🇰🇷';
-    }
     if (lower.contains('bali') ||
         lower.contains('jakarta') ||
+        lower.contains('ubud') ||
         lower.contains('indonesia')) {
       return '🇮🇩';
     }
     if (lower.contains('sydney') ||
         lower.contains('melbourne') ||
+        lower.contains('brisbane') ||
         lower.contains('australia')) {
       return '🇦🇺';
     }
@@ -245,6 +503,7 @@ class CountryCurrencyHelper {
     if (lower.contains('rome') ||
         lower.contains('milan') ||
         lower.contains('florence') ||
+        lower.contains('venice') ||
         lower.contains('italy')) {
       return '🇮🇹';
     }
@@ -284,6 +543,22 @@ class CountryCurrencyHelper {
       return '🇨🇭';
     }
 
+    return fallback;
+  }
+
+  static String? resolveTripFlag({
+    String? destinationCountry,
+    String? title,
+    String? fallback,
+  }) {
+    if (destinationCountry != null && destinationCountry.trim().isNotEmpty) {
+      final flag = resolveFlag(destinationCountry);
+      if (flag != null) return flag;
+    }
+    if (title != null && title.trim().isNotEmpty) {
+      final flag = resolveFlag(title);
+      if (flag != null) return flag;
+    }
     return fallback;
   }
 }

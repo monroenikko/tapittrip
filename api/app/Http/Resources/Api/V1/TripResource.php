@@ -23,7 +23,7 @@ final class TripResource extends JsonResource
     {
         $currentUser = $request->user();
         $role = $currentUser ? $this->memberRole($currentUser) : null;
-        $destinationCurrency = CountryCurrencyResolver::resolve($this->destination_country ?? $this->title);
+        $destinationCurrency = CountryCurrencyResolver::resolveTripCurrency($this->destination_country, $this->title);
 
         return [
             'id' => (string) $this->id,

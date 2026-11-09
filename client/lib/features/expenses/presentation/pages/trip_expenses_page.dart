@@ -36,12 +36,18 @@ class TripExpensesPage extends ConsumerWidget {
 
     final trips = ref.watch(tripListProvider).asData?.value;
     final trip = trips?.where((t) => t.id == tripId).firstOrNull;
-    final destinationCurrency =
-        trip?.destinationCurrency ??
-        CountryCurrencyHelper.resolveCurrency(
-          trip?.destinationCountry ?? trip?.title,
-          defaultCurrency: 'USD',
-        );
+    final budget = budgetAsync.asData?.value;
+    final expenses = expensesAsync.asData?.value;
+    final expenseCurrencies = expenses?.map((e) => e.currency).toList();
+
+    final destinationCurrency = CountryCurrencyHelper.resolveTripCurrency(
+      explicitCurrency: trip?.destinationCurrency,
+      destinationCountry: trip?.destinationCountry,
+      title: trip?.title,
+      budgetCurrency: budget?.currency,
+      expenseCurrencies: expenseCurrencies,
+      defaultCurrency: 'USD',
+    );
 
     final categories = const [
       'all',
@@ -202,7 +208,9 @@ class TripExpensesPage extends ConsumerWidget {
                                     child: Text(
                                       'Market rate: 1 $destinationCurrency ≈ ${rate.rate.toStringAsFixed(4)} $homeCurrency',
                                       style: theme.textTheme.labelMedium
-                                          ?.copyWith(fontWeight: FontWeight.w600),
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -278,17 +286,25 @@ class TripExpensesPage extends ConsumerWidget {
                                   if (hasBudget) ...[
                                     const SizedBox(width: 4),
                                     IconButton(
-                                      icon: const Icon(Icons.edit_outlined, size: 16),
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 16,
+                                      ),
                                       tooltip: 'Edit Budget',
                                       visualDensity: VisualDensity.compact,
                                       onPressed: () {
-                                        final currentBudget = budgetAsync.asData?.value;
+                                        final currentBudget =
+                                            budgetAsync.asData?.value;
                                         SetBudgetDialog.show(
                                           context,
                                           tripId: tripId,
-                                          initialCurrency: currentBudget?.currency ?? summary.baseCurrency,
-                                          initialTotalBudgetMinor: currentBudget?.totalBudgetMinor,
-                                          initialDailyBudgetMinor: currentBudget?.dailyBudgetMinor,
+                                          initialCurrency:
+                                              currentBudget?.currency ??
+                                              summary.baseCurrency,
+                                          initialTotalBudgetMinor:
+                                              currentBudget?.totalBudgetMinor,
+                                          initialDailyBudgetMinor:
+                                              currentBudget?.dailyBudgetMinor,
                                         );
                                       },
                                     ),
@@ -297,7 +313,9 @@ class TripExpensesPage extends ConsumerWidget {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                summary.formatBaseAmount(summary.totalSpentBaseMinor),
+                                summary.formatBaseAmount(
+                                  summary.totalSpentBaseMinor,
+                                ),
                                 style: theme.textTheme.headlineMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: colorScheme.onSurface,

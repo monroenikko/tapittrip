@@ -28,6 +28,8 @@ final class TripAssistantTest extends TestCase
     {
         parent::setUp();
 
+        Config::set('services.gemini.api_key', null);
+
         $this->user = User::factory()->create();
         Sanctum::actingAs($this->user);
 

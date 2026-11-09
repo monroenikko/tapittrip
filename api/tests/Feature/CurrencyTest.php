@@ -74,6 +74,20 @@ final class CurrencyTest extends TestCase
 
         $this->assertSame('USD', CountryCurrencyResolver::resolve(null));
         $this->assertSame('USD', CountryCurrencyResolver::resolve(''));
+
+        // District / City keywords
+        $this->assertSame('KRW', CountryCurrencyResolver::resolve('Myeongdong'));
+        $this->assertSame('KRW', CountryCurrencyResolver::resolve('Seoul'));
+        $this->assertSame('HKD', CountryCurrencyResolver::resolve('Hong Kong'));
+        $this->assertSame('HKD', CountryCurrencyResolver::resolve('迪士尼 Disney'));
+        $this->assertSame('PHP', CountryCurrencyResolver::resolve('BGC Taguig'));
+
+        // Trip currency resolution with fallback to title
+        $this->assertSame('KRW', CountryCurrencyResolver::resolveTripCurrency('Myeongdong', 'Korea'));
+        $this->assertSame('KRW', CountryCurrencyResolver::resolveTripCurrency('', 'Korea Trip'));
+        $this->assertSame('HKD', CountryCurrencyResolver::resolveTripCurrency('Hong Kong', 'Family Vacation'));
+        $this->assertSame('PHP', CountryCurrencyResolver::resolveTripCurrency(null, 'BGC Taguig Trip'));
+        $this->assertSame('USD', CountryCurrencyResolver::resolveTripCurrency(null, null));
     }
 
     public function test_trip_resource_includes_destination_currency(): void
@@ -83,16 +97,16 @@ final class CurrencyTest extends TestCase
 
         $trip = Trip::factory()->create([
             'owner_id' => $user->id,
-            'title' => 'Cherry Blossom Tour',
-            'destination_country' => 'JP',
+            'title' => 'Korea',
+            'destination_country' => 'Myeongdong',
         ]);
 
         $response = $this->getJson("/api/v1/trips/{$trip->id}");
 
         $response
             ->assertOk()
-            ->assertJsonPath('data.destination_country', 'JP')
-            ->assertJsonPath('data.destination_currency', 'JPY');
+            ->assertJsonPath('data.destination_country', 'Myeongdong')
+            ->assertJsonPath('data.destination_currency', 'KRW');
     }
 
     public function test_currency_minor_conversion_handles_zero_decimal_scales(): void

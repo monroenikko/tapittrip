@@ -315,10 +315,13 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                           children: [
                             Builder(
                               builder: (context) {
-                                final flag = CountryCurrencyHelper.resolveFlag(
+                                final flag =
+                                    CountryCurrencyHelper.resolveFlag(
                                       trip.destinationCountry,
                                     ) ??
-                                    CountryCurrencyHelper.resolveFlag(trip.title);
+                                    CountryCurrencyHelper.resolveFlag(
+                                      trip.title,
+                                    );
 
                                 return Row(
                                   children: [
@@ -447,13 +450,12 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 Builder(
                   builder: (context) {
                     final destCurrency =
-                        (trip?.destinationCurrency != null &&
-                            trip!.destinationCurrency!.isNotEmpty)
-                        ? trip.destinationCurrency!
-                        : CountryCurrencyHelper.resolveCurrency(
-                            trip?.destinationCountry ?? trip?.title,
-                            defaultCurrency: 'JPY',
-                          );
+                        CountryCurrencyHelper.resolveTripCurrency(
+                          explicitCurrency: trip?.destinationCurrency,
+                          destinationCountry: trip?.destinationCountry,
+                          title: trip?.title,
+                          defaultCurrency: 'JPY',
+                        );
                     final authState = ref.watch(authProvider);
                     final authUser = authState is Authenticated
                         ? authState.user

@@ -49,68 +49,137 @@ final class CountryCurrencyResolver
      * @var array<string, string>
      */
     private const KEYWORD_TO_CURRENCY = [
+        // Philippines
         'philippines' => 'PHP',
         'manila' => 'PHP',
         'taguig' => 'PHP',
         'bgc' => 'PHP',
+        'bonifacio' => 'PHP',
         'makati' => 'PHP',
         'cebu' => 'PHP',
         'boracay' => 'PHP',
         'palawan' => 'PHP',
+        'el nido' => 'PHP',
+        'coron' => 'PHP',
         'davao' => 'PHP',
         'siargao' => 'PHP',
         'bohol' => 'PHP',
+        'panglao' => 'PHP',
         'baguio' => 'PHP',
         'pasig' => 'PHP',
         'quezon city' => 'PHP',
+
+        // Japan
         'japan' => 'JPY',
         'tokyo' => 'JPY',
         'osaka' => 'JPY',
         'kyoto' => 'JPY',
         'hokkaido' => 'JPY',
+        'sapporo' => 'JPY',
+        'fukuoka' => 'JPY',
+        'hakone' => 'JPY',
+        'okinawa' => 'JPY',
+        'shibuya' => 'JPY',
+        'shinjuku' => 'JPY',
+        'asakusa' => 'JPY',
+
+        // South Korea
+        'south korea' => 'KRW',
+        'korea' => 'KRW',
+        'seoul' => 'KRW',
+        'busan' => 'KRW',
+        'incheon' => 'KRW',
+        'jeju' => 'KRW',
+        'myeongdong' => 'KRW',
+        'gangnam' => 'KRW',
+        'hongdae' => 'KRW',
+        'itaewon' => 'KRW',
+
+        // Hong Kong
+        'hong kong' => 'HKD',
+        'hongkong' => 'HKD',
+        'kowloon' => 'HKD',
+        'tsim sha tsui' => 'HKD',
+        'disneyland' => 'HKD',
+        'disney' => 'HKD',
+        '迪士尼' => 'HKD',
+        'mong kok' => 'HKD',
+
+        // Singapore
+        'singapore' => 'SGD',
+        'changi' => 'SGD',
+        'sentosa' => 'SGD',
+
+        // Taiwan
+        'taiwan' => 'TWD',
+        'taipei' => 'TWD',
+        'kaohsiung' => 'TWD',
+
+        // Thailand
+        'thailand' => 'THB',
+        'bangkok' => 'THB',
+        'phuket' => 'THB',
+        'chiang mai' => 'THB',
+        'pattaya' => 'THB',
+        'krabi' => 'THB',
+
+        // Indonesia
+        'indonesia' => 'IDR',
+        'bali' => 'IDR',
+        'jakarta' => 'IDR',
+        'ubud' => 'IDR',
+        'seminyak' => 'IDR',
+        'canggu' => 'IDR',
+
+        // Malaysia
+        'malaysia' => 'MYR',
+        'kuala lumpur' => 'MYR',
+        'penang' => 'MYR',
+
+        // United States
         'united states' => 'USD',
         'usa' => 'USD',
         'new york' => 'USD',
         'los angeles' => 'USD',
         'san francisco' => 'USD',
         'hawaii' => 'USD',
-        'singapore' => 'SGD',
+        'california' => 'USD',
+        'las vegas' => 'USD',
+        'orlando' => 'USD',
+
+        // United Kingdom
         'united kingdom' => 'GBP',
         'great britain' => 'GBP',
         'england' => 'GBP',
         'london' => 'GBP',
         'scotland' => 'GBP',
+        'edinburgh' => 'GBP',
+        'manchester' => 'GBP',
+
+        // Australia
         'australia' => 'AUD',
         'sydney' => 'AUD',
         'melbourne' => 'AUD',
-        'thailand' => 'THB',
-        'bangkok' => 'THB',
-        'phuket' => 'THB',
-        'chiang mai' => 'THB',
-        'south korea' => 'KRW',
-        'korea' => 'KRW',
-        'seoul' => 'KRW',
-        'busan' => 'KRW',
-        'canada' => 'CAD',
-        'toronto' => 'CAD',
-        'vancouver' => 'CAD',
-        'hong kong' => 'HKD',
-        'taiwan' => 'TWD',
-        'taipei' => 'TWD',
-        'indonesia' => 'IDR',
-        'bali' => 'IDR',
-        'jakarta' => 'IDR',
-        'malaysia' => 'MYR',
-        'kuala lumpur' => 'MYR',
+        'brisbane' => 'AUD',
+        'perth' => 'AUD',
+
+        // UAE
         'united arab emirates' => 'AED',
         'uae' => 'AED',
         'dubai' => 'AED',
         'abu dhabi' => 'AED',
+
+        // Vietnam
         'vietnam' => 'VND',
         'hanoi' => 'VND',
         'ho chi minh' => 'VND',
+        'saigon' => 'VND',
+        'da nang' => 'VND',
+
+        // Europe
         'france' => 'EUR',
         'paris' => 'EUR',
+        'nice' => 'EUR',
         'germany' => 'EUR',
         'berlin' => 'EUR',
         'munich' => 'EUR',
@@ -119,15 +188,25 @@ final class CountryCurrencyResolver
         'rome' => 'EUR',
         'milan' => 'EUR',
         'florence' => 'EUR',
+        'venice' => 'EUR',
         'spain' => 'EUR',
         'madrid' => 'EUR',
         'barcelona' => 'EUR',
         'netherlands' => 'EUR',
         'amsterdam' => 'EUR',
         'europe' => 'EUR',
+        'austria' => 'EUR',
+        'vienna' => 'EUR',
+
+        // Switzerland
         'switzerland' => 'CHF',
         'zurich' => 'CHF',
         'geneva' => 'CHF',
+
+        // Canada
+        'canada' => 'CAD',
+        'toronto' => 'CAD',
+        'vancouver' => 'CAD',
     ];
 
     /**
@@ -156,6 +235,28 @@ final class CountryCurrencyResolver
         $lower = strtolower($trimmed);
         foreach (self::KEYWORD_TO_CURRENCY as $keyword => $currency) {
             if (str_contains($lower, $keyword)) {
+                return $currency;
+            }
+        }
+
+        return $default;
+    }
+
+    /**
+     * Resolve currency for a trip, checking destination country first, then title.
+     */
+    public static function resolveTripCurrency(?string $destinationCountry, ?string $title = null, string $default = 'USD'): string
+    {
+        if ($destinationCountry !== null && trim($destinationCountry) !== '') {
+            $currency = self::resolve($destinationCountry, '');
+            if ($currency !== '') {
+                return $currency;
+            }
+        }
+
+        if ($title !== null && trim($title) !== '') {
+            $currency = self::resolve($title, '');
+            if ($currency !== '') {
                 return $currency;
             }
         }
