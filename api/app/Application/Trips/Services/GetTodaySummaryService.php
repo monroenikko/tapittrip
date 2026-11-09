@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Trips\Services;
 
+use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Application\Trips\Data\TodaySummaryResult;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Stays\Models\Stay;
@@ -126,22 +127,28 @@ final class GetTodaySummaryService
         // Budget pacing
         $budgetPacing = null;
         $budget = $trip->budget;
-        if ($budget !== null) {
+        $hasExpenses = $trip->expenses()->exists();
+
+        if ($budget !== null || $hasExpenses) {
+            $currency = $budget?->currency ?? $trip->destination_currency ?? CountryCurrencyResolver::resolve($trip->destination_country ?? $trip->title);
+
             $spentTodayMinor = (int) $trip->expenses()
                 ->whereDate('expense_date', $todayDate)
                 ->sum('base_amount_minor');
 
             $totalSpentMinor = (int) $trip->expenses()->sum('base_amount_minor');
-            $remainingBudgetMinor = $budget->total_budget_minor - $totalSpentMinor;
-            $dailyBudgetMinor = $budget->daily_budget_minor;
+            $remainingBudgetMinor = $budget !== null
+                ? ($budget->total_budget_minor - $totalSpentMinor)
+                : 0;
+            $dailyBudgetMinor = $budget?->daily_budget_minor;
 
             $dailyUtilizationPercent = ($dailyBudgetMinor !== null && $dailyBudgetMinor > 0)
                 ? round(($spentTodayMinor / $dailyBudgetMinor) * 100, 1)
                 : null;
 
             $budgetPacing = [
-                'currency' => $budget->currency,
-                'total_budget_minor' => $budget->total_budget_minor,
+                'currency' => $currency,
+                'total_budget_minor' => $budget?->total_budget_minor ?? 0,
                 'daily_budget_minor' => $dailyBudgetMinor,
                 'spent_today_minor' => $spentTodayMinor,
                 'total_spent_minor' => $totalSpentMinor,

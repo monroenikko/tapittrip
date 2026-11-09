@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/map_launcher.dart';
 import '../../../itinerary/presentation/providers/itinerary_provider.dart';
@@ -102,6 +103,13 @@ class QuickActionsGrid extends ConsumerWidget {
       ),
       _buildActionButton(
         context: context,
+        icon: Icons.account_balance_wallet_outlined,
+        label: 'Expenses',
+        color: Colors.teal.shade700,
+        onTap: () => context.push('/trips/${summary.trip.id}/expenses'),
+      ),
+      _buildActionButton(
+        context: context,
         icon: Icons.add_location_alt_rounded,
         label: '+ Stop',
         color: colorScheme.tertiary,
@@ -160,7 +168,7 @@ class QuickActionsGrid extends ConsumerWidget {
             constraints.maxWidth < 340 ||
                 MediaQuery.textScalerOf(context).scale(14) > 18
             ? 2
-            : 4;
+            : (constraints.maxWidth >= 350 ? 5 : 3);
         final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
         return Wrap(
           spacing: 8,

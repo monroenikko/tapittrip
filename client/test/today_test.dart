@@ -371,7 +371,7 @@ void main() {
       },
     );
 
-    testWidgets('QuickActionsGrid renders 4 action buttons', (tester) async {
+    testWidgets('QuickActionsGrid renders 5 action buttons', (tester) async {
       await tester.pumpWidget(
         _buildTestApp(QuickActionsGrid(summary: testSummary)),
       );
@@ -379,6 +379,7 @@ void main() {
 
       expect(find.text('Itinerary'), findsOneWidget);
       expect(find.text('Stays'), findsOneWidget);
+      expect(find.text('Expenses'), findsOneWidget);
       expect(find.text('+ Stop'), findsOneWidget);
       expect(find.text('Directions'), findsOneWidget);
     });
@@ -511,6 +512,37 @@ void main() {
         expect(find.text('Target: \$200.00'), findsOneWidget);
         expect(find.text('25% daily limit used'), findsOneWidget);
         expect(find.text('Remaining: \$150.00'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'TodayDashboardPage renders TodayBudgetCard prompt when budget pacing is null',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildTestApp(
+            const TodayDashboardPage(initialTripId: 'trip-101'),
+            overrides: [
+              tripRepositoryProvider.overrideWithValue(
+                _FakeTripRepository([testTrip]),
+              ),
+              todaySummaryProvider('trip-101')
+                  .overrideWith((ref) async => testSummary),
+            ],
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        await tester.scrollUntilVisible(
+          find.text('Trip Budget & Expenses'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+
+        expect(find.text('Trip Budget & Expenses'), findsOneWidget);
+        expect(find.text('No budget set yet'), findsOneWidget);
+        expect(find.text('Set Budget'), findsOneWidget);
+        expect(find.text('Log Expense'), findsOneWidget);
       },
     );
   });

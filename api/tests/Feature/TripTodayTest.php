@@ -203,4 +203,39 @@ final class TripTodayTest extends TestCase
 
         $this->assertEquals(25.0, $response->json('data.budget_pacing.daily_utilization_percent'));
     }
+
+    public function test_today_dashboard_includes_spending_pacing_when_only_expenses_logged(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $today = Carbon::now('Asia/Tokyo')->toDateString();
+
+        $trip = Trip::factory()->create([
+            'owner_id' => $user->id,
+            'title' => 'Tokyo Expense-Only Trip',
+            'destination_country' => 'JP',
+            'start_date' => $today,
+            'end_date' => Carbon::now('Asia/Tokyo')->addDays(5)->toDateString(),
+            'primary_timezone' => 'Asia/Tokyo',
+        ]);
+
+        Expense::factory()->create([
+            'trip_id' => $trip->id,
+            'payer_id' => $user->id,
+            'amount_minor' => 3500,
+            'currency' => 'JPY',
+            'base_amount_minor' => 3500,
+            'expense_date' => $today,
+        ]);
+
+        $response = $this->getJson("/api/v1/trips/{$trip->id}/today");
+
+        $response->assertOk()
+            ->assertJsonPath('data.budget_pacing.currency', 'JPY')
+            ->assertJsonPath('data.budget_pacing.total_budget_minor', 0)
+            ->assertJsonPath('data.budget_pacing.daily_budget_minor', null)
+            ->assertJsonPath('data.budget_pacing.spent_today_minor', 3500)
+            ->assertJsonPath('data.budget_pacing.total_spent_minor', 3500);
+    }
 }
