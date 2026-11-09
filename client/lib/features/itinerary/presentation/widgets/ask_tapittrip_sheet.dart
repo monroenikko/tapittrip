@@ -5,6 +5,18 @@ import 'package:tapittrip/core/network/api_exceptions.dart';
 import 'package:tapittrip/features/itinerary/domain/models/trip_assistant_response.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 
+class _AssistantChatMessage {
+  const _AssistantChatMessage({
+    required this.isUser,
+    required this.text,
+    this.response,
+  });
+
+  final bool isUser;
+  final String text;
+  final TripAssistantResponse? response;
+}
+
 class AskTapItTripSheet extends ConsumerStatefulWidget {
   const AskTapItTripSheet({super.key, required this.tripId, this.initialQuery});
 
@@ -31,13 +43,18 @@ class AskTapItTripSheet extends ConsumerStatefulWidget {
 
 class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
   late final TextEditingController _queryController;
+  final ScrollController _scrollController = ScrollController();
+  final List<_AssistantChatMessage> _messages = [];
+
   bool _isLoading = false;
   String? _errorMessage;
-  TripAssistantResponse? _response;
 
   final List<String> _quickPrompts = const [
     'Where should we eat near our hotel?',
     'Which lounge can I use in Terminal 3?',
+    'What should I pack for this trip?',
+    'Local tipping & payment etiquette',
+    'Top hidden gems and spots to visit',
     'Can you make Day 2 easier for our toddler?',
     'What should we do if it rains today?',
   ];
@@ -56,17 +73,35 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
   @override
   void dispose() {
     _queryController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _sendQuery(String queryText) async {
     final query = queryText.trim();
     if (query.isEmpty) return;
 
+    _queryController.clear();
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _messages.add(_AssistantChatMessage(isUser: true, text: query));
     });
+
+    _scrollToBottom();
 
     try {
       final repo = ref.read(aiItineraryRepositoryProvider);
@@ -75,8 +110,15 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _response = result;
+          _messages.add(
+            _AssistantChatMessage(
+              isUser: false,
+              text: result.reply,
+              response: result,
+            ),
+          );
         });
+        _scrollToBottom();
       }
     } catch (e) {
       if (mounted) {
@@ -84,6 +126,7 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
           _isLoading = false;
           _errorMessage = 'Could not get response: $e';
         });
+        _scrollToBottom();
       }
     }
   }
@@ -175,11 +218,11 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
     final colorScheme = theme.colorScheme;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.85,
+      initialChildSize: 0.88,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
-      builder: (ctx, scrollController) {
+      builder: (ctx, parentScrollController) {
         return Container(
           decoration: BoxDecoration(
             color: colorScheme.surface,
@@ -211,7 +254,7 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        Icons.chat_bubble_outline_rounded,
+                        Icons.auto_awesome_rounded,
                         color: colorScheme.onPrimaryContainer,
                         size: 20,
                       ),
@@ -221,11 +264,36 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Ask TapItTrip',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                'Ask TapItTrip',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'AI',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           Text(
                             'Your contextual in-trip assistant',
@@ -245,12 +313,58 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
               ),
               const Divider(height: 1),
 
-              // Scrollable Body
+              // Scrollable Conversation Area
               Expanded(
                 child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(20),
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
                   children: [
+                    // Welcome & Scoping Banner if no messages yet
+                    if (_messages.isEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.travel_explore_rounded,
+                                  size: 18,
+                                  color: colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Travel & Suggestions Assistant',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Ask anything about local dining, packing tips, etiquette, transit, or hidden gems. Tap any suggestion below to get started!',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
                     // Quick Prompts Section
                     Text(
                       'Suggested Questions',
@@ -279,13 +393,150 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+
+                    // Render Messages History
+                    ..._messages.map((msg) {
+                      if (msg.isUser) {
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            margin: const EdgeInsets.only(
+                              bottom: 12,
+                              left: 48,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                                bottomLeft: Radius.circular(16),
+                                bottomRight: Radius.circular(4),
+                              ),
+                            ),
+                            child: Text(
+                              msg.text,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onPrimary,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final response = msg.response;
+                      if (response == null) {
+                        return const SizedBox.shrink();
+                      }
+
+                      final isOutOfScope =
+                          response.category.toLowerCase() == 'out_of_scope';
+
+                      return Card(
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isOutOfScope
+                                ? colorScheme.error.withValues(alpha: 0.4)
+                                : colorScheme.outlineVariant.withValues(
+                                    alpha: 0.6,
+                                  ),
+                          ),
+                        ),
+                        color: isOutOfScope
+                            ? colorScheme.errorContainer.withValues(alpha: 0.2)
+                            : colorScheme.surfaceContainerLow,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _categoryColor(
+                                        response.category,
+                                        colorScheme,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      _categoryLabel(response.category),
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Icon(
+                                    Icons.shield_outlined,
+                                    size: 16,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Advisory only',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                response.reply,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  height: 1.45,
+                                ),
+                              ),
+                              if (response.suggestedActions.isNotEmpty) ...[
+                                const Divider(height: 24),
+                                Text(
+                                  'Suggested Actions',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...response.suggestedActions.map((action) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: FilledButton.tonalIcon(
+                                      icon: const Icon(
+                                        Icons.add_task_rounded,
+                                        size: 16,
+                                      ),
+                                      label: Text(action.label),
+                                      onPressed: () => _handleAction(action),
+                                    ),
+                                  );
+                                }),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
 
                     // Loading State
                     if (_isLoading) ...[
                       const Center(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 32),
+                          padding: EdgeInsets.symmetric(vertical: 24),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -327,100 +578,6 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                       ),
                       const SizedBox(height: 16),
                     ],
-
-                    // Response Card
-                    if (_response != null) ...[
-                      Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(
-                            color: colorScheme.outlineVariant.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                        color: colorScheme.surfaceContainerLow,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _categoryColor(
-                                        _response!.category,
-                                        colorScheme,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      _categoryLabel(_response!.category),
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Icon(
-                                    Icons.shield_outlined,
-                                    size: 16,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Advisory only',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _response!.reply,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  height: 1.4,
-                                ),
-                              ),
-                              if (_response!.suggestedActions.isNotEmpty) ...[
-                                const Divider(height: 24),
-                                Text(
-                                  'Suggested Actions',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.primary,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                ..._response!.suggestedActions.map((action) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: FilledButton.tonalIcon(
-                                      icon: const Icon(
-                                        Icons.add_task_rounded,
-                                        size: 16,
-                                      ),
-                                      label: Text(action.label),
-                                      onPressed: () => _handleAction(action),
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
                   ],
                 ),
               ),
@@ -444,7 +601,7 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                         textInputAction: TextInputAction.send,
                         onSubmitted: _isLoading ? null : _sendQuery,
                         decoration: InputDecoration(
-                          hintText: 'Ask about food, lounges, pacing...',
+                          hintText: 'Ask about food, packing, etiquette...',
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
@@ -491,6 +648,20 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
         return Colors.teal;
       case 'weather':
         return Colors.blueGrey;
+      case 'packing':
+        return Colors.purple;
+      case 'culture':
+      case 'etiquette':
+        return Colors.amber.shade800;
+      case 'transit':
+      case 'transport':
+        return Colors.blue;
+      case 'itinerary':
+        return Colors.green.shade700;
+      case 'safety':
+        return Colors.red.shade700;
+      case 'out_of_scope':
+        return Colors.blueGrey.shade700;
       default:
         return colorScheme.primary;
     }
@@ -505,9 +676,23 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
       case 'toddler_friendly':
         return 'Toddler & Family';
       case 'weather':
-        return 'Weather Alternative';
+        return 'Weather Advice';
+      case 'packing':
+        return 'Packing & Gear';
+      case 'culture':
+      case 'etiquette':
+        return 'Culture & Etiquette';
+      case 'transit':
+      case 'transport':
+        return 'Transit & Navigation';
+      case 'itinerary':
+        return 'Itinerary Suggestion';
+      case 'safety':
+        return 'Safety & Emergency';
+      case 'out_of_scope':
+        return 'Travel Guardrail';
       default:
-        return 'Assistant Tip';
+        return 'Travel Assistant';
     }
   }
 }

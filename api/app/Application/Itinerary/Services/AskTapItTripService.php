@@ -10,6 +10,10 @@ use App\Domain\Trips\Models\Trip;
 
 final class AskTapItTripService
 {
+    public function __construct(
+        private readonly GeminiAssistantService $geminiService,
+    ) {}
+
     /**
      * Ask TapItTrip contextual assistant about an active trip.
      */
@@ -22,7 +26,7 @@ final class AskTapItTripService
         $normalizedQuery = mb_strtolower(trim($query));
         $stay = $trip->stays()->first();
         $daysCount = $trip->days()->count();
-        $destination = $trip->title;
+        $destination = $trip->destination_country ? "{$trip->title} ({$trip->destination_country})" : $trip->title;
 
         // Context summary for caller
         $contextSummary = [
@@ -34,7 +38,14 @@ final class AskTapItTripService
             'days_count' => $daysCount,
         ];
 
-        // 1. Airport Lounge / Terminal query
+        // 1. Live Google Gemini AI Assistant with Travel Scoping & Suggestions
+        $aiResult = $this->geminiService->ask($trip, $query, $contextSummary);
+        if ($aiResult !== null) {
+            return $aiResult;
+        }
+
+        // 2. Offline / Local Heuristic Fallback
+        // Airport Lounge / Terminal query
         if (
             str_contains($normalizedQuery, 'lounge') ||
             str_contains($normalizedQuery, 'terminal') ||
@@ -44,7 +55,7 @@ final class AskTapItTripService
             return $this->handleLoungeQuery($trip, $normalizedQuery, $terminalCode, $contextSummary);
         }
 
-        // 2. Toddler / Family / Pacing query
+        // Toddler / Family / Pacing query
         if (
             str_contains($normalizedQuery, 'toddler') ||
             str_contains($normalizedQuery, 'kid') ||
@@ -58,7 +69,7 @@ final class AskTapItTripService
             return $this->handleToddlerAndPacingQuery($trip, $normalizedQuery, $contextSummary);
         }
 
-        // 3. Hotel / Accommodation proximity / Dining
+        // Hotel / Accommodation proximity / Dining
         if (
             str_contains($normalizedQuery, 'hotel') ||
             str_contains($normalizedQuery, 'stay') ||
@@ -73,7 +84,7 @@ final class AskTapItTripService
             return $this->handleStayAndDiningQuery($trip, $stay, $contextSummary);
         }
 
-        // 4. Weather / Rain query
+        // Weather / Rain query
         if (
             str_contains($normalizedQuery, 'rain') ||
             str_contains($normalizedQuery, 'weather') ||
@@ -84,7 +95,7 @@ final class AskTapItTripService
             return $this->handleWeatherQuery($trip, $contextSummary);
         }
 
-        // 5. General contextual fallback
+        // General contextual fallback
         return $this->handleGeneralQuery($trip, $contextSummary);
     }
 

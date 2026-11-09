@@ -11,6 +11,8 @@ use App\Domain\Stays\Models\Stay;
 use App\Domain\Trips\Models\Trip;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -163,5 +165,91 @@ final class TripAssistantTest extends TestCase
         ]);
 
         $response->assertUnprocessable();
+    }
+
+    public function test_assistant_calls_gemini_ai_when_api_key_configured_and_returns_rich_suggestions(): void
+    {
+        Config::set('services.gemini.api_key', 'mock-key');
+
+        $fakeAiResponse = [
+            'candidates' => [
+                [
+                    'content' => [
+                        'parts' => [
+                            [
+                                'text' => json_encode([
+                                    'reply' => "In Tokyo, card acceptance is high at convenience stores, but small ramen shops and temple stalls require cash.\n\n• **Tip**: Buy a Welcome Suica card at Haneda/Narita airport for instant tap-to-ride.\n• **Food Suggestion**: Try tonkotsu ramen at Ichiran Shinjuku.",
+                                    'category' => 'transit',
+                                    'suggested_actions' => [
+                                        [
+                                            'label' => 'Add Dinner at Ichiran Ramen',
+                                            'kind' => 'add_activity',
+                                            'payload' => [
+                                                'title' => 'Dinner at Ichiran Shinjuku',
+                                                'kind' => 'dining',
+                                                'place_name' => 'Ichiran Shinjuku',
+                                                'notes' => 'Classic tonkotsu ramen with private dining booths',
+                                            ],
+                                        ],
+                                    ],
+                                ]),
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response($fakeAiResponse, 200),
+        ]);
+
+        $response = $this->postJson("/api/v1/trips/{$this->trip->id}/assistant/query", [
+            'query' => 'Should I carry cash or use cards in Tokyo?',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.category', 'transit')
+            ->assertJsonPath('data.suggested_actions.0.label', 'Add Dinner at Ichiran Ramen')
+            ->assertJsonPath('data.suggested_actions.0.payload.kind', 'meal');
+
+        $this->assertStringContainsString('Welcome Suica card', $response->json('data.reply'));
+    }
+
+    public function test_assistant_polite_guardrail_when_asking_non_travel_question(): void
+    {
+        Config::set('services.gemini.api_key', 'mock-key');
+
+        $fakeAiResponse = [
+            'candidates' => [
+                [
+                    'content' => [
+                        'parts' => [
+                            [
+                                'text' => json_encode([
+                                    'reply' => 'I am your TapItTrip travel companion, focused exclusively on travel advice, trip planning, local recommendations, and journey logistics. How can I help with your trip to Tokyo Family Explorer?',
+                                    'category' => 'out_of_scope',
+                                    'suggested_actions' => [],
+                                ]),
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response($fakeAiResponse, 200),
+        ]);
+
+        $response = $this->postJson("/api/v1/trips/{$this->trip->id}/assistant/query", [
+            'query' => 'Who won the 1998 soccer world cup final?',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.category', 'out_of_scope')
+            ->assertJsonCount(0, 'data.suggested_actions');
+
+        $this->assertStringContainsString('focused exclusively on travel advice', $response->json('data.reply'));
     }
 }

@@ -143,5 +143,42 @@ void main() {
         expect(find.text('Add Dinner near Hotel'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'renders out of scope response with travel guardrail category label',
+      (tester) async {
+        final fakeApi = FakeAssistantApiClient();
+        fakeApi.postResponse = {
+          'data': {
+            'reply':
+                'I am your TapItTrip travel companion, focused exclusively on travel advice, trip planning, and journey logistics. How can I assist with your trip?',
+            'category': 'out_of_scope',
+            'suggested_actions': [],
+          },
+        };
+        final repo = AiItineraryRepository(apiClient: fakeApi);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [aiItineraryRepositoryProvider.overrideWithValue(repo)],
+            child: const MaterialApp(
+              home: Scaffold(body: AskTapItTripSheet(tripId: 'trip-789')),
+            ),
+          ),
+        );
+
+        // Tap on a prompt
+        await tester.tap(find.text('Where should we eat near our hotel?'));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // Verify guardrail label and message rendered
+        expect(find.text('Travel Guardrail'), findsOneWidget);
+        expect(
+          find.textContaining('focused exclusively on travel advice'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

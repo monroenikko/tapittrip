@@ -10,6 +10,36 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — Ask TapItTrip AI Assistant with Travel Scoping & Practical Suggestions
+
+### Completed
+
+- **Backend AI Assistant Service (`GeminiAssistantService`, `AskTapItTripService`)**:
+  - Implemented `GeminiAssistantService` integrating Google Gemini live internet AI (`gemini-flash-lite-latest`) for open-ended traveler Q&A and concierge advice.
+  - Injects full trip context: title, destination country/city, travel dates, trip type, accommodations/stays, and currently planned stops.
+  - **Strict Travel Scoping & Guardrails**:
+    - AI is bounded strictly to travel-related inquiries: itineraries, dining & local food, packing & seasonal gear, cultural etiquette & tipping, transit/navigation, hidden gems, and traveler safety.
+    - Out-of-scope non-travel prompts (e.g. programming/code, homework, math, politics, unrelated news) trigger a polite redirection back to trip advice, with `category: out_of_scope` and empty actions.
+  - **Practical Suggestions & Action Buttons**:
+    - Generates actionable travel advice with clean Markdown headings and bullet points.
+    - Emits structured `suggested_actions` for recommended stops, automatically normalized to canonical kinds (`attraction`, `meal`, `transport`, `hotel`) so travelers can add them directly to their itinerary in one tap.
+  - **Offline-First Fallback**:
+    - Seamlessly falls back to local deterministic rule heuristics (terminal lounges, toddler buffers, stays proximity, and weather arcades) when offline or when no API key is provided.
+- **Mobile Client Enhancements (`AskTapItTripSheet`)**:
+  - Upgraded to a conversational chat history thread where user questions and AI suggestions stay visible and scrollable.
+  - User messages appear in right-aligned primary bubbles; assistant responses render in rich cards with category badges, advisory notice, and one-tap action buttons.
+  - Expanded quick suggestion chips: *"What should I pack for this trip?"*, *"Local tipping & payment etiquette"*, *"Top hidden gems and spots to visit"*, etc.
+  - Added visual guardrail indicator styling when an out-of-scope prompt is entered.
+- **OpenAPI & Automated Verification**:
+  - Updated `docs/api/openapi.yaml` with expanded categories (`packing`, `culture`, `transit`, `itinerary`, `safety`, `out_of_scope`).
+  - Added unit test suite `tests/Unit/GeminiAssistantServiceTest.php` testing key absence, travel query resolution, suggested actions normalization, out-of-scope redirection, and error resilience.
+  - Expanded `tests/Feature/TripAssistantTest.php` testing live AI mocking and guardrail redirects.
+  - Added Flutter widget test `renders out of scope response with travel guardrail category label` in `client/test/trip_assistant_test.dart`.
+  - Backend PHPUnit: 135/135 tests pass (754 assertions).
+  - Backend Pint: 0 style issues across 318 files.
+  - Mobile Flutter: 142/142 tests pass.
+  - Mobile Analyzer: 0 issues found.
+
 ## 2026-11-09 — Itinerary Activity Kind Alias Normalization & AI Assistant Feedback Hardening
 
 ### Completed
