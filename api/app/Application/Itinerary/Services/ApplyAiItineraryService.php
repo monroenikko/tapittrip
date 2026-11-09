@@ -23,8 +23,9 @@ final class ApplyAiItineraryService
     {
         $createdItems = new Collection;
         $startDate = $trip->start_date ? Carbon::parse($trip->start_date) : Carbon::today();
+        $timezone = $trip->primary_timezone ?: 'UTC';
 
-        DB::transaction(function () use ($trip, $data, $startDate, &$createdItems): void {
+        DB::transaction(function () use ($trip, $data, $startDate, $timezone, &$createdItems): void {
             foreach ($data->days as $dayData) {
                 $dayNumber = (int) ($dayData['day_number'] ?? 1);
                 $localDate = $startDate->copy()->addDays($dayNumber - 1)->toDateString();
@@ -48,11 +49,14 @@ final class ApplyAiItineraryService
                     $placeName = $activity['place_name'] ?? null;
 
                     if ($placeName !== null && $placeName !== '') {
+                        $lat = isset($activity['latitude']) && $activity['latitude'] !== null ? (float) $activity['latitude'] : null;
+                        $lng = isset($activity['longitude']) && $activity['longitude'] !== null ? (float) $activity['longitude'] : null;
+
                         $place = Place::create([
                             'name' => (string) $placeName,
                             'formatted_address' => (string) ($activity['place_address'] ?? $placeName),
-                            'latitude' => isset($activity['latitude']) ? (float) $activity['latitude'] : 35.6762,
-                            'longitude' => isset($activity['longitude']) ? (float) $activity['longitude'] : 139.6503,
+                            'latitude' => $lat,
+                            'longitude' => $lng,
                             'google_place_id' => 'place_'.Str::random(16),
                             'source' => 'ai_planner',
                         ]);
@@ -60,6 +64,32 @@ final class ApplyAiItineraryService
                     }
 
                     $currentMaxOrder++;
+
+                    $startsAtUtc = null;
+                    if (! empty($activity['planned_start_time'])) {
+                        try {
+                            if (preg_match('/^\d{1,2}:\d{2}/', (string) $activity['planned_start_time'])) {
+                                $startsAtUtc = Carbon::parse("{$localDate} {$activity['planned_start_time']}", $timezone)->utc()->toIso8601String();
+                            } else {
+                                $startsAtUtc = Carbon::parse($activity['planned_start_time'], $timezone)->utc()->toIso8601String();
+                            }
+                        } catch (\Throwable) {
+                            $startsAtUtc = null;
+                        }
+                    }
+
+                    $endsAtUtc = null;
+                    if (! empty($activity['planned_end_time'])) {
+                        try {
+                            if (preg_match('/^\d{1,2}:\d{2}/', (string) $activity['planned_end_time'])) {
+                                $endsAtUtc = Carbon::parse("{$localDate} {$activity['planned_end_time']}", $timezone)->utc()->toIso8601String();
+                            } else {
+                                $endsAtUtc = Carbon::parse($activity['planned_end_time'], $timezone)->utc()->toIso8601String();
+                            }
+                        } catch (\Throwable) {
+                            $endsAtUtc = null;
+                        }
+                    }
 
                     $item = ItineraryItem::create([
                         'trip_id' => $trip->id,
@@ -69,8 +99,9 @@ final class ApplyAiItineraryService
                         'kind' => (string) ($activity['kind'] ?? 'sightseeing'),
                         'status' => 'planned',
                         'notes' => isset($activity['description']) ? (string) $activity['description'] : null,
-                        'planned_start_time' => $activity['planned_start_time'] ?? null,
-                        'planned_end_time' => $activity['planned_end_time'] ?? null,
+                        'starts_at_utc' => $startsAtUtc,
+                        'ends_at_utc' => $endsAtUtc,
+                        'timezone' => $timezone,
                         'sort_order' => $currentMaxOrder,
                         'version' => 1,
                     ]);

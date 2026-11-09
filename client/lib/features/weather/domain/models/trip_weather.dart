@@ -49,7 +49,9 @@ class TripWeather {
     final currentJson = rawCurrent is Map
         ? Map<String, dynamic>.from(rawCurrent)
         : <String, dynamic>{};
-    final rawForecast = json['forecast'] as List<dynamic>? ?? [];
+    final rawForecast = json['forecast'];
+    final List<dynamic> forecastList =
+        rawForecast is List ? rawForecast : const [];
 
     return TripWeather(
       destination: (json['destination'] as String?) ?? 'Destination',
@@ -57,7 +59,7 @@ class TripWeather {
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       timezone: (json['timezone'] as String?) ?? 'UTC',
       current: WeatherCondition.fromJson(currentJson),
-      forecast: rawForecast
+      forecast: forecastList
           .whereType<Map>()
           .map((e) => DailyForecast.fromJson(Map<String, dynamic>.from(e)))
           .toList(),

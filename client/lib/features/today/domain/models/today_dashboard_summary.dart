@@ -161,10 +161,18 @@ class TodayDashboardSummary {
   }
 
   factory TodayDashboardSummary.fromJson(Map<String, dynamic> json) {
-    final tripJson = json['trip'] as Map<String, dynamic>? ?? {};
-    final activeDayJson = json['active_day'] as Map<String, dynamic>?;
-    final metricsJson = json['metrics'] as Map<String, dynamic>? ?? {};
-    final rawTodayItems = json['today_items'] as List<dynamic>? ?? [];
+    final tripJson = json['trip'] is Map
+        ? Map<String, dynamic>.from(json['trip'] as Map)
+        : <String, dynamic>{};
+    final activeDayJson = json['active_day'] is Map
+        ? Map<String, dynamic>.from(json['active_day'] as Map)
+        : null;
+    final metricsJson = json['metrics'] is Map
+        ? Map<String, dynamic>.from(json['metrics'] as Map)
+        : <String, dynamic>{};
+    final rawTodayItems = json['today_items'] is List
+        ? (json['today_items'] as List)
+        : const [];
 
     return TodayDashboardSummary(
       trip: Trip.fromJson(tripJson),
@@ -174,23 +182,28 @@ class TodayDashboardSummary {
           ? ActiveDayInfo.fromJson(activeDayJson)
           : null,
       todayItems: rawTodayItems
-          .map((item) => ItineraryItem.fromJson(item as Map<String, dynamic>))
+          .whereType<Map>()
+          .map((item) => ItineraryItem.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
-      nextUpcomingItem: json['next_upcoming_item'] != null
+      nextUpcomingItem: json['next_upcoming_item'] is Map
           ? ItineraryItem.fromJson(
-              json['next_upcoming_item'] as Map<String, dynamic>,
+              Map<String, dynamic>.from(json['next_upcoming_item'] as Map),
             )
           : null,
-      currentStay: json['current_stay'] != null
-          ? Stay.fromJson(json['current_stay'] as Map<String, dynamic>)
+      currentStay: json['current_stay'] is Map
+          ? Stay.fromJson(
+              Map<String, dynamic>.from(json['current_stay'] as Map),
+            )
           : null,
       metrics: DashboardMetrics.fromJson(metricsJson),
       timezone: json['timezone'] as String? ?? 'UTC',
       localTime: DateTime.tryParse(json['local_time'] as String? ?? ''),
-      budgetPacing: json['budget_pacing'] != null
-          ? BudgetPacing.fromJson(json['budget_pacing'] as Map<String, dynamic>)
+      budgetPacing: json['budget_pacing'] is Map
+          ? BudgetPacing.fromJson(
+              Map<String, dynamic>.from(json['budget_pacing'] as Map),
+            )
           : null,
-      weather: json['weather'] != null
+      weather: json['weather'] is Map
           ? WeatherCondition.fromJson(
               Map<String, dynamic>.from(json['weather'] as Map),
             )

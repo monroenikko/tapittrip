@@ -29,7 +29,7 @@ class _AiItineraryPreviewSheetState
     try {
       final repo = ref.read(aiItineraryRepositoryProvider);
       await repo.applyPlan(widget.tripId, widget.plan.days);
-      ref.invalidate(itineraryListProvider(widget.tripId));
+      await ref.read(itineraryListProvider(widget.tripId).notifier).refresh();
       ref.invalidate(tripDaysProvider(widget.tripId));
 
       if (mounted) {

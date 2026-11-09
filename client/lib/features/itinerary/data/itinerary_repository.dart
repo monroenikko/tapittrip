@@ -33,7 +33,8 @@ class ItineraryRepository {
         );
 
         return response
-            .map((json) => TripDay.fromJson(json as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((json) => TripDay.fromJson(Map<String, dynamic>.from(json)))
             .toList();
       }
       return [];
@@ -42,7 +43,8 @@ class ItineraryRepository {
       if (cached != null) {
         final data = jsonDecode(cached) as List<dynamic>;
         return data
-            .map((json) => TripDay.fromJson(json as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((json) => TripDay.fromJson(Map<String, dynamic>.from(json)))
             .toList();
       }
       rethrow;
@@ -51,7 +53,8 @@ class ItineraryRepository {
       if (cached != null) {
         final data = jsonDecode(cached) as List<dynamic>;
         return data
-            .map((json) => TripDay.fromJson(json as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((json) => TripDay.fromJson(Map<String, dynamic>.from(json)))
             .toList();
       }
       rethrow;
@@ -69,7 +72,7 @@ class ItineraryRepository {
       data: {'local_date': localDate, if (notes != null) 'notes': notes},
     );
 
-    return TripDay.fromJson(response as Map<String, dynamic>);
+    return TripDay.fromJson(Map<String, dynamic>.from(response as Map));
   }
 
   /// Fetch all itinerary items for a trip with offline cache support.
@@ -83,25 +86,33 @@ class ItineraryRepository {
         queryParameters: {if (tripDayId != null) 'trip_day_id': tripDayId},
       );
 
+      final List<dynamic> list;
       if (response is List) {
-        if (tripDayId == null) {
-          await _storage.write(
-            key: _cacheKey(tripId),
-            value: jsonEncode(response),
-          );
-        }
-
-        return response
-            .map((json) => ItineraryItem.fromJson(json as Map<String, dynamic>))
-            .toList();
+        list = response;
+      } else if (response is Map && response['data'] is List) {
+        list = response['data'] as List<dynamic>;
+      } else {
+        list = const [];
       }
-      return [];
+
+      if (tripDayId == null) {
+        await _storage.write(
+          key: _cacheKey(tripId),
+          value: jsonEncode(list),
+        );
+      }
+
+      return list
+          .whereType<Map>()
+          .map((json) => ItineraryItem.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
     } on ApiException {
       final cached = await _storage.read(key: _cacheKey(tripId));
       if (cached != null) {
         final data = jsonDecode(cached) as List<dynamic>;
         var items = data
-            .map((json) => ItineraryItem.fromJson(json as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((json) => ItineraryItem.fromJson(Map<String, dynamic>.from(json)))
             .toList();
         if (tripDayId != null) {
           items = items.where((it) => it.tripDayId == tripDayId).toList();
@@ -114,7 +125,8 @@ class ItineraryRepository {
       if (cached != null) {
         final data = jsonDecode(cached) as List<dynamic>;
         var items = data
-            .map((json) => ItineraryItem.fromJson(json as Map<String, dynamic>))
+            .whereType<Map>()
+            .map((json) => ItineraryItem.fromJson(Map<String, dynamic>.from(json)))
             .toList();
         if (tripDayId != null) {
           items = items.where((it) => it.tripDayId == tripDayId).toList();
@@ -155,7 +167,7 @@ class ItineraryRepository {
       data: payload,
     );
 
-    return ItineraryItem.fromJson(response as Map<String, dynamic>);
+    return ItineraryItem.fromJson(Map<String, dynamic>.from(response as Map));
   }
 
   /// Update an itinerary item.
@@ -186,7 +198,7 @@ class ItineraryRepository {
       data: payload,
     );
 
-    return ItineraryItem.fromJson(response as Map<String, dynamic>);
+    return ItineraryItem.fromJson(Map<String, dynamic>.from(response as Map));
   }
 
   /// Reorder itinerary items in bulk.
@@ -203,7 +215,8 @@ class ItineraryRepository {
       await _storage.write(key: _cacheKey(tripId), value: jsonEncode(response));
 
       return response
-          .map((json) => ItineraryItem.fromJson(json as Map<String, dynamic>))
+          .whereType<Map>()
+          .map((json) => ItineraryItem.fromJson(Map<String, dynamic>.from(json)))
           .toList();
     }
     return [];
@@ -223,7 +236,8 @@ class ItineraryRepository {
 
     if (response is List) {
       return response
-          .map((json) => Place.fromJson(json as Map<String, dynamic>))
+          .whereType<Map>()
+          .map((json) => Place.fromJson(Map<String, dynamic>.from(json)))
           .toList();
     }
     return [];
@@ -245,6 +259,6 @@ class ItineraryRepository {
       },
     );
 
-    return VisitEvent.fromJson(response as Map<String, dynamic>);
+    return VisitEvent.fromJson(Map<String, dynamic>.from(response as Map));
   }
 }

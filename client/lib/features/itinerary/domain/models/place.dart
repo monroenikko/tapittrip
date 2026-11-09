@@ -33,12 +33,12 @@ class Place {
       providerPlaceId: json['provider_place_id'] as String?,
       formattedAddress: json['formatted_address'] as String?,
       countryCode: json['country_code'] as String?,
-      latitude: json['latitude'] != null
+      latitude: json['latitude'] is num
           ? (json['latitude'] as num).toDouble()
-          : null,
-      longitude: json['longitude'] != null
+          : double.tryParse(json['latitude']?.toString() ?? ''),
+      longitude: json['longitude'] is num
           ? (json['longitude'] as num).toDouble()
-          : null,
+          : double.tryParse(json['longitude']?.toString() ?? ''),
       photoReference: json['photo_reference'] as String?,
       attribution: json['attribution'] as String?,
       googleMapsUrl: json['google_maps_url'] as String?,

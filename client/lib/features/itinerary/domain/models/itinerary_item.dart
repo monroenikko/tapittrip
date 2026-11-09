@@ -51,11 +51,11 @@ class ItineraryItem {
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'planned',
       version: (json['version'] as num?)?.toInt() ?? 1,
-      place: json['place'] != null
-          ? Place.fromJson(json['place'] as Map<String, dynamic>)
+      place: json['place'] is Map
+          ? Place.fromJson(Map<String, dynamic>.from(json['place'] as Map))
           : null,
-      day: json['day'] != null
-          ? TripDay.fromJson(json['day'] as Map<String, dynamic>)
+      day: json['day'] is Map
+          ? TripDay.fromJson(Map<String, dynamic>.from(json['day'] as Map))
           : null,
     );
   }
