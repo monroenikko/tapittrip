@@ -148,8 +148,9 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
       final converted = parsed * rate;
       final isTargetZeroDecimal = widget.homeCurrency.toUpperCase() == 'JPY';
       final symbol = _currencySymbol(widget.homeCurrency);
-      final rateStr =
-          rate < 0.01 ? rate.toStringAsFixed(6) : rate.toStringAsFixed(4);
+      final rateStr = rate < 0.01
+          ? rate.toStringAsFixed(6)
+          : rate.toStringAsFixed(4);
       final formattedAmount = isTargetZeroDecimal
           ? converted.round().toString()
           : converted.toStringAsFixed(2);

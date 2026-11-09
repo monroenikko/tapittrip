@@ -11,6 +11,7 @@ use App\Domain\Expenses\Models\ExpenseSettlement;
 use App\Domain\Expenses\Models\TripBudget;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
+use App\Domain\Journal\Models\JournalEntry;
 use App\Domain\Media\Models\MediaAttachment;
 use App\Domain\Notifications\Models\Reminder;
 use App\Domain\Stays\Models\Stay;
@@ -233,5 +234,17 @@ final class Trip extends Model
     {
         return $this->hasMany(ExpenseSettlement::class)
             ->orderBy('settled_at', 'desc');
+    }
+
+    /**
+     * All journal entries recorded for this trip.
+     *
+     * @return HasMany<JournalEntry, $this>
+     */
+    public function journalEntries(): HasMany
+    {
+        return $this->hasMany(JournalEntry::class)
+            ->orderBy('entry_date', 'desc')
+            ->orderBy('created_at', 'desc');
     }
 }

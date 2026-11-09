@@ -2493,6 +2493,213 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthenticated"
 
+  /trips/{trip}/journal:
+    get:
+      operationId: listTripJournalEntries
+      summary: List journal entries for a trip (user's entries and shared entries)
+      tags:
+        - Journal
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: List of journal entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/JournalEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: createTripJournalEntry
+      summary: Create a new journal entry for a trip
+      tags:
+        - Journal
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJournalEntryRequest"
+      responses:
+        "201":
+          description: Journal entry created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/JournalEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation error.
+
+  /journal-entries/{entry}:
+    get:
+      operationId: getJournalEntry
+      summary: Get details of a journal entry
+      tags:
+        - Journal
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: entry
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Journal entry details.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/JournalEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "404":
+          description: Entry not found.
+    patch:
+      operationId: updateJournalEntry
+      summary: Update a journal entry (Author only)
+      tags:
+        - Journal
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: entry
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateJournalEntryRequest"
+      responses:
+        "200":
+          description: Journal entry updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/JournalEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (Not the author).
+        "422":
+          description: Validation error.
+    delete:
+      operationId: deleteJournalEntry
+      summary: Delete a journal entry (Author or Trip Owner only)
+      tags:
+        - Journal
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: entry
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Journal entry deleted successfully.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /journal-entries/{entry}/photos:
+    post:
+      operationId: uploadJournalPhoto
+      summary: Upload a photo and attach it to a journal entry (Author only)
+      tags:
+        - Journal
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: entry
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - photo
+              properties:
+                photo:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Photo uploaded successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/JournalEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation error.
+
 components:
   securitySchemes:
     BearerAuth:
@@ -4739,6 +4946,159 @@ components:
         currency:
           type: string
           example: USD
+
+    JournalEntry:
+      type: object
+      required:
+        - id
+        - trip_id
+        - user_id
+        - title
+        - content
+        - entry_date
+        - is_shared
+        - is_author
+        - photos
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        author_name:
+          type: string
+          example: Jane Doe
+        author_avatar_url:
+          type: string
+          nullable: true
+        itinerary_item_id:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+          example: Sunset at Senso-ji
+        content:
+          type: string
+          example: Magical evening walking through the lanterns.
+        entry_date:
+          type: string
+          format: date
+          example: "2026-11-09"
+        location_name:
+          type: string
+          nullable: true
+          example: Asakusa, Tokyo
+        weather:
+          type: string
+          nullable: true
+          example: sunny
+        mood:
+          type: string
+          nullable: true
+          example: amazed
+        is_shared:
+          type: boolean
+          example: false
+        is_author:
+          type: boolean
+          example: true
+        photos:
+          type: array
+          items:
+            type: string
+          example: ["/storage/journal-photos/photo1.jpg"]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateJournalEntryRequest:
+      type: object
+      required:
+        - title
+        - content
+        - entry_date
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          example: Sunset at Senso-ji
+        content:
+          type: string
+          example: Magical evening walking through the lanterns.
+        entry_date:
+          type: string
+          format: date
+          example: "2026-11-09"
+        location_name:
+          type: string
+          maxLength: 255
+          nullable: true
+          example: Asakusa, Tokyo
+        weather:
+          type: string
+          maxLength: 64
+          nullable: true
+          example: sunny
+        mood:
+          type: string
+          maxLength: 32
+          nullable: true
+          example: amazed
+        is_shared:
+          type: boolean
+          default: false
+          example: false
+        itinerary_item_id:
+          type: string
+          format: uuid
+          nullable: true
+        photos:
+          type: array
+          items:
+            type: string
+
+    UpdateJournalEntryRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        content:
+          type: string
+        entry_date:
+          type: string
+          format: date
+        location_name:
+          type: string
+          maxLength: 255
+          nullable: true
+        weather:
+          type: string
+          maxLength: 64
+          nullable: true
+        mood:
+          type: string
+          maxLength: 32
+          nullable: true
+        is_shared:
+          type: boolean
+        itinerary_item_id:
+          type: string
+          format: uuid
+          nullable: true
+        photos:
+          type: array
+          items:
+            type: string
+
 
 
 

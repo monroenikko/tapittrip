@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -23,7 +24,10 @@ class CurrencyRateDetails {
   final String provider;
   final bool isOffline;
 
-  factory CurrencyRateDetails.fromJson(Map<String, dynamic> json, {bool isOffline = false}) {
+  factory CurrencyRateDetails.fromJson(
+    Map<String, dynamic> json, {
+    bool isOffline = false,
+  }) {
     return CurrencyRateDetails(
       from: json['from'] as String? ?? 'USD',
       to: json['to'] as String? ?? 'PHP',
@@ -74,7 +78,10 @@ class CurrencyRepository {
     'CHF': 0.88,
   };
 
-  Future<CurrencyRateDetails> getRateDetails(String fromCurrency, String toCurrency) async {
+  Future<CurrencyRateDetails> getRateDetails(
+    String fromCurrency,
+    String toCurrency,
+  ) async {
     final from = fromCurrency.toUpperCase().trim();
     final to = toCurrency.toUpperCase().trim();
 
@@ -146,9 +153,11 @@ final currencyRepositoryProvider = Provider<CurrencyRepository>((ref) {
   return CurrencyRepository(apiClient: apiClient);
 });
 
-final currencyRateProvider = FutureProvider.family<CurrencyRateDetails, ({String from, String to})>(
-  (ref, pair) async {
-    final repository = ref.watch(currencyRepositoryProvider);
-    return repository.getRateDetails(pair.from, pair.to);
-  },
-);
+final currencyRateProvider =
+    FutureProvider.family<CurrencyRateDetails, ({String from, String to})>((
+      ref,
+      pair,
+    ) async {
+      final repository = ref.watch(currencyRepositoryProvider);
+      return repository.getRateDetails(pair.from, pair.to);
+    });

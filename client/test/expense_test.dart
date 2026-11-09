@@ -231,39 +231,42 @@ void main() {
   });
 
   group('ExpenseSummary Model', () {
-    test('deserializes JSON summary with category breakdowns and calculations', () {
-      final json = {
-        'trip_id': 't-1',
-        'base_currency': 'USD',
-        'total_budget_minor': 100000,
-        'daily_budget_minor': 20000,
-        'total_spent_base_minor': 25000,
-        'remaining_budget_minor': 75000,
-        'budget_utilization_percent': 25.0,
-        'expenses_count': 5,
-        'category_breakdown': [
-          {
-            'category': 'dining',
-            'amount_minor': 15000,
-            'count': 3,
-            'percent': 60.0,
-          },
-        ],
-        'daily_spending': [
-          {'date': '2026-11-10', 'amount_minor': 25000, 'count': 5},
-        ],
-      };
+    test(
+      'deserializes JSON summary with category breakdowns and calculations',
+      () {
+        final json = {
+          'trip_id': 't-1',
+          'base_currency': 'USD',
+          'total_budget_minor': 100000,
+          'daily_budget_minor': 20000,
+          'total_spent_base_minor': 25000,
+          'remaining_budget_minor': 75000,
+          'budget_utilization_percent': 25.0,
+          'expenses_count': 5,
+          'category_breakdown': [
+            {
+              'category': 'dining',
+              'amount_minor': 15000,
+              'count': 3,
+              'percent': 60.0,
+            },
+          ],
+          'daily_spending': [
+            {'date': '2026-11-10', 'amount_minor': 25000, 'count': 5},
+          ],
+        };
 
-      final summary = ExpenseSummary.fromJson(json);
+        final summary = ExpenseSummary.fromJson(json);
 
-      expect(summary.tripId, 't-1');
-      expect(summary.totalSpentBase, 250.0);
-      expect(summary.totalBudget, 1000.0);
-      expect(summary.remainingBudget, 750.0);
-      expect(summary.categoryBreakdown.first.category, 'dining');
-      expect(summary.categoryBreakdown.first.amount, 150.0);
-      expect(summary.dailySpending.first.date, '2026-11-10');
-    });
+        expect(summary.tripId, 't-1');
+        expect(summary.totalSpentBase, 250.0);
+        expect(summary.totalBudget, 1000.0);
+        expect(summary.remainingBudget, 750.0);
+        expect(summary.categoryBreakdown.first.category, 'dining');
+        expect(summary.categoryBreakdown.first.amount, 150.0);
+        expect(summary.dailySpending.first.date, '2026-11-10');
+      },
+    );
   });
 
   group('Expense Model', () {
@@ -475,30 +478,27 @@ void main() {
   });
 
   group('Group Settlement Repository & UI', () {
-    test(
-      'ExpenseRepository getGroupBalances and recordSettlement make correct API calls',
-      () async {
-        final fakeApi = FakeExpenseApiClient();
-        final repo = ExpenseRepository(apiClient: fakeApi);
+    test('ExpenseRepository getGroupBalances and recordSettlement make correct API calls', () async {
+      final fakeApi = FakeExpenseApiClient();
+      final repo = ExpenseRepository(apiClient: fakeApi);
 
-        final balances = await repo.getGroupBalances('t-1');
-        expect(fakeApi.lastGetPath, '/v1/trips/t-1/settlements');
-        expect(balances.balances.length, 2);
-        expect(balances.suggestedSettlements.first.payerName, 'Bob');
+      final balances = await repo.getGroupBalances('t-1');
+      expect(fakeApi.lastGetPath, '/v1/trips/t-1/settlements');
+      expect(balances.balances.length, 2);
+      expect(balances.suggestedSettlements.first.payerName, 'Bob');
 
-        final settlement = await repo.recordSettlement(
-          't-1',
-          payerId: 'u-2',
-          payeeId: 'u-1',
-          amountMinor: 3000,
-          currency: 'USD',
-          notes: 'Cash payment',
-        );
-        expect(fakeApi.lastPostPath, '/v1/trips/t-1/settlements');
-        expect(fakeApi.lastPostData['amount_minor'], 3000);
-        expect(settlement.notes, 'Cash payment');
-      },
-    );
+      final settlement = await repo.recordSettlement(
+        't-1',
+        payerId: 'u-2',
+        payeeId: 'u-1',
+        amountMinor: 3000,
+        currency: 'USD',
+        notes: 'Cash payment',
+      );
+      expect(fakeApi.lastPostPath, '/v1/trips/t-1/settlements');
+      expect(fakeApi.lastPostData['amount_minor'], 3000);
+      expect(settlement.notes, 'Cash payment');
+    });
 
     testWidgets(
       'TripExpensesPage renders Balances tab and opens SettleUpDialog',

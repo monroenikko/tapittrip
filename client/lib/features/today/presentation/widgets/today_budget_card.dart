@@ -144,7 +144,9 @@ class TodayBudgetCard extends StatelessWidget {
                     color: isDailyOver
                         ? Colors.redAccent
                         : colorScheme.onSurfaceVariant,
-                    fontWeight: isDailyOver ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isDailyOver
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
                 Text(
@@ -168,14 +170,16 @@ class TodayBudgetCard extends StatelessWidget {
           Row(
             children: [
               TextButton.icon(
-                onPressed: () => context.push('/trips/${summary.trip.id}/expenses'),
+                onPressed: () =>
+                    context.push('/trips/${summary.trip.id}/expenses'),
                 icon: const Icon(Icons.bar_chart_rounded, size: 18),
                 label: const Text('All Expenses'),
               ),
               const Spacer(),
               FilledButton.tonalIcon(
                 onPressed: () {
-                  final destCurrency = summary.trip.destinationCurrency ??
+                  final destCurrency =
+                      summary.trip.destinationCurrency ??
                       CountryCurrencyHelper.resolveCurrency(
                         summary.trip.destinationCountry ?? summary.trip.title,
                         defaultCurrency: pacing.currency,
@@ -198,4 +202,3 @@ class TodayBudgetCard extends StatelessWidget {
     );
   }
 }
-

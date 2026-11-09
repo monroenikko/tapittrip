@@ -9,18 +9,24 @@ class CountryResidenceDialog extends ConsumerStatefulWidget {
 
   final String? currentCountryCode;
 
-  static Future<CountryItem?> show(BuildContext context, {String? currentCountryCode}) {
+  static Future<CountryItem?> show(
+    BuildContext context, {
+    String? currentCountryCode,
+  }) {
     return showDialog<CountryItem>(
       context: context,
-      builder: (ctx) => CountryResidenceDialog(currentCountryCode: currentCountryCode),
+      builder: (ctx) =>
+          CountryResidenceDialog(currentCountryCode: currentCountryCode),
     );
   }
 
   @override
-  ConsumerState<CountryResidenceDialog> createState() => _CountryResidenceDialogState();
+  ConsumerState<CountryResidenceDialog> createState() =>
+      _CountryResidenceDialogState();
 }
 
-class _CountryResidenceDialogState extends ConsumerState<CountryResidenceDialog> {
+class _CountryResidenceDialogState
+    extends ConsumerState<CountryResidenceDialog> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   bool _isSaving = false;
@@ -60,7 +66,9 @@ class _CountryResidenceDialogState extends ConsumerState<CountryResidenceDialog>
           const SizedBox(height: 6),
           Text(
             'Select where you reside to automatically configure your home currency and conversion rates.',
-            style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -76,7 +84,9 @@ class _CountryResidenceDialogState extends ConsumerState<CountryResidenceDialog>
                 hintText: 'Search country or currency...',
                 isDense: true,
                 filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                fillColor: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.4,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -93,17 +103,30 @@ class _CountryResidenceDialogState extends ConsumerState<CountryResidenceDialog>
                       separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (ctx, idx) {
                         final item = filtered[idx];
-                        final isSelected = item.code == widget.currentCountryCode;
+                        final isSelected =
+                            item.code == widget.currentCountryCode;
 
                         return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          leading: Text(item.flag, style: const TextStyle(fontSize: 24)),
-                          title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          leading: Text(
+                            item.flag,
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                          title: Text(
+                            item.name,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: colorScheme.primaryContainer,
                                   borderRadius: BorderRadius.circular(6),
@@ -119,14 +142,20 @@ class _CountryResidenceDialogState extends ConsumerState<CountryResidenceDialog>
                               ),
                               if (isSelected) ...[
                                 const SizedBox(width: 8),
-                                Icon(Icons.check_circle, color: colorScheme.primary, size: 20),
+                                Icon(
+                                  Icons.check_circle,
+                                  color: colorScheme.primary,
+                                  size: 20,
+                                ),
                               ],
                             ],
                           ),
                           onTap: () async {
                             final navigator = Navigator.of(context);
                             setState(() => _isSaving = true);
-                            await ref.read(authProvider.notifier).updateProfile(
+                            await ref
+                                .read(authProvider.notifier)
+                                .updateProfile(
                                   homeCountry: item.code,
                                   homeCurrency: item.currency,
                                 );

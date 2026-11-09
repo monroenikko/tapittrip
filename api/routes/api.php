@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\TripBudgetController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
 use App\Http\Controllers\Api\V1\TripExpenseController;
+use App\Http\Controllers\Api\V1\TripJournalController;
 use App\Http\Controllers\Api\V1\TripTodayController;
 use App\Http\Controllers\Api\V1\VisitEventController;
 use Illuminate\Support\Facades\Route;
@@ -82,6 +83,13 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/trips/{trip}/settlements', [GroupSettlementController::class, 'store'])->name('trips.settlements.store');
 
         Route::get('/currencies/rates', [CurrencyController::class, 'rate'])->name('currencies.rates');
+
+        Route::get('/trips/{trip}/journal', [TripJournalController::class, 'index'])->name('trips.journal.index');
+        Route::post('/trips/{trip}/journal', [TripJournalController::class, 'store'])->name('trips.journal.store');
+        Route::get('/journal-entries/{entry}', [TripJournalController::class, 'show'])->name('journal-entries.show');
+        Route::patch('/journal-entries/{entry}', [TripJournalController::class, 'update'])->name('journal-entries.update');
+        Route::delete('/journal-entries/{entry}', [TripJournalController::class, 'destroy'])->name('journal-entries.destroy');
+        Route::post('/journal-entries/{entry}/photos', [TripJournalController::class, 'uploadPhoto'])->name('journal-entries.photos.upload');
 
         Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');
         Route::post('/trips/{trip}/checklists', [ChecklistController::class, 'store'])->name('trips.checklists.store');

@@ -133,14 +133,17 @@ void main() {
       expect(fakeApi.lastQueryParams?['to'], 'PHP');
     });
 
-    test('returns 1.0 for identical currencies without calling network', () async {
-      final fakeApi = FakeCurrencyApiClient();
-      final repo = CurrencyRepository(apiClient: fakeApi);
+    test(
+      'returns 1.0 for identical currencies without calling network',
+      () async {
+        final fakeApi = FakeCurrencyApiClient();
+        final repo = CurrencyRepository(apiClient: fakeApi);
 
-      final rate = await repo.getRate('PHP', 'PHP');
-      expect(rate, 1.0);
-      expect(fakeApi.lastGetPath, isNull);
-    });
+        final rate = await repo.getRate('PHP', 'PHP');
+        expect(rate, 1.0);
+        expect(fakeApi.lastGetPath, isNull);
+      },
+    );
   });
 
   group('Widgets & UI Conversion', () {
@@ -185,50 +188,55 @@ void main() {
       },
     );
 
-    testWidgets('CountryResidenceDialog displays searchable country list and selects country', (tester) async {
-      CountryItem? selectedResult;
+    testWidgets(
+      'CountryResidenceDialog displays searchable country list and selects country',
+      (tester) async {
+        CountryItem? selectedResult;
 
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) {
-                return Scaffold(
-                  body: Center(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        selectedResult = await CountryResidenceDialog.show(context);
-                      },
-                      child: const Text('Open Dialog'),
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: Builder(
+                builder: (context) {
+                  return Scaffold(
+                    body: Center(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          selectedResult = await CountryResidenceDialog.show(
+                            context,
+                          );
+                        },
+                        child: const Text('Open Dialog'),
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Open Dialog'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Open Dialog'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Country of Residence'), findsOneWidget);
-      expect(find.text('Philippines'), findsOneWidget);
-      expect(find.text('Japan'), findsOneWidget);
+        expect(find.text('Country of Residence'), findsOneWidget);
+        expect(find.text('Philippines'), findsOneWidget);
+        expect(find.text('Japan'), findsOneWidget);
 
-      // Search for Japan
-      await tester.enterText(find.byType(TextField), 'Japan');
-      await tester.pumpAndSettle();
+        // Search for Japan
+        await tester.enterText(find.byType(TextField), 'Japan');
+        await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(ListTile, 'Japan'), findsOneWidget);
-      expect(find.widgetWithText(ListTile, 'Philippines'), findsNothing);
+        expect(find.widgetWithText(ListTile, 'Japan'), findsOneWidget);
+        expect(find.widgetWithText(ListTile, 'Philippines'), findsNothing);
 
-      // Tap Japan
-      await tester.tap(find.widgetWithText(ListTile, 'Japan'));
-      await tester.pumpAndSettle();
+        // Tap Japan
+        await tester.tap(find.widgetWithText(ListTile, 'Japan'));
+        await tester.pumpAndSettle();
 
-      expect(selectedResult?.code, 'JP');
-      expect(selectedResult?.currency, 'JPY');
-    });
+        expect(selectedResult?.code, 'JP');
+        expect(selectedResult?.currency, 'JPY');
+      },
+    );
   });
 }

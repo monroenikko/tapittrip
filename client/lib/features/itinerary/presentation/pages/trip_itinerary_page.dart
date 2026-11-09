@@ -152,6 +152,8 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 context.push('/notifications/preferences');
               } else if (value == 'expenses') {
                 context.push('/trips/${widget.tripId}/expenses');
+              } else if (value == 'journal') {
+                context.push('/trips/${widget.tripId}/journal');
               } else if (value == 'favorite') {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -180,6 +182,16 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                     Icon(Icons.account_balance_wallet_outlined, size: 20),
                     SizedBox(width: 8),
                     Text('Expenses & Budget'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'journal',
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_stories_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Memories & Journal'),
                   ],
                 ),
               ),

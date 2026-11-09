@@ -36,7 +36,8 @@ class TripExpensesPage extends ConsumerWidget {
 
     final trips = ref.watch(tripListProvider).asData?.value;
     final trip = trips?.where((t) => t.id == tripId).firstOrNull;
-    final destinationCurrency = trip?.destinationCurrency ??
+    final destinationCurrency =
+        trip?.destinationCurrency ??
         CountryCurrencyHelper.resolveCurrency(
           trip?.destinationCountry ?? trip?.title,
           defaultCurrency: 'USD',
@@ -87,10 +88,7 @@ class TripExpensesPage extends ConsumerWidget {
           ],
           bottom: const TabBar(
             tabs: [
-              Tab(
-                icon: Icon(Icons.receipt_long_outlined),
-                text: 'Expenses',
-              ),
+              Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Expenses'),
               Tab(
                 icon: Icon(Icons.people_alt_outlined),
                 text: 'Balances & Settle',
@@ -277,11 +275,12 @@ class TripExpensesPage extends ConsumerWidget {
                                     ),
                                     child: Text(
                                       summary.baseCurrency,
-                                      style:
-                                          theme.textTheme.labelSmall?.copyWith(
-                                        color: colorScheme.onPrimaryContainer,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color:
+                                                colorScheme.onPrimaryContainer,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                   ),
                                 ],
@@ -318,22 +317,22 @@ class TripExpensesPage extends ConsumerWidget {
                                   children: [
                                     Text(
                                       'Budget: \$${(summary.totalBudgetMinor! / 100.0).toStringAsFixed(2)}',
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
                                     ),
                                     Text(
                                       isOver
                                           ? 'Over budget by \$${((-summary.remainingBudgetMinor!) / 100.0).toStringAsFixed(2)}'
                                           : 'Remaining: \$${(summary.remainingBudgetMinor! / 100.0).toStringAsFixed(2)}',
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: isOver
-                                            ? Colors.redAccent
-                                            : Colors.green,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: isOver
+                                                ? Colors.redAccent
+                                                : Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -374,12 +373,15 @@ class TripExpensesPage extends ConsumerWidget {
                             : selectedFilter == cat;
 
                         return FilterChip(
-                          label: Text(isAll ? 'All' : _formatCategoryLabel(cat)),
+                          label: Text(
+                            isAll ? 'All' : _formatCategoryLabel(cat),
+                          ),
                           selected: isSelected,
                           onSelected: (_) {
                             ref
                                 .read(
-                                  selectedExpenseCategoryFilterProvider.notifier,
+                                  selectedExpenseCategoryFilterProvider
+                                      .notifier,
                                 )
                                 .setFilter(isAll ? null : cat);
                           },
@@ -493,16 +495,17 @@ class TripExpensesPage extends ConsumerWidget {
                                         expense.formatAmount(),
                                         style: theme.textTheme.titleSmall
                                             ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                       if (isForeign) ...[
                                         Text(
                                           '≈ ${expense.formatAmount(useBaseCurrency: true)}',
                                           style: theme.textTheme.labelSmall
                                               ?.copyWith(
-                                            color: colorScheme.onSurfaceVariant,
-                                          ),
+                                                color: colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
                                         ),
                                       ],
                                     ],
@@ -521,9 +524,8 @@ class TripExpensesPage extends ConsumerWidget {
                                       } else if (val == 'delete') {
                                         ref
                                             .read(
-                                              tripExpensesProvider(
-                                                tripId,
-                                              ).notifier,
+                                              tripExpensesProvider(tripId)
+                                                  .notifier,
                                             )
                                             .deleteExpense(expense.id);
                                       }
@@ -616,11 +618,13 @@ class TripExpensesPage extends ConsumerWidget {
                         if (member.isOwed) {
                           badgeColor = Colors.green.withValues(alpha: 0.15);
                           textColor = Colors.green.shade800;
-                          badgeText = 'gets back ${member.formatBalance(groupBalances.baseCurrency)}';
+                          badgeText =
+                              'gets back ${member.formatBalance(groupBalances.baseCurrency)}';
                         } else if (member.owes) {
                           badgeColor = Colors.red.withValues(alpha: 0.15);
                           textColor = Colors.red.shade800;
-                          badgeText = 'owes ${member.formatBalance(groupBalances.baseCurrency)}';
+                          badgeText =
+                              'owes ${member.formatBalance(groupBalances.baseCurrency)}';
                         } else {
                           badgeColor = colorScheme.surfaceContainerHighest;
                           textColor = colorScheme.onSurfaceVariant;
@@ -653,7 +657,9 @@ class TripExpensesPage extends ConsumerWidget {
                             ),
                             title: Text(
                               member.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             subtitle: member.email.isNotEmpty
                                 ? Text(
@@ -729,17 +735,18 @@ class TripExpensesPage extends ConsumerWidget {
                                         'All Settled Up!',
                                         style: theme.textTheme.titleSmall
                                             ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green.shade800,
-                                        ),
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green.shade800,
+                                            ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         'No outstanding debts among companions.',
-                                        style:
-                                            theme.textTheme.bodySmall?.copyWith(
-                                          color: colorScheme.onSurfaceVariant,
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -791,9 +798,9 @@ class TripExpensesPage extends ConsumerWidget {
                                           'Owes ${s.formatAmount()}',
                                           style: theme.textTheme.bodyMedium
                                               ?.copyWith(
-                                            color: colorScheme.primary,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                                color: colorScheme.primary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -850,7 +857,9 @@ class TripExpensesPage extends ConsumerWidget {
                               ),
                               title: Text(
                                 '${record.payerName} paid ${record.payeeName}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               subtitle: record.notes != null
                                   ? Text(record.notes!)

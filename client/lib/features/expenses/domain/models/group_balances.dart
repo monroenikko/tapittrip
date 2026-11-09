@@ -196,13 +196,23 @@ class GroupBalances {
       tripId: json['trip_id'] as String,
       baseCurrency: json['base_currency'] as String? ?? 'USD',
       balances: (json['balances'] as List<dynamic>? ?? [])
-          .map((e) => MemberBalance.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map(
+            (e) => MemberBalance.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
           .toList(),
-      suggestedSettlements: (json['suggested_settlements'] as List<dynamic>? ?? [])
-          .map((e) => SuggestedSettlement.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList(),
+      suggestedSettlements:
+          (json['suggested_settlements'] as List<dynamic>? ?? [])
+              .map(
+                (e) => SuggestedSettlement.fromJson(
+                  Map<String, dynamic>.from(e as Map),
+                ),
+              )
+              .toList(),
       settlementHistory: (json['settlement_history'] as List<dynamic>? ?? [])
-          .map((e) => SettlementRecord.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map(
+            (e) =>
+                SettlementRecord.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
           .toList(),
     );
   }
@@ -219,8 +229,9 @@ class GroupBalances {
     'trip_id': tripId,
     'base_currency': baseCurrency,
     'balances': balances.map((b) => b.toJson()).toList(),
-    'suggested_settlements': suggestedSettlements.map((s) => s.toJson()).toList(),
+    'suggested_settlements': suggestedSettlements
+        .map((s) => s.toJson())
+        .toList(),
     'settlement_history': settlementHistory.map((h) => h.toJson()).toList(),
   };
 }
-

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../data/expense_repository.dart';
 import '../../domain/models/expense.dart';
@@ -20,8 +21,8 @@ class ExpenseCategoryFilterNotifier extends Notifier<String?> {
 
 final selectedExpenseCategoryFilterProvider =
     NotifierProvider<ExpenseCategoryFilterNotifier, String?>(
-  ExpenseCategoryFilterNotifier.new,
-);
+      ExpenseCategoryFilterNotifier.new,
+    );
 
 class TripBudgetNotifier extends AsyncNotifier<TripBudget?> {
   TripBudgetNotifier(this.tripId);
@@ -52,8 +53,8 @@ class TripBudgetNotifier extends AsyncNotifier<TripBudget?> {
 
 final tripBudgetProvider =
     AsyncNotifierProvider.family<TripBudgetNotifier, TripBudget?, String>(
-  (tripId) => TripBudgetNotifier(tripId),
-);
+      (tripId) => TripBudgetNotifier(tripId),
+    );
 
 class TripExpensesNotifier extends AsyncNotifier<List<Expense>> {
   TripExpensesNotifier(this.tripId);
@@ -153,17 +154,21 @@ class TripExpensesNotifier extends AsyncNotifier<List<Expense>> {
 
 final tripExpensesProvider =
     AsyncNotifierProvider.family<TripExpensesNotifier, List<Expense>, String>(
-  (tripId) => TripExpensesNotifier(tripId),
-);
+      (tripId) => TripExpensesNotifier(tripId),
+    );
 
-final expenseSummaryProvider =
-    FutureProvider.family<ExpenseSummary, String>((ref, tripId) async {
+final expenseSummaryProvider = FutureProvider.family<ExpenseSummary, String>((
+  ref,
+  tripId,
+) async {
   final repo = ref.watch(expenseRepositoryProvider);
   return repo.getSummary(tripId);
 });
 
-final groupBalancesProvider =
-    FutureProvider.family<GroupBalances, String>((ref, tripId) async {
+final groupBalancesProvider = FutureProvider.family<GroupBalances, String>((
+  ref,
+  tripId,
+) async {
   final repo = ref.watch(expenseRepositoryProvider);
   return repo.getGroupBalances(tripId);
 });

@@ -16,9 +16,19 @@ class CountryCurrencyHelper {
   static const List<CountryItem> supportedCountries = [
     CountryItem(name: 'Philippines', code: 'PH', currency: 'PHP', flag: '🇵🇭'),
     CountryItem(name: 'Japan', code: 'JP', currency: 'JPY', flag: '🇯🇵'),
-    CountryItem(name: 'United States', code: 'US', currency: 'USD', flag: '🇺🇸'),
+    CountryItem(
+      name: 'United States',
+      code: 'US',
+      currency: 'USD',
+      flag: '🇺🇸',
+    ),
     CountryItem(name: 'Singapore', code: 'SG', currency: 'SGD', flag: '🇸🇬'),
-    CountryItem(name: 'United Kingdom', code: 'GB', currency: 'GBP', flag: '🇬🇧'),
+    CountryItem(
+      name: 'United Kingdom',
+      code: 'GB',
+      currency: 'GBP',
+      flag: '🇬🇧',
+    ),
     CountryItem(name: 'Australia', code: 'AU', currency: 'AUD', flag: '🇦🇺'),
     CountryItem(name: 'France', code: 'FR', currency: 'EUR', flag: '🇫🇷'),
     CountryItem(name: 'Germany', code: 'DE', currency: 'EUR', flag: '🇩🇪'),
@@ -31,12 +41,20 @@ class CountryCurrencyHelper {
     CountryItem(name: 'Taiwan', code: 'TW', currency: 'TWD', flag: '🇹🇼'),
     CountryItem(name: 'Indonesia', code: 'ID', currency: 'IDR', flag: '🇮🇩'),
     CountryItem(name: 'Malaysia', code: 'MY', currency: 'MYR', flag: '🇲🇾'),
-    CountryItem(name: 'United Arab Emirates', code: 'AE', currency: 'AED', flag: '🇦🇪'),
+    CountryItem(
+      name: 'United Arab Emirates',
+      code: 'AE',
+      currency: 'AED',
+      flag: '🇦🇪',
+    ),
     CountryItem(name: 'Vietnam', code: 'VN', currency: 'VND', flag: '🇻🇳'),
     CountryItem(name: 'Switzerland', code: 'CH', currency: 'CHF', flag: '🇨🇭'),
   ];
 
-  static String resolveCurrency(String? input, {String defaultCurrency = 'USD'}) {
+  static String resolveCurrency(
+    String? input, {
+    String defaultCurrency = 'USD',
+  }) {
     if (input == null || input.trim().isEmpty) return defaultCurrency;
     final trimmed = input.trim();
     final upper = trimmed.toUpperCase();
@@ -56,19 +74,27 @@ class CountryCurrencyHelper {
     // Check keyword
     final lower = trimmed.toLowerCase();
     for (final c in supportedCountries) {
-      if (lower.contains(c.name.toLowerCase()) || lower.contains(c.code.toLowerCase())) {
+      if (lower.contains(c.name.toLowerCase()) ||
+          lower.contains(c.code.toLowerCase())) {
         return c.currency;
       }
     }
 
     // Common city/island keywords
-    if (lower.contains('tokyo') || lower.contains('osaka') || lower.contains('kyoto')) {
+    if (lower.contains('tokyo') ||
+        lower.contains('osaka') ||
+        lower.contains('kyoto')) {
       return 'JPY';
     }
-    if (lower.contains('manila') || lower.contains('cebu') || lower.contains('boracay')) {
+    if (lower.contains('manila') ||
+        lower.contains('cebu') ||
+        lower.contains('boracay')) {
       return 'PHP';
     }
-    if (lower.contains('paris') || lower.contains('rome') || lower.contains('madrid') || lower.contains('berlin')) {
+    if (lower.contains('paris') ||
+        lower.contains('rome') ||
+        lower.contains('madrid') ||
+        lower.contains('berlin')) {
       return 'EUR';
     }
     if (lower.contains('london')) {

@@ -96,8 +96,8 @@ class BudgetPacing {
       totalSpentMinor: (json['total_spent_minor'] as num?)?.toInt() ?? 0,
       remainingBudgetMinor:
           (json['remaining_budget_minor'] as num?)?.toInt() ?? 0,
-      dailyUtilizationPercent:
-          (json['daily_utilization_percent'] as num?)?.toDouble(),
+      dailyUtilizationPercent: (json['daily_utilization_percent'] as num?)
+          ?.toDouble(),
     );
   }
 

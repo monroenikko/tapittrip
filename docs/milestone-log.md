@@ -2,13 +2,60 @@
 
 ## Current milestone
 
-- Milestone: **M8b — Automatic Travel Destination Currency & Residing Country Conversion**
-- Status: **Completed**
-- Basis: Approved Milestone M8b plan (`m8b-auto-currency-and-residence-conversion-plan.md`). Traveler country of residence and home currency profile setting, live market exchange rate provider architecture with caching and offline fallback, automatic destination currency selection from trip location, and live converted home reflection badge in expense logging.
+- Milestone: **M9 — Travel Memories, Photos & Group Journal**
+- Status: **Slice 1 Completed**
+- Basis: Approved Milestone M9 plan (`m9-travel-journal-and-memories-plan.md`). Personal and group travel reflections, mood chips, weather, and photo attachments; private by default on creation (`is_shared = false`), with companion sharing (TC-8.1).
 - Boundary:
-  - Slice 1: Backend Profile Residing Country & Live Exchange Rate Services — **Completed**.
-  - Slice 2: Mobile Profile Residence Setup & Country Resolution — **Completed**.
-  - Slice 3: Automatic Expense Currency Defaulting & Live Home Reflection — **Completed**.
+  - Slice 1: Personal & Group Travel Journal Entries & Photo Reflections — **Completed**.
+  - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
+  - Slice 3: Automated Trip Recap & Story Album — **Planned**.
+
+## 2026-11-09 — Milestone M9 (Slice 1): Personal & Group Travel Journal Entries and Photo Reflections
+
+### Completed
+
+- **Database Migrations & Schema**:
+  - `journal_entries`: UUID primary key, `trip_id` FK cascade (`trips.id`), `user_id` FK cascade (`users.id`), `itinerary_item_id` FK nullable (`itinerary_items.id`), `title` string(255), `content` text, `entry_date` date, `location_name` string(255) nullable, `weather` string(64) nullable, `mood` string(32) nullable, `is_shared` boolean default false, `photos` jsonb default '[]', timestamps, softDeletes.
+  - Indexed on `[trip_id, entry_date]` and `[user_id, is_shared]`.
+  - Applied to `tapittrip` dev and `tapittrip_test` PostgreSQL databases with privileged migrator credentials.
+- **Backend Application Services & Domain Architecture**:
+  - Domain Model: `JournalEntry` (`App\Domain\Journal\Models\JournalEntry`).
+  - Relation: `journalEntries(): HasMany` on `Trip`.
+  - Factory: `JournalEntryFactory` (`Database\Factories\JournalEntryFactory`).
+  - DTOs: `CreateJournalEntryData`, `UpdateJournalEntryData` under `App\Application\Journal\Data`.
+  - Application Services:
+    - `CreateJournalEntryService`: Creates journal reflection with transaction boundary and author attribution.
+    - `UpdateJournalEntryService`: Enforces author-only modifications and handles `is_shared` circle sharing toggles.
+    - `DeleteJournalEntryService`: Author and trip-owner soft deletion.
+    - `GetTripJournalService`: Enforces TC-8.1 personal privacy filtering: returns author's personal entries + entries shared with circle (`where('user_id', $user->id)->orWhere('is_shared', true)`).
+    - `UploadJournalPhotoService`: Validates image MIME/size and uploads to storage disk with UUID paths.
+- **Backend HTTP Layer & OpenAPI**:
+  - Form Requests: `CreateJournalEntryRequest`, `UpdateJournalEntryRequest`, `UploadJournalPhotoRequest`.
+  - API Resource: `JournalEntryResource` exposing author metadata, mood, weather, privacy flag, and photo list.
+  - Controller: `TripJournalController` registering:
+    - `GET /api/v1/trips/{trip}/journal`
+    - `POST /api/v1/trips/{trip}/journal`
+    - `GET /api/v1/journal-entries/{entry}`
+    - `PATCH /api/v1/journal-entries/{entry}`
+    - `DELETE /api/v1/journal-entries/{entry}`
+    - `POST /api/v1/journal-entries/{entry}/photos`
+  - Routes registered in `api/routes/api.php` and `phpunit.postgres.xml`.
+  - Documented all endpoints and schemas in `docs/api/openapi.yaml`.
+- **Mobile Client Integration**:
+  - Domain Model: `JournalEntry` with mood emoji helpers (`amazed` 🤩, `happy` 😊, `peaceful` 😌, `excited` 🎉, `tired` 😴, `grateful` 🙏, `adventurous` 🏔️), weather icons, and privacy labels.
+  - Repository: `JournalRepository` with encrypted secure storage caching (`cached_journal_{tripId}`) and automatic offline fallback.
+  - Provider: `tripJournalProvider(tripId)` with Riverpod `AsyncNotifier` handling listing, filtering, creating, editing, deleting, and sharing toggles.
+  - Presentation Widgets:
+    - `JournalEntryCard`: Author avatar, date, mood/weather chips, location chip, privacy badge (`🔒 Only You` vs `👥 Shared with Circle`), and photo thumbnail gallery.
+    - `AddJournalEntrySheet`: Interactive reflection composer with mood selector, weather picker, photo input, and "Share with Circle" toggle (defaulting to private).
+    - `TripJournalPage`: Journal feed with stats summary header (Total Moments, Shared Circle, Only You), filter chips, and empty state.
+    - Router & Navigation: Added `/trips/:tripId/journal` to `AppRouter` and "Memories & Journal" to the Itinerary page overflow menu.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `TripJournalTest.php` (5 tests, 25 assertions). Full suite passes: 125/125 tests, 700 assertions.
+  - Backend Pint: 0 style issues.
+  - Mobile Flutter Tests: Added `journal_test.dart` (10 tests). Full suite passes: 136/136 tests.
+  - Mobile Flutter Analyzer: 0 issues.
+  - Feature Document: Created `docs/features/travel-journal-and-memories.md`.
 
 ## 2026-11-08 — Milestone M8b: Automatic Travel Destination Currency & Residing Country Conversion
 

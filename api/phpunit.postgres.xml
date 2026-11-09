@@ -23,6 +23,7 @@
             <file>tests/Feature/TripExpenseTest.php</file>
             <file>tests/Feature/GroupSettlementTest.php</file>
             <file>tests/Feature/CurrencyTest.php</file>
+            <file>tests/Feature/TripJournalTest.php</file>
         </testsuite>
     </testsuites>
     <php>

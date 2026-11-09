@@ -162,10 +162,7 @@ class _SettleUpDialogState extends ConsumerState<SettleUpDialog> {
                       ],
                     ),
                   ),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    color: colorScheme.primary,
-                  ),
+                  Icon(Icons.arrow_forward_rounded, color: colorScheme.primary),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
