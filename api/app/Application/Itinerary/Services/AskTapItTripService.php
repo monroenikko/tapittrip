@@ -185,7 +185,7 @@ final class AskTapItTripService
                     'kind' => 'add_activity',
                     'payload' => [
                         'title' => 'Afternoon Rest & Toddler Recharge',
-                        'kind' => 'activity',
+                        'kind' => 'attraction',
                         'notes' => 'Quiet buffer at hotel or shaded park.',
                     ],
                 ],
@@ -217,7 +217,7 @@ final class AskTapItTripService
                         'kind' => 'add_activity',
                         'payload' => [
                             'title' => "Dinner near {$stayName}",
-                            'kind' => 'dining',
+                            'kind' => 'meal',
                             'place_name' => "Local Restaurant near {$stayName}",
                             'place_address' => $address,
                         ],
@@ -266,7 +266,7 @@ final class AskTapItTripService
                     'kind' => 'add_activity',
                     'payload' => [
                         'title' => 'Indoor Cultural Experience & Food Hall',
-                        'kind' => 'sightseeing',
+                        'kind' => 'attraction',
                         'notes' => 'Rainy-day backup stop.',
                     ],
                 ],

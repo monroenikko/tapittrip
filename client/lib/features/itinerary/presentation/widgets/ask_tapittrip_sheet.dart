@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tapittrip/core/network/api_exceptions.dart';
 import 'package:tapittrip/features/itinerary/domain/models/trip_assistant_response.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 
@@ -97,11 +98,14 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
     if (action.kind == 'add_activity') {
       final payload = action.payload;
       try {
+        final rawKind = payload['kind'] as String?;
+        final normalizedKind = _normalizeActivityKind(rawKind);
+
         await ref
             .read(itineraryListProvider(widget.tripId).notifier)
             .addItem(
               title: (payload['title'] as String?) ?? 'Suggested Stop',
-              kind: (payload['kind'] as String?) ?? 'sightseeing',
+              kind: normalizedKind,
               notes: payload['notes'] as String?,
               inlinePlace: payload['place_name'] != null
                   ? {
@@ -121,14 +125,47 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
         }
       } catch (e) {
         if (mounted) {
+          String displayError = e.toString();
+          if (e is ValidationException) {
+            displayError = e.fieldErrors.join(', ');
+          } else if (e is ApiException) {
+            displayError = e.message;
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to add stop: $e'),
+              content: Text('Failed to add stop: $displayError'),
               backgroundColor: Colors.redAccent,
             ),
           );
         }
       }
+    }
+  }
+
+  String _normalizeActivityKind(String? raw) {
+    switch (raw?.toLowerCase().trim()) {
+      case 'sightseeing':
+      case 'activity':
+      case 'nature':
+      case 'culture':
+      case 'shopping':
+        return 'attraction';
+      case 'dining':
+      case 'food':
+      case 'restaurant':
+      case 'cafe':
+      case 'bar':
+        return 'meal';
+      case 'transit':
+      case 'train':
+      case 'bus':
+      case 'rideshare':
+        return 'transport';
+      case 'stay':
+      case 'accommodation':
+        return 'hotel';
+      default:
+        return (raw != null && raw.isNotEmpty) ? raw : 'attraction';
     }
   }
 

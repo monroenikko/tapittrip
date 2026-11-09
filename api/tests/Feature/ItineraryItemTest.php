@@ -203,4 +203,35 @@ final class ItineraryItemTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $itemDay1->id);
     }
+
+    public function test_user_can_create_itinerary_item_with_kind_aliases_normalized(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+
+        $payload = [
+            'title' => 'Bonifacio High Street Walk',
+            'kind' => 'sightseeing',
+        ];
+
+        $response = $this->postJson("/api/v1/trips/{$trip->id}/itinerary-items", $payload);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.kind', 'attraction');
+
+        $dinnerPayload = [
+            'title' => 'Dinner at Wildflour',
+            'kind' => 'dining',
+        ];
+
+        $dinnerResponse = $this->postJson("/api/v1/trips/{$trip->id}/itinerary-items", $dinnerPayload);
+
+        $dinnerResponse
+            ->assertCreated()
+            ->assertJsonPath('data.kind', 'meal');
+    }
 }

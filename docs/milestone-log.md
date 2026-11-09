@@ -10,6 +10,28 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — Itinerary Activity Kind Alias Normalization & AI Assistant Feedback Hardening
+
+### Completed
+
+- **Form Requests & Validation Normalization**:
+  - `StoreItineraryItemRequest` & `UpdateItineraryItemRequest`: Added `prepareForValidation` hooks mapping natural language activity categories to canonical OpenAPI values:
+    - `sightseeing`, `activity`, `nature`, `culture`, `shopping` $\rightarrow$ `attraction`
+    - `dining`, `food`, `restaurant`, `cafe`, `bar` $\rightarrow$ `meal`
+    - `transit`, `train`, `bus`, `taxi`, `rideshare` $\rightarrow$ `transport`
+    - `stay`, `accommodation`, `resort` $\rightarrow$ `hotel`
+  - Expanded `in:...` validation rule to accept all common aliases before database persistence.
+- **AI Assistant Defaults**:
+  - `AskTapItTripService`: Updated quick action suggestions to emit canonical kinds (`attraction`, `meal`) directly.
+- **Mobile Client Normalization & Error Parsing**:
+  - `AskTapItTripSheet`: Added `_normalizeActivityKind` helper before dispatching `addItem`.
+  - Added structured unwrapping of `ValidationException` (displaying specific field errors) and `ApiException` in the user-facing SnackBar.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `test_user_can_create_itinerary_item_with_kind_aliases_normalized` in `tests/Feature/ItineraryItemTest.php`. 133/133 tests pass (745 assertions).
+  - Backend Pint: 0 style issues across 316 files.
+  - Mobile Flutter: 141/141 tests pass.
+  - Mobile Analyzer: 0 issues found.
+
 ## 2026-11-09 — Live Internet Gemini AI Travel & Ground Transit Intelligence
 
 ### Completed
