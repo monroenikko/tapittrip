@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/app_logo.dart';
+import '../../../lounges/data/lounge_repository.dart';
+import '../../../lounges/presentation/providers/lounge_provider.dart';
 import '../../../trips/domain/models/trip.dart';
 import '../../../trips/presentation/providers/trip_list_provider.dart';
 import '../providers/today_provider.dart';
@@ -29,13 +31,20 @@ class _TodayDashboardPageState extends ConsumerState<TodayDashboardPage> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialTripId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.initialTripId != null) {
         ref
             .read(activeDashboardTripIdProvider.notifier)
             .selectTrip(widget.initialTripId);
-      });
-    }
+      }
+      final trips = ref.read(tripListProvider).asData?.value;
+      if (trips != null && trips.isNotEmpty) {
+        final repo = ref.read(loungeRepositoryProvider);
+        for (final trip in trips) {
+          repo.prefetchAirports(LoungeRepository.detectAirportsForTrip(trip));
+        }
+      }
+    });
   }
 
   void _showTripSwitcher(

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../lounges/presentation/providers/lounge_provider.dart';
 import '../../data/outbox_storage.dart';
 import '../../domain/models/outbox_operation.dart';
 import '../../services/sync_service.dart';
@@ -50,7 +51,12 @@ final outboxStorageProvider = Provider<OutboxStorage>((ref) {
 final syncServiceProvider = Provider<SyncService>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   final outboxStorage = ref.watch(outboxStorageProvider);
-  return SyncService(apiClient: apiClient, outboxStorage: outboxStorage);
+  final loungeRepo = ref.watch(loungeRepositoryProvider);
+  return SyncService(
+    apiClient: apiClient,
+    outboxStorage: outboxStorage,
+    loungeRepository: loungeRepo,
+  );
 });
 
 class SyncNotifier extends Notifier<SyncState> {

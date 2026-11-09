@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../../core/network/api_client.dart';
+import '../../lounges/data/lounge_repository.dart';
 import '../data/outbox_storage.dart';
 import '../domain/models/outbox_operation.dart';
 import '../domain/models/sync_result.dart';
@@ -23,11 +24,13 @@ class SyncService {
   SyncService({
     required this.apiClient,
     required this.outboxStorage,
+    this.loungeRepository,
     String? deviceKey,
   }) : deviceKey = deviceKey ?? _generateDeviceKey();
 
   final ApiClient apiClient;
   final OutboxStorage outboxStorage;
+  final LoungeRepository? loungeRepository;
   final String deviceKey;
 
   dynamic _extractData(dynamic response) {
@@ -148,6 +151,22 @@ class SyncService {
         .length;
 
     final pullResult = await pullLatest(tripId: tripId);
+
+    // Proactively pre-fetch and cache hub airport lounge directory in background
+    if (loungeRepository != null) {
+      loungeRepository!.prefetchAirports(const [
+        'MNL',
+        'HND',
+        'NRT',
+        'SIN',
+        'BKK',
+        'ICN',
+        'KIX',
+        'DPS',
+        'SFO',
+        'LAX',
+      ]);
+    }
 
     return SyncAllSummary(
       pushedCount: acceptedCount,

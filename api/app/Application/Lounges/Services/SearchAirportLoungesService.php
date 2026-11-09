@@ -21,6 +21,10 @@ final class SearchAirportLoungesService
         $airport = Airport::with('terminals')->where('iata_code', $iata)->first();
 
         if ($airport === null) {
+            $airport = AirportLoungeDirectoryService::autoProvision($iata);
+        }
+
+        if ($airport === null) {
             throw new NotFoundHttpException("Airport with IATA code '{$iata}' not found");
         }
 

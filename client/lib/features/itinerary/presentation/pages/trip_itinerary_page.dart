@@ -20,6 +20,8 @@ import 'package:tapittrip/features/itinerary/presentation/widgets/ask_tapittrip_
 import 'package:tapittrip/features/itinerary/presentation/widgets/itinerary_filter_tabs.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/route_summary_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/timeline_day_badge.dart';
+import 'package:tapittrip/features/lounges/data/lounge_repository.dart';
+import 'package:tapittrip/features/lounges/presentation/providers/lounge_provider.dart';
 import 'package:tapittrip/features/stays/presentation/providers/stay_provider.dart';
 import 'package:tapittrip/features/stays/presentation/widgets/add_stay_bottom_sheet.dart';
 import 'package:tapittrip/features/stays/presentation/widgets/stay_card.dart';
@@ -40,6 +42,21 @@ class TripItineraryPage extends ConsumerStatefulWidget {
 class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
   int _selectedTabIndex = 0;
   bool _isReordering = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _prefetchLounges();
+    });
+  }
+
+  void _prefetchLounges() {
+    final trip = _resolveTrip();
+    final loungeRepo = ref.read(loungeRepositoryProvider);
+    final codes = LoungeRepository.detectAirportsForTrip(trip);
+    loungeRepo.prefetchAirports(codes);
+  }
 
   Trip? _resolveTrip() {
     if (widget.initialTrip != null) return widget.initialTrip;

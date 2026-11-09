@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Application\Lounges\Services\AirportLoungeDirectoryService;
 use App\Domain\Lounges\Models\Airport;
 use App\Domain\Lounges\Models\AirportLounge;
 use App\Domain\Lounges\Models\AirportTerminal;
@@ -117,5 +118,8 @@ final class AirportLoungeSeeder extends Seeder
                 'disclaimer' => 'Walk-in rate approx ¥1,540 per adult.',
             ]
         );
+
+        // Provision major international hub airports (HND, SIN, BKK, ICN, KIX, DPS, SFO, LAX)
+        AirportLoungeDirectoryService::provisionAll();
     }
 }
