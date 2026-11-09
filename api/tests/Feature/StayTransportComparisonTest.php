@@ -26,13 +26,13 @@ final class StayTransportComparisonTest extends TestCase
         /** @var Stay $stay */
         $stay = Stay::factory()->create([
             'trip_id' => $trip->id,
-            'name' => 'The Kayon Resort Ubud',
-            'latitude' => -8.4721,
-            'longitude' => 115.2719,
+            'name' => 'Shinjuku Prince Hotel',
+            'latitude' => 35.6945,
+            'longitude' => 139.7006,
         ]);
 
         $payload = [
-            'origin_name' => 'Ngurah Rai International Airport (DPS)',
+            'origin_name' => 'Tokyo Haneda Airport (HND)',
             'party_size' => 2,
             'luggage_preset' => 'heavy',
             'checked_bags' => 3,
@@ -183,5 +183,102 @@ final class StayTransportComparisonTest extends TestCase
         $this->assertNotNull($rail);
         $this->assertEquals('Shinjuku Station (South Exit)', $rail['dropoff_location']);
         $this->assertGreaterThan(0, $rail['last_mile_walk_meters']);
+    }
+
+    public function test_manila_arrival_transport_does_not_suggest_rail_and_recommends_grab_and_p2p_bus(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create([
+            'owner_id' => $user->id,
+            'title' => 'Manila City Trip',
+            'destination_country' => 'Philippines',
+        ]);
+
+        /** @var Stay $stay */
+        $stay = Stay::factory()->create([
+            'trip_id' => $trip->id,
+            'name' => 'Seda BGC',
+            'address' => '30th Street cor 11th Avenue, Bonifacio Global City, Taguig',
+            'latitude' => 14.5505,
+            'longitude' => 121.0509,
+        ]);
+
+        $payload = [
+            'origin_name' => 'Ninoy Aquino International Airport (MNL)',
+            'party_size' => 2,
+            'luggage_preset' => 'standard',
+        ];
+
+        $response = $this->postJson("/api/v1/stays/{$stay->id}/transport-options", $payload);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.verified', true)
+            ->assertJsonPath('data.nearest_transit.has_airport_rail', false)
+            ->assertJsonPath('data.nearest_transit.nearest_airport_code', 'MNL');
+
+        $options = collect($response->json('data.options'));
+
+        // Manila NAIA has NO express rail station!
+        $this->assertNull($options->firstWhere('mode', 'express_rail'));
+
+        // Proposes GrabCar / Airport Taxi and UBE Express P2P Bus
+        $grab = $options->firstWhere('mode', 'rideshare');
+        $this->assertNotNull($grab);
+        $this->assertStringContainsString('GrabCar', $grab['title']);
+        $this->assertEquals('PHP', $grab['currency']);
+
+        $bus = $options->firstWhere('mode', 'public_transit');
+        $this->assertNotNull($bus);
+        $this->assertStringContainsString('UBE Express', $bus['title']);
+        $this->assertEquals('PHP', $bus['currency']);
+    }
+
+    public function test_bali_arrival_transport_does_not_suggest_rail_and_recommends_private_driver(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create([
+            'owner_id' => $user->id,
+            'title' => 'Bali Getaway',
+            'destination_country' => 'Indonesia',
+        ]);
+
+        /** @var Stay $stay */
+        $stay = Stay::factory()->create([
+            'trip_id' => $trip->id,
+            'name' => 'The Kayon Resort Ubud',
+            'latitude' => -8.4721,
+            'longitude' => 115.2719,
+        ]);
+
+        $payload = [
+            'origin_name' => 'Ngurah Rai International Airport (DPS)',
+            'party_size' => 2,
+            'luggage_preset' => 'standard',
+        ];
+
+        $response = $this->postJson("/api/v1/stays/{$stay->id}/transport-options", $payload);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.verified', true)
+            ->assertJsonPath('data.nearest_transit.has_airport_rail', false);
+
+        $options = collect($response->json('data.options'));
+
+        // Bali has NO express rail station!
+        $this->assertNull($options->firstWhere('mode', 'express_rail'));
+
+        // Proposes Private Driver and Grab Lounge
+        $driver = $options->firstWhere('mode', 'private_transfer');
+        $this->assertNotNull($driver);
+        $this->assertStringContainsString('Private Driver', $driver['title']);
+        $this->assertEquals('IDR', $driver['currency']);
     }
 }

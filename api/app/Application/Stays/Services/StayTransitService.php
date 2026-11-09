@@ -18,6 +18,41 @@ final class StayTransitService
         $text = mb_strtolower(($stay->name ?? '').' '.($stay->address ?? ''));
 
         // 1. Regional database of major global hubs
+        if (str_contains($text, 'manila') || str_contains($text, 'makati') || str_contains($text, 'taguig') || str_contains($text, 'bgc') || str_contains($text, 'pasay') || str_contains($text, 'quezon city') || str_contains($text, 'pasig') || str_contains($text, 'ortigas') || str_contains($text, 'mandaluyong') || str_contains($text, 'philippines') || str_contains($text, 'naia')) {
+            $station = 'One Ayala Transport Hub (EDSA & Ayala Ave)';
+            if (str_contains($text, 'bgc') || str_contains($text, 'taguig')) {
+                $station = 'BGC Market! Market! & One Bonifacio Terminal';
+            } elseif (str_contains($text, 'pasay')) {
+                $station = 'Taft Avenue MRT/LRT Station Hub';
+            } elseif (str_contains($text, 'ortigas') || str_contains($text, 'pasig')) {
+                $station = 'Robinsons Galleria P2P Terminal';
+            }
+
+            return [
+                'station_name' => $station,
+                'station_address' => 'Ayala Center / BGC, Metro Manila',
+                'walking_distance_meters' => 380,
+                'walking_minutes' => 5,
+                'nearest_airport_name' => 'Ninoy Aquino International Airport',
+                'nearest_airport_code' => 'MNL',
+                'airport_distance_km' => 9.2,
+                'has_airport_rail' => false,
+            ];
+        }
+
+        if (str_contains($text, 'cebu') || str_contains($text, 'mactan') || str_contains($text, 'lapu-lapu')) {
+            return [
+                'station_name' => 'Cebu IT Park Transport Terminal',
+                'station_address' => 'Salinas Dr, Lahug, Cebu City',
+                'walking_distance_meters' => 320,
+                'walking_minutes' => 4,
+                'nearest_airport_name' => 'Mactan-Cebu International Airport',
+                'nearest_airport_code' => 'CEB',
+                'airport_distance_km' => 13.5,
+                'has_airport_rail' => false,
+            ];
+        }
+
         if (str_contains($text, 'tokyo') || str_contains($text, 'shinjuku') || str_contains($text, 'shibuya') || str_contains($text, 'asakusa') || str_contains($text, 'ginza') || str_contains($text, 'roppongi')) {
             $station = 'Shinjuku Station (South Exit)';
             if (str_contains($text, 'asakusa')) {
@@ -36,6 +71,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'Tokyo Haneda Airport',
                 'nearest_airport_code' => 'HND',
                 'airport_distance_km' => 18.2,
+                'has_airport_rail' => true,
             ];
         }
 
@@ -48,6 +84,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'Ngurah Rai International Airport',
                 'nearest_airport_code' => 'DPS',
                 'airport_distance_km' => 36.5,
+                'has_airport_rail' => false,
             ];
         }
 
@@ -60,6 +97,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'Paris Charles de Gaulle Airport',
                 'nearest_airport_code' => 'CDG',
                 'airport_distance_km' => 26.0,
+                'has_airport_rail' => true,
             ];
         }
 
@@ -72,6 +110,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'London Heathrow Airport',
                 'nearest_airport_code' => 'LHR',
                 'airport_distance_km' => 24.5,
+                'has_airport_rail' => true,
             ];
         }
 
@@ -84,6 +123,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'Singapore Changi Airport',
                 'nearest_airport_code' => 'SIN',
                 'airport_distance_km' => 21.0,
+                'has_airport_rail' => true,
             ];
         }
 
@@ -96,6 +136,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'John F. Kennedy International Airport',
                 'nearest_airport_code' => 'JFK',
                 'airport_distance_km' => 25.8,
+                'has_airport_rail' => true,
             ];
         }
 
@@ -108,6 +149,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'Suvarnabhumi Airport',
                 'nearest_airport_code' => 'BKK',
                 'airport_distance_km' => 28.4,
+                'has_airport_rail' => true,
             ];
         }
 
@@ -120,6 +162,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'Incheon International Airport',
                 'nearest_airport_code' => 'ICN',
                 'airport_distance_km' => 48.0,
+                'has_airport_rail' => true,
             ];
         }
 
@@ -132,6 +175,7 @@ final class StayTransitService
                 'nearest_airport_name' => 'Kansai International Airport',
                 'nearest_airport_code' => 'KIX',
                 'airport_distance_km' => 42.0,
+                'has_airport_rail' => true,
             ];
         }
 
@@ -147,6 +191,7 @@ final class StayTransitService
             'nearest_airport_name' => "{$cityOrDistrict} International Airport",
             'nearest_airport_code' => null,
             'airport_distance_km' => 22.0,
+            'has_airport_rail' => false,
         ];
     }
 }

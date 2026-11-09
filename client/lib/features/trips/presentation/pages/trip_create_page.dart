@@ -109,7 +109,7 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
         } else if (e is ApiException) {
           _errorMessage = e.message;
         } else {
-          _errorMessage = 'Failed to create trip. Please check your connection.';
+          _errorMessage = 'Failed to create trip: ${e.toString()}';
         }
       });
     }

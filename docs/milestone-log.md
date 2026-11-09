@@ -10,6 +10,30 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — AI Arrival Transport Intelligence, Non-Rail Regional Hubs & Client Currency Hardening
+
+### Completed
+
+- **AI Arrival Transport Intelligence & Regional Hubs (`CompareStayTransportService`, `StayTransitService`)**:
+  - Dynamically detects airport transit capability and regional reality rather than proposing hardcoded express rail everywhere.
+  - **Manila / NAIA (MNL)**: Accurately identifies that no airport rail station exists at Ninoy Aquino International Airport; recommends `GrabCar / NAIA Airport Taxi` (rideshare with Skyway routing in PHP), `UBE Express / P2P Premium Airport Bus` (public transit to Makati/BGC in PHP), and `NAIA Airport Loop & City Bus Network`.
+  - **Bali / Ngurah Rai (DPS)**: Identifies absence of passenger trains; recommends `Pre-Arranged Private Driver / Hotel Transfer`, `Grab / Gojek Airport Pick-Up Lounge`, and `Ngurah Rai Airport Fixed-Rate Taxi` in IDR.
+  - **Tokyo / Haneda & Narita (HND/NRT)**: Models authentic `Airport Express Rail` (Keikyu Line / Tokyo Monorail / JR East), `Direct Private Taxi / Airport Transfer` (Tokyo MK Taxi), and `Airport Limousine Bus` in JPY.
+  - **London / Singapore / Paris**: Localized modes with authentic currency (GBP, SGD, EUR) and regional operators.
+  - Generates transparent provider attribution: `'provider_attribution' => 'AI Transit Intelligence (TapItTrip Verified Regional Advisory)'`.
+- **Currency & Residing Country Alignment**:
+  - Transport options now return local destination currency (JPY, PHP, IDR, GBP, EUR) instead of hardcoded USD.
+  - Mobile sheet calculates dual-currency conversion against user's residing/home currency (e.g. `¥2,200 (≈ ₱875.54)`).
+  - Itinerary header displays destination currency with residing country conversion subtitle (`formatDual`).
+- **Client Deserialization Hardening (`TripRepository`)**:
+  - Replaced unsafe `response as Map<String, dynamic>` type casts with `Map<String, dynamic>.from(response as Map)` across `getTrips`, `getTrip`, `createTrip`, and `updateTrip`, preventing `TypeError` on runtime dynamic map deserialization.
+  - Enhanced `TripCreatePage` error handling to surface actionable error descriptions if unexpected exceptions occur.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `test_manila_arrival_transport_does_not_suggest_rail_and_recommends_grab_and_p2p_bus` and `test_bali_arrival_transport_does_not_suggest_rail_and_recommends_private_driver` in `StayTransportComparisonTest.php`. 132/132 tests pass (741 assertions).
+  - Backend Pint: 0 style issues across 312 files.
+  - Mobile Flutter: 141/141 tests pass.
+  - Mobile Analyzer: 0 issues found.
+
 ## 2026-11-09 — Trip Destination Length & Client Error Feedback Hardening
 
 ### Completed

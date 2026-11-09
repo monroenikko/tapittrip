@@ -42,7 +42,7 @@ class RemoteTripRepository implements TripRepository {
     final response = await _apiClient.get('/trips');
     if (response is List) {
       return response
-          .map((item) => Trip.fromJson(item as Map<String, dynamic>))
+          .map((item) => Trip.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList();
     }
     return [];
@@ -51,7 +51,7 @@ class RemoteTripRepository implements TripRepository {
   @override
   Future<Trip> getTrip(String id) async {
     final response = await _apiClient.get('/trips/$id');
-    return Trip.fromJson(response as Map<String, dynamic>);
+    return Trip.fromJson(Map<String, dynamic>.from(response as Map));
   }
 
   @override
@@ -77,7 +77,7 @@ class RemoteTripRepository implements TripRepository {
     };
 
     final response = await _apiClient.post('/trips', data: payload);
-    return Trip.fromJson(response as Map<String, dynamic>);
+    return Trip.fromJson(Map<String, dynamic>.from(response as Map));
   }
 
   @override
@@ -106,7 +106,7 @@ class RemoteTripRepository implements TripRepository {
     };
 
     final response = await _apiClient.put('/trips/$id', data: payload);
-    return Trip.fromJson(response as Map<String, dynamic>);
+    return Trip.fromJson(Map<String, dynamic>.from(response as Map));
   }
 
   @override
