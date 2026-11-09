@@ -18,6 +18,7 @@ import 'package:tapittrip/features/weather/domain/models/daily_forecast.dart';
 import 'package:tapittrip/features/weather/domain/models/trip_weather.dart';
 import 'package:tapittrip/features/weather/domain/models/weather_condition.dart';
 import 'package:tapittrip/features/weather/presentation/providers/weather_provider.dart';
+import 'package:tapittrip/features/weather/presentation/widgets/trip_weather_view.dart';
 
 const samplePlace = Place(
   id: 'place-1',
@@ -143,6 +144,68 @@ void main() {
 
         await tester.tap(find.byTooltip('Delete stop'));
         expect(deleteCalled, isTrue);
+      },
+    );
+
+    testWidgets(
+      'ActivityTimelineCard renders weather badge with forecast and triggers onWeatherTap',
+      (tester) async {
+        bool weatherTapped = false;
+        const testWeather = TripWeather(
+          destination: 'Tokyo',
+          latitude: 35.7147,
+          longitude: 139.7967,
+          timezone: 'Asia/Tokyo',
+          current: WeatherCondition(
+            temperatureC: 22.0,
+            temperatureF: 71.6,
+            condition: 'Sunny',
+            icon: 'sunny',
+            humidity: 50,
+            windKph: 10,
+            precipitationProbability: 5,
+            advisory: 'Clear skies',
+          ),
+          forecast: [
+            DailyForecast(
+              date: '2026-11-10',
+              dayName: 'Tue',
+              tempMaxC: 24.0,
+              tempMinC: 16.0,
+              tempMaxF: 75.2,
+              tempMinF: 60.8,
+              condition: 'Partly Cloudy',
+              icon: 'partly_cloudy',
+              precipitationProbability: 25,
+            ),
+          ],
+        );
+
+        final itemWithDate = sampleItem.copyWith(
+          startsAtUtc: '2026-11-10T09:00:00Z',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: ActivityTimelineCard(
+                item: itemWithDate,
+                weather: testWeather,
+                onWeatherTap: () => weatherTapped = true,
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          find.textContaining('Tue: 24°C • Partly Cloudy'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('25%'), findsOneWidget);
+
+        await tester.tap(find.textContaining('Tue: 24°C • Partly Cloudy'));
+        expect(weatherTapped, isTrue);
       },
     );
 
@@ -323,8 +386,18 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('18°C • Clear Sky'), findsOneWidget);
+      expect(find.textContaining('18°C • Clear Sky'), findsWidgets);
       expect(find.text('18°C'), findsWidgets);
+
+      // Tapping the weather pill on an activity card switches to the Weather tab
+      final itemWeatherFinder = find.descendant(
+        of: find.byType(ActivityTimelineCard),
+        matching: find.textContaining('18°C • Clear Sky'),
+      );
+      expect(itemWeatherFinder, findsOneWidget);
+      await tester.tap(itemWeatherFinder);
+      await tester.pumpAndSettle();
+      expect(find.byType(TripWeatherView), findsOneWidget);
     });
 
     testWidgets('keeps a large error responsive without exposing it', (
@@ -366,96 +439,104 @@ void main() {
       expect(find.textContaining('private provider payload'), findsNothing);
     });
 
-    testWidgets('TripItineraryPage switching to Weather tab renders TripWeatherView with whole week forecast without layout errors', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+    testWidgets(
+      'TripItineraryPage switching to Weather tab renders TripWeatherView with whole week forecast without layout errors',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      const mockWeather = TripWeather(
-        destination: 'BGC Taguig',
-        latitude: 14.55,
-        longitude: 121.05,
-        timezone: 'Asia/Manila',
-        current: WeatherCondition(
-          temperatureC: 29.0,
-          temperatureF: 84.2,
-          condition: 'Partly Cloudy',
-          icon: 'partly_cloudy',
-          humidity: 68,
-          windKph: 12.0,
-          precipitationProbability: 15,
-          advisory: 'Warm and pleasant in Taguig.',
-        ),
-        forecast: [
-          DailyForecast(
-            date: '2026-11-09',
-            dayName: 'Today',
-            tempMaxC: 30.0,
-            tempMinC: 24.0,
-            tempMaxF: 86.0,
-            tempMinF: 75.2,
+        const mockWeather = TripWeather(
+          destination: 'BGC Taguig',
+          latitude: 14.55,
+          longitude: 121.05,
+          timezone: 'Asia/Manila',
+          current: WeatherCondition(
+            temperatureC: 29.0,
+            temperatureF: 84.2,
             condition: 'Partly Cloudy',
             icon: 'partly_cloudy',
-            precipitationProbability: 20,
+            humidity: 68,
+            windKph: 12.0,
+            precipitationProbability: 15,
+            advisory: 'Warm and pleasant in Taguig.',
           ),
-          DailyForecast(
-            date: '2026-11-10',
-            dayName: 'Tomorrow',
-            tempMaxC: 31.0,
-            tempMinC: 25.0,
-            tempMaxF: 87.8,
-            tempMinF: 77.0,
-            condition: 'Clear Sky',
-            icon: 'sunny',
-            precipitationProbability: 10,
-          ),
-        ],
-        providerAttribution: 'Live Weather via Open-Meteo',
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            itineraryListProvider('trip-1')
-                .overrideWith(() => _FakeItineraryListNotifier('trip-1')),
-            tripDaysProvider('trip-1').overrideWith((ref) => Future.value([])),
-            tripWeatherProvider('trip-1')
-                .overrideWith((ref) => Future.value(mockWeather)),
+          forecast: [
+            DailyForecast(
+              date: '2026-11-09',
+              dayName: 'Today',
+              tempMaxC: 30.0,
+              tempMinC: 24.0,
+              tempMaxF: 86.0,
+              tempMinF: 75.2,
+              condition: 'Partly Cloudy',
+              icon: 'partly_cloudy',
+              precipitationProbability: 20,
+            ),
+            DailyForecast(
+              date: '2026-11-10',
+              dayName: 'Tomorrow',
+              tempMaxC: 31.0,
+              tempMinC: 25.0,
+              tempMaxF: 87.8,
+              tempMinF: 77.0,
+              condition: 'Clear Sky',
+              icon: 'sunny',
+              precipitationProbability: 10,
+            ),
           ],
-          child: MaterialApp(
-            theme: AppTheme.light(),
-            home: const TripItineraryPage(
-              tripId: 'trip-1',
-              initialTrip: sampleTrip,
+          providerAttribution: 'Live Weather via Open-Meteo',
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              itineraryListProvider('trip-1')
+                  .overrideWith(() => _FakeItineraryListNotifier('trip-1')),
+              tripDaysProvider('trip-1')
+                  .overrideWith((ref) => Future.value([])),
+              tripWeatherProvider('trip-1')
+                  .overrideWith((ref) => Future.value(mockWeather)),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripItineraryPage(
+                tripId: 'trip-1',
+                initialTrip: sampleTrip,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Tap the Weather filter tab in ItineraryFilterTabs
-      final weatherTab = find.descendant(
-        of: find.byType(ItineraryFilterTabs),
-        matching: find.text('Weather'),
-      );
-      await tester.tap(weatherTab);
-      await tester.pumpAndSettle();
+        // Tap the Weather filter tab in ItineraryFilterTabs
+        final weatherTab = find.descendant(
+          of: find.byType(ItineraryFilterTabs),
+          matching: find.text('Weather'),
+        );
+        await tester.tap(weatherTab);
+        await tester.pumpAndSettle();
 
-      // Verify the full weather view is rendered seamlessly
-      expect(find.text('BGC Taguig'), findsWidgets);
-      expect(find.text('Live Weather & Climate (Asia/Manila)'), findsOneWidget);
-      expect(find.text('29°C'), findsWidgets);
-      expect(find.text('Destination Weather Advisory'), findsOneWidget);
-      expect(find.text('Warm and pleasant in Taguig.'), findsOneWidget);
-      expect(find.text('Forecast for Trip Days'), findsOneWidget);
-      expect(find.text('Today'), findsOneWidget);
-      expect(find.text('Tomorrow'), findsOneWidget);
-      expect(find.text('Ask TapItTrip for Weather Backup Ideas'), findsOneWidget);
-    });
+        // Verify the full weather view is rendered seamlessly
+        expect(find.text('BGC Taguig'), findsWidgets);
+        expect(
+          find.text('Live Weather & Climate (Asia/Manila)'),
+          findsOneWidget,
+        );
+        expect(find.text('29°C'), findsWidgets);
+        expect(find.text('Destination Weather Advisory'), findsOneWidget);
+        expect(find.text('Warm and pleasant in Taguig.'), findsOneWidget);
+        expect(find.text('Forecast for Trip Days'), findsOneWidget);
+        expect(find.text('Today'), findsOneWidget);
+        expect(find.text('Tomorrow'), findsOneWidget);
+        expect(
+          find.text('Ask TapItTrip for Weather Backup Ideas'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }
 

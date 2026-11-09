@@ -26,7 +26,8 @@ class WeatherCondition {
   final String advisory;
 
   String get tempString => '${temperatureC.round()}°C';
-  String get tempDualString => '${temperatureC.round()}°C (${temperatureF.round()}°F)';
+  String get tempDualString =>
+      '${temperatureC.round()}°C (${temperatureF.round()}°F)';
 
   IconData get weatherIcon {
     switch (icon.toLowerCase()) {
@@ -84,8 +85,8 @@ class WeatherCondition {
       windKph: (json['wind_kph'] as num?)?.toDouble() ?? 10.0,
       precipitationProbability:
           (json['precipitation_probability'] as num?)?.toInt() ?? 10,
-      advisory: (json['advisory'] as String?) ??
-          'Comfortable weather for traveling.',
+      advisory:
+          (json['advisory'] as String?) ?? 'Comfortable weather for traveling.',
     );
   }
 
@@ -104,4 +105,3 @@ class WeatherCondition {
     };
   }
 }
-

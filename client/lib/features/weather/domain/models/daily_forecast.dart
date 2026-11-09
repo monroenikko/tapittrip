@@ -23,8 +23,7 @@ class DailyForecast {
   final String icon;
   final int precipitationProbability;
 
-  String get rangeString =>
-      '${tempMinC.round()}° / ${tempMaxC.round()}°C';
+  String get rangeString => '${tempMinC.round()}° / ${tempMaxC.round()}°C';
 
   IconData get weatherIcon {
     switch (icon.toLowerCase()) {
@@ -99,4 +98,3 @@ class DailyForecast {
     };
   }
 }
-

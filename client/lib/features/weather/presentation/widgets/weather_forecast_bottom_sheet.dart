@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../providers/weather_provider.dart';
 import '../../../itinerary/presentation/widgets/ask_tapittrip_sheet.dart';
 
@@ -342,11 +343,11 @@ class WeatherForecastBottomSheet extends ConsumerWidget {
                                   children: [
                                     Text(
                                       'Weather Advisory & Packing Tip',
-                                      style:
-                                          theme.textTheme.labelMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: colorScheme.secondary,
-                                      ),
+                                      style: theme.textTheme.labelMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: colorScheme.secondary,
+                                          ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -529,4 +530,3 @@ class _ForecastMetric extends StatelessWidget {
     );
   }
 }
-

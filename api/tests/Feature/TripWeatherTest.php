@@ -113,4 +113,14 @@ final class TripWeatherTest extends TestCase
         $this->assertNotNull($response->json('data.weather.temperature_c'));
         $this->assertNotNull($response->json('data.weather.condition'));
     }
+
+    public function test_trip_weather_with_custom_coordinates_and_location(): void
+    {
+        $response = $this->getJson("/api/v1/trips/{$this->trip->id}/weather?latitude=35.2323&longitude=139.1069&location=Hakone");
+
+        $response->assertOk()
+            ->assertJsonPath('data.destination', 'Hakone')
+            ->assertJsonPath('data.latitude', 35.2323)
+            ->assertJsonPath('data.longitude', 139.1069);
+    }
 }

@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/map_launcher.dart';
+import '../../../weather/domain/models/daily_forecast.dart';
+import '../../../weather/domain/models/trip_weather.dart';
+import '../../../weather/presentation/providers/weather_provider.dart';
 import '../../domain/models/itinerary_item.dart';
 
 class ActivityTimelineCard extends StatelessWidget {
   const ActivityTimelineCard({
     super.key,
     required this.item,
+    this.weather,
     this.onTap,
     this.onToggleVisited,
     this.onEdit,
     this.onDelete,
+    this.onWeatherTap,
   });
 
   final ItineraryItem item;
+  final TripWeather? weather;
   final VoidCallback? onTap;
   final VoidCallback? onToggleVisited;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onWeatherTap;
 
   IconData _iconForKind(String kind) {
     switch (kind.toLowerCase()) {
@@ -182,6 +190,8 @@ class ActivityTimelineCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+              if (weather != null)
+                _buildWeatherBadge(context, colorScheme, weather!),
               const SizedBox(height: 12),
               // Bottom Action Bar: Google Maps Directions, Visited Check, More
               Row(
@@ -190,7 +200,7 @@ class ActivityTimelineCard extends StatelessWidget {
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
+                        horizontal: 14,
                         vertical: 6,
                       ),
                       minimumSize: const Size(0, 32),
@@ -257,6 +267,160 @@ class ActivityTimelineCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildWeatherBadge(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TripWeather weather,
+  ) {
+    final theme = Theme.of(context);
+    String? scheduledDate = item.day?.localDate;
+    if (scheduledDate == null &&
+        item.startsAtUtc != null &&
+        item.startsAtUtc!.length >= 10) {
+      scheduledDate = item.startsAtUtc!.substring(0, 10);
+    }
+
+    DailyForecast? matchedForecast;
+    if (scheduledDate != null && weather.forecast.isNotEmpty) {
+      for (final f in weather.forecast) {
+        if (f.date == scheduledDate) {
+          matchedForecast = f;
+          break;
+        }
+      }
+    }
+
+    final IconData icon =
+        matchedForecast?.weatherIcon ?? weather.current.weatherIcon;
+    final Color color =
+        matchedForecast?.weatherColor ?? weather.current.weatherColor;
+    final String temp = matchedForecast != null
+        ? '${matchedForecast.tempMaxC.round()}°C'
+        : weather.current.tempString;
+    final String condition =
+        matchedForecast?.condition ?? weather.current.condition;
+    final int rainChance =
+        matchedForecast?.precipitationProbability ??
+        weather.current.precipitationProbability;
+
+    final String dayPrefix = matchedForecast != null
+        ? '${matchedForecast.dayName}: '
+        : '';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: InkWell(
+        onTap: onWeatherTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  '$dayPrefix$temp • $condition',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (rainChance > 15) ...[
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.water_drop_outlined,
+                  size: 11,
+                  color: Colors.blue.shade700,
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  '$rainChance%',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.blue.shade700,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+              if (onWeatherTap != null) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 12,
+                  color: color.withValues(alpha: 0.7),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A wrapper around [ActivityTimelineCard] that automatically resolves and watches
+/// location-specific or destination weather for the given itinerary stop.
+class LiveWeatherActivityTimelineCard extends ConsumerWidget {
+  const LiveWeatherActivityTimelineCard({
+    super.key,
+    required this.tripId,
+    required this.item,
+    this.onTap,
+    this.onToggleVisited,
+    this.onEdit,
+    this.onDelete,
+    this.onWeatherTap,
+  });
+
+  final String tripId;
+  final ItineraryItem item;
+  final VoidCallback? onTap;
+  final VoidCallback? onToggleVisited;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final VoidCallback? onWeatherTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final place = item.place;
+    final lat = place?.latitude;
+    final lng = place?.longitude;
+    final locName = place?.name ?? item.title;
+
+    final weatherAsync = ref.watch(
+      itemLocationWeatherProvider((
+        tripId: tripId,
+        latitude: lat,
+        longitude: lng,
+        location: locName,
+      )),
+    );
+
+    final weather =
+        weatherAsync.asData?.value ??
+        ref.watch(tripWeatherProvider(tripId)).asData?.value;
+
+    return ActivityTimelineCard(
+      item: item,
+      weather: weather,
+      onTap: onTap,
+      onToggleVisited: onToggleVisited,
+      onEdit: onEdit,
+      onDelete: onDelete,
+      onWeatherTap: onWeatherTap,
     );
   }
 }

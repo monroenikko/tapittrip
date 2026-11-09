@@ -415,7 +415,7 @@ paths:
   /trips/{trip}/weather:
     get:
       operationId: getTripWeather
-      summary: Get live weather and forecast for trip destination
+      summary: Get live weather and forecast for trip destination or specific stop
       tags:
         - Trips
         - Weather
@@ -428,6 +428,26 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: latitude
+          in: query
+          required: false
+          description: Optional latitude coordinate for a specific itinerary stop or sub-location.
+          schema:
+            type: number
+            format: float
+        - name: longitude
+          in: query
+          required: false
+          description: Optional longitude coordinate for a specific itinerary stop or sub-location.
+          schema:
+            type: number
+            format: float
+        - name: location
+          in: query
+          required: false
+          description: Optional location or place name (e.g. Hakone, BGC Taguig).
+          schema:
+            type: string
       responses:
         "200":
           description: Live trip weather and 7-day forecast.

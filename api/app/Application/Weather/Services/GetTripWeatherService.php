@@ -16,14 +16,23 @@ use Illuminate\Support\Facades\Log;
 final class GetTripWeatherService
 {
     /**
-     * Get live or cached weather for the active trip's destination.
+     * Get live or cached weather for the active trip's destination or a specific location/coordinates.
      */
-    public function getWeather(Trip $trip): TripWeatherData
-    {
+    public function getWeather(
+        Trip $trip,
+        ?float $latitude = null,
+        ?float $longitude = null,
+        ?string $location = null,
+    ): TripWeatherData {
         $timezone = $trip->primary_timezone ?: 'UTC';
         $now = CarbonImmutable::now($timezone);
         $dateKey = $now->format('Y-m-d-H');
-        $cacheKey = "trip_weather_{$trip->id}_{$dateKey}";
+
+        $locKey = ($latitude !== null && $longitude !== null)
+            ? 'loc_'.round($latitude, 3).'_'.round($longitude, 3)
+            : ($location ? 'named_'.md5(mb_strtolower(trim($location))) : 'main');
+
+        $cacheKey = "trip_weather_{$trip->id}_{$locKey}_{$dateKey}";
 
         try {
             $cached = Cache::get($cacheKey);
@@ -34,7 +43,15 @@ final class GetTripWeatherService
             Log::info("Weather cache read bypass for trip {$trip->id}: ".$e->getMessage());
         }
 
-        [$lat, $lng, $destName] = $this->resolveCoordinates($trip);
+        if ($latitude !== null && $longitude !== null) {
+            $lat = $latitude;
+            $lng = $longitude;
+            $destName = $location ?: ($trip->destination_country ?? $trip->title);
+        } elseif ($location !== null && trim($location) !== '') {
+            [$lat, $lng, $destName] = $this->resolveCoordinatesForLocation($location, $trip);
+        } else {
+            [$lat, $lng, $destName] = $this->resolveCoordinates($trip);
+        }
 
         try {
             $url = "https://api.open-meteo.com/v1/forecast?latitude={$lat}&longitude={$lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto";
@@ -79,6 +96,41 @@ final class GetTripWeatherService
     }
 
     /**
+     * Resolve coordinates for a specific location string (city, neighborhood, or landmark).
+     *
+     * @return array{0: float, 1: float, 2: string} [latitude, longitude, destinationName]
+     */
+    private function resolveCoordinatesForLocation(string $location, Trip $trip): array
+    {
+        $match = $this->lookupCityCoordinates($location);
+        if ($match !== null) {
+            return $match;
+        }
+
+        // Check if an existing itinerary item's place has coordinates for this location
+        $item = $trip->itineraryItems()
+            ->whereHas('place', function ($q) use ($location) {
+                $q->whereNotNull('latitude')
+                    ->whereNotNull('longitude')
+                    ->where(function ($sub) use ($location) {
+                        $sub->where('name', 'ilike', "%{$location}%")
+                            ->orWhere('formatted_address', 'ilike', "%{$location}%");
+                    });
+            })
+            ->with('place')
+            ->first();
+
+        if ($item !== null && $item->place?->latitude !== null && $item->place?->longitude !== null) {
+            return [(float) $item->place->latitude, (float) $item->place->longitude, $item->place->name ?: $location];
+        }
+
+        // Fallback to trip coordinates with the location name
+        [$tripLat, $tripLng] = $this->resolveCoordinates($trip);
+
+        return [$tripLat, $tripLng, $location];
+    }
+
+    /**
      * Resolve latitude and longitude for the trip.
      *
      * @return array{0: float, 1: float, 2: string} [latitude, longitude, destinationName]
@@ -105,49 +157,121 @@ final class GetTripWeatherService
         }
 
         // 3. Known cities / destinations dictionary
-        $dest = mb_strtolower(trim(($trip->destination_country ?? '').' '.$trip->title));
-        $destMap = [
-            'tokyo' => [35.6762, 139.6503, 'Tokyo, Japan'],
-            'japan' => [35.6762, 139.6503, 'Tokyo, Japan'],
-            'osaka' => [34.6937, 135.5023, 'Osaka, Japan'],
-            'kyoto' => [35.0116, 135.7681, 'Kyoto, Japan'],
-            'taguig' => [14.5547, 121.0494, 'Taguig (BGC), Philippines'],
-            'bgc' => [14.5547, 121.0494, 'Bonifacio Global City, Philippines'],
-            'manila' => [14.5995, 120.9842, 'Manila, Philippines'],
-            'makati' => [14.5547, 121.0244, 'Makati, Philippines'],
-            'cebu' => [10.3157, 123.8854, 'Cebu, Philippines'],
-            'boracay' => [11.9674, 121.9248, 'Boracay, Philippines'],
-            'philippines' => [14.5995, 120.9842, 'Manila, Philippines'],
-            'singapore' => [1.3521, 103.8198, 'Singapore'],
-            'bangkok' => [13.7563, 100.5018, 'Bangkok, Thailand'],
-            'thailand' => [13.7563, 100.5018, 'Bangkok, Thailand'],
-            'bali' => [-8.4095, 115.1889, 'Bali, Indonesia'],
-            'indonesia' => [-8.4095, 115.1889, 'Bali, Indonesia'],
-            'seoul' => [37.5665, 126.9780, 'Seoul, South Korea'],
-            'korea' => [37.5665, 126.9780, 'Seoul, South Korea'],
-            'london' => [51.5074, -0.1278, 'London, United Kingdom'],
-            'paris' => [48.8566, 2.3522, 'Paris, France'],
-            'france' => [48.8566, 2.3522, 'Paris, France'],
-            'rome' => [41.9028, 12.4964, 'Rome, Italy'],
-            'italy' => [41.9028, 12.4964, 'Rome, Italy'],
-            'sydney' => [-33.8688, 151.2093, 'Sydney, Australia'],
-            'australia' => [-33.8688, 151.2093, 'Sydney, Australia'],
-            'new york' => [40.7128, -74.0060, 'New York, USA'],
-            'san francisco' => [37.7749, -122.4194, 'San Francisco, USA'],
-            'zurich' => [47.3769, 8.5417, 'Zurich, Switzerland'],
-            'switzerland' => [47.3769, 8.5417, 'Zurich, Switzerland'],
-        ];
-
-        foreach ($destMap as $key => [$lat, $lng, $name]) {
-            if (str_contains($dest, $key)) {
-                return [$lat, $lng, $name];
-            }
+        $dest = ($trip->destination_country ?? '').' '.$trip->title;
+        $match = $this->lookupCityCoordinates($dest);
+        if ($match !== null) {
+            return $match;
         }
 
         // Default to Tokyo coordinates or destination title
         $fallbackName = $trip->destination_country ? "{$trip->title} ({$trip->destination_country})" : $trip->title;
 
         return [35.6762, 139.6503, $fallbackName];
+    }
+
+    /**
+     * Look up coordinates from an expanded dictionary of travel destinations and cities.
+     *
+     * @return array{0: float, 1: float, 2: string}|null [latitude, longitude, destinationName]
+     */
+    private function lookupCityCoordinates(string $query): ?array
+    {
+        $normalized = mb_strtolower(trim($query));
+        if ($normalized === '') {
+            return null;
+        }
+
+        $destMap = [
+            'tokyo' => [35.6762, 139.6503, 'Tokyo, Japan'],
+            'shinjuku' => [35.6938, 139.7035, 'Shinjuku, Tokyo'],
+            'shibuya' => [35.6580, 139.7016, 'Shibuya, Tokyo'],
+            'asakusa' => [35.7147, 139.7967, 'Asakusa, Tokyo'],
+            'ginza' => [35.6719, 139.7648, 'Ginza, Tokyo'],
+            'ueno' => [35.7140, 139.7741, 'Ueno, Tokyo'],
+            'roppongi' => [35.6628, 139.7314, 'Roppongi, Tokyo'],
+            'odaiba' => [35.6262, 139.7744, 'Odaiba, Tokyo'],
+            'hakone' => [35.2323, 139.1069, 'Hakone, Japan'],
+            'fuji' => [35.3606, 138.7274, 'Mount Fuji, Japan'],
+            'kawaguchiko' => [35.5042, 138.7628, 'Lake Kawaguchiko, Japan'],
+            'osaka' => [34.6937, 135.5023, 'Osaka, Japan'],
+            'kyoto' => [35.0116, 135.7681, 'Kyoto, Japan'],
+            'nara' => [34.6851, 135.8048, 'Nara, Japan'],
+            'kobe' => [34.6901, 135.1955, 'Kobe, Japan'],
+            'yokohama' => [35.4437, 139.6380, 'Yokohama, Japan'],
+            'sapporo' => [43.0618, 141.3545, 'Sapporo, Japan'],
+            'hiroshima' => [34.3853, 132.4553, 'Hiroshima, Japan'],
+            'fukuoka' => [33.5904, 130.4017, 'Fukuoka, Japan'],
+            'okinawa' => [26.2124, 127.6809, 'Okinawa, Japan'],
+            'japan' => [35.6762, 139.6503, 'Tokyo, Japan'],
+
+            'taguig' => [14.5547, 121.0494, 'Taguig (BGC), Philippines'],
+            'bgc' => [14.5547, 121.0494, 'Bonifacio Global City, Philippines'],
+            'bonifacio' => [14.5547, 121.0494, 'Bonifacio Global City, Philippines'],
+            'makati' => [14.5547, 121.0244, 'Makati, Philippines'],
+            'manila' => [14.5995, 120.9842, 'Manila, Philippines'],
+            'pasay' => [14.5378, 120.9993, 'Pasay, Philippines'],
+            'quezon' => [14.6760, 121.0437, 'Quezon City, Philippines'],
+            'cebu' => [10.3157, 123.8854, 'Cebu, Philippines'],
+            'boracay' => [11.9674, 121.9248, 'Boracay, Philippines'],
+            'baguio' => [16.4023, 120.5960, 'Baguio, Philippines'],
+            'palawan' => [9.8349, 118.7384, 'Palawan, Philippines'],
+            'el nido' => [11.1956, 119.4075, 'El Nido, Philippines'],
+            'coron' => [12.0004, 120.2036, 'Coron, Philippines'],
+            'siargao' => [9.8587, 126.0464, 'Siargao, Philippines'],
+            'philippines' => [14.5995, 120.9842, 'Manila, Philippines'],
+
+            'singapore' => [1.3521, 103.8198, 'Singapore'],
+            'bangkok' => [13.7563, 100.5018, 'Bangkok, Thailand'],
+            'chiang mai' => [18.7883, 98.9853, 'Chiang Mai, Thailand'],
+            'phuket' => [7.8804, 98.3923, 'Phuket, Thailand'],
+            'thailand' => [13.7563, 100.5018, 'Bangkok, Thailand'],
+
+            'bali' => [-8.4095, 115.1889, 'Bali, Indonesia'],
+            'ubud' => [-8.5069, 115.2625, 'Ubud, Bali'],
+            'jakarta' => [-6.2088, 106.8456, 'Jakarta, Indonesia'],
+            'indonesia' => [-8.4095, 115.1889, 'Bali, Indonesia'],
+
+            'seoul' => [37.5665, 126.9780, 'Seoul, South Korea'],
+            'incheon' => [37.4563, 126.7052, 'Incheon, South Korea'],
+            'busan' => [35.1796, 129.0756, 'Busan, South Korea'],
+            'jeju' => [33.4996, 126.5312, 'Jeju Island, South Korea'],
+            'korea' => [37.5665, 126.9780, 'Seoul, South Korea'],
+
+            'hong kong' => [22.3193, 114.1694, 'Hong Kong'],
+            'macau' => [22.1987, 113.5439, 'Macau'],
+            'taipei' => [25.0330, 121.5654, 'Taipei, Taiwan'],
+            'taiwan' => [25.0330, 121.5654, 'Taipei, Taiwan'],
+
+            'london' => [51.5074, -0.1278, 'London, United Kingdom'],
+            'paris' => [48.8566, 2.3522, 'Paris, France'],
+            'france' => [48.8566, 2.3522, 'Paris, France'],
+            'rome' => [41.9028, 12.4964, 'Rome, Italy'],
+            'milan' => [45.4642, 9.1900, 'Milan, Italy'],
+            'venice' => [45.4408, 12.3155, 'Venice, Italy'],
+            'italy' => [41.9028, 12.4964, 'Rome, Italy'],
+            'barcelona' => [41.3879, 2.1699, 'Barcelona, Spain'],
+            'madrid' => [40.4168, -3.7038, 'Madrid, Spain'],
+            'amsterdam' => [52.3676, 4.9041, 'Amsterdam, Netherlands'],
+            'zurich' => [47.3769, 8.5417, 'Zurich, Switzerland'],
+            'switzerland' => [47.3769, 8.5417, 'Zurich, Switzerland'],
+            'dubai' => [25.2048, 55.2708, 'Dubai, UAE'],
+
+            'sydney' => [-33.8688, 151.2093, 'Sydney, Australia'],
+            'melbourne' => [-37.8136, 144.9631, 'Melbourne, Australia'],
+            'australia' => [-33.8688, 151.2093, 'Sydney, Australia'],
+
+            'new york' => [40.7128, -74.0060, 'New York, USA'],
+            'san francisco' => [37.7749, -122.4194, 'San Francisco, USA'],
+            'los angeles' => [34.0522, -118.2437, 'Los Angeles, USA'],
+        ];
+
+        foreach ($destMap as $key => [$lat, $lng, $name]) {
+            if (str_contains($normalized, $key)) {
+                return [$lat, $lng, $name];
+            }
+        }
+
+        return null;
     }
 
     /**

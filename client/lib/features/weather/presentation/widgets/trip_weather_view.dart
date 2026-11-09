@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../providers/weather_provider.dart';
 import '../../../itinerary/presentation/widgets/ask_tapittrip_sheet.dart';
 
@@ -277,8 +278,9 @@ class TripWeatherView extends ConsumerWidget {
                           const SizedBox(height: 4),
                           Text(
                             current.advisory,
-                            style:
-                                theme.textTheme.bodySmall?.copyWith(height: 1.35),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              height: 1.35,
+                            ),
                           ),
                         ],
                       ),
@@ -351,11 +353,7 @@ class TripWeatherView extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      Icon(
-                        day.weatherIcon,
-                        color: day.weatherColor,
-                        size: 22,
-                      ),
+                      Icon(day.weatherIcon, color: day.weatherColor, size: 22),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(

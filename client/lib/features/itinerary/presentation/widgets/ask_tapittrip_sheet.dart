@@ -165,11 +165,15 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
       final stopTitle = (rawTitle != null && rawTitle.isNotEmpty)
           ? rawTitle
           : (rawPlaceName != null && rawPlaceName.isNotEmpty
-              ? rawPlaceName
-              : (action.label.isNotEmpty ? action.label : 'Suggested Activity'));
+                ? rawPlaceName
+                : (action.label.isNotEmpty
+                      ? action.label
+                      : 'Suggested Activity'));
 
       final rawAddress =
-          (payload['place_address'] ?? payload['address'] ?? payload['formatted_address'])
+          (payload['place_address'] ??
+                  payload['address'] ??
+                  payload['formatted_address'])
               as String?;
       final address = rawAddress?.trim();
 
@@ -185,16 +189,16 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
 
         final Map<String, dynamic>? inlinePlace =
             (rawPlaceName != null && rawPlaceName.isNotEmpty)
-                ? {
-                    'name': rawPlaceName,
-                    if (address != null && address.isNotEmpty) ...{
-                      'formatted_address': address,
-                      'address': address,
-                    },
-                    'provider': 'manual',
-                    'attribution': 'TapItTrip Assistant',
-                  }
-                : null;
+            ? {
+                'name': rawPlaceName,
+                if (address != null && address.isNotEmpty) ...{
+                  'formatted_address': address,
+                  'address': address,
+                },
+                'provider': 'manual',
+                'attribution': 'TapItTrip Assistant',
+              }
+            : null;
 
         await ref
             .read(itineraryListProvider(widget.tripId).notifier)
@@ -225,7 +229,8 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
           _bannerTimer = Timer(const Duration(milliseconds: 4500), () {
             if (mounted) {
               setState(() {
-                if (_actionSuccessMessage == 'Added "$stopTitle" to your itinerary!') {
+                if (_actionSuccessMessage ==
+                    'Added "$stopTitle" to your itinerary!') {
                   _actionSuccessMessage = null;
                 }
               });
@@ -242,7 +247,8 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
           } else if (e is ApiException) {
             displayError = e.message;
           } else {
-            displayError = e.toString()
+            displayError = e
+                .toString()
                 .replaceAll(RegExp(r'^ApiException\([^)]+\):\s*'), '')
                 .replaceAll(RegExp(r'^Exception:\s*'), '');
           }
@@ -497,10 +503,7 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                         return Align(
                           alignment: Alignment.centerRight,
                           child: Container(
-                            margin: const EdgeInsets.only(
-                              bottom: 12,
-                              left: 48,
-                            ),
+                            margin: const EdgeInsets.only(bottom: 12, left: 48),
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 10,
@@ -610,10 +613,11 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                                 const SizedBox(height: 8),
                                 ...response.suggestedActions.map((action) {
                                   final actionKey = _getActionKey(action);
-                                  final isPending =
-                                      _pendingActionKeys.contains(actionKey);
-                                  final isCompleted =
-                                      _completedActionKeys.contains(actionKey);
+                                  final isPending = _pendingActionKeys.contains(
+                                    actionKey,
+                                  );
+                                  final isCompleted = _completedActionKeys
+                                      .contains(actionKey);
 
                                   if (isCompleted) {
                                     return Container(
@@ -623,10 +627,14 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                                         vertical: 10,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withValues(alpha: 0.12),
+                                        color: Colors.green.withValues(
+                                          alpha: 0.12,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: Colors.green.withValues(alpha: 0.35),
+                                          color: Colors.green.withValues(
+                                            alpha: 0.35,
+                                          ),
                                         ),
                                       ),
                                       child: Row(

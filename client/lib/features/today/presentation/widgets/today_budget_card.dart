@@ -36,7 +36,8 @@ class TodayBudgetCard extends ConsumerWidget {
     final displayCurrency = pacing?.currency ?? homeCurrency;
 
     // 1. Unconfigured / No Budget Set State
-    if (pacing == null || (pacing.totalBudgetMinor == 0 && pacing.totalSpentMinor == 0)) {
+    if (pacing == null ||
+        (pacing.totalBudgetMinor == 0 && pacing.totalSpentMinor == 0)) {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -80,7 +81,10 @@ class TodayBudgetCard extends ConsumerWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
@@ -144,7 +148,8 @@ class TodayBudgetCard extends ConsumerWidget {
                   label: const Text('Log Expense'),
                 ),
                 TextButton.icon(
-                  onPressed: () => context.push('/trips/${summary.trip.id}/expenses'),
+                  onPressed: () =>
+                      context.push('/trips/${summary.trip.id}/expenses'),
                   icon: const Icon(Icons.receipt_long_outlined, size: 16),
                   label: const Text('All Expenses'),
                 ),
@@ -250,7 +255,9 @@ class TodayBudgetCard extends ConsumerWidget {
                     context,
                     tripId: summary.trip.id,
                     initialCurrency: pacing.currency,
-                    initialTotalBudgetMinor: pacing.totalBudgetMinor > 0 ? pacing.totalBudgetMinor : null,
+                    initialTotalBudgetMinor: pacing.totalBudgetMinor > 0
+                        ? pacing.totalBudgetMinor
+                        : null,
                     initialDailyBudgetMinor: pacing.dailyBudgetMinor,
                   );
                   ref.invalidate(todaySummaryProvider(summary.trip.id));
@@ -344,7 +351,9 @@ class TodayBudgetCard extends ConsumerWidget {
                 Text(
                   'Remaining: ${CurrencyFormatter.formatAmount(pacing.remainingBudgetMinor, pacing.currency, isMinor: true)}',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: pacing.remainingBudgetMinor < 0 ? Colors.redAccent : Colors.green,
+                    color: pacing.remainingBudgetMinor < 0
+                        ? Colors.redAccent
+                        : Colors.green,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

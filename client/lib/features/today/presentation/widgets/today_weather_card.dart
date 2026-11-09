@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../domain/models/today_dashboard_summary.dart';
 import '../../../weather/presentation/widgets/weather_forecast_bottom_sheet.dart';
 
@@ -129,7 +130,8 @@ class TodayWeatherCard extends StatelessWidget {
                 children: [
                   _MetricChip(
                     icon: Icons.thermostat_outlined,
-                    label: 'Feels ${weather.feelsLikeC?.round() ?? weather.temperatureC.round()}°C',
+                    label:
+                        'Feels ${weather.feelsLikeC?.round() ?? weather.temperatureC.round()}°C',
                   ),
                   const SizedBox(width: 8),
                   _MetricChip(
@@ -153,7 +155,9 @@ class TodayWeatherCard extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
+                  color: colorScheme.surfaceContainerHigh.withValues(
+                    alpha: 0.5,
+                  ),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -225,4 +229,3 @@ class _MetricChip extends StatelessWidget {
     );
   }
 }
-

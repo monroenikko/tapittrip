@@ -128,7 +128,8 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
         } else if (e is ApiException) {
           displayError = e.message;
         } else {
-          displayError = e.toString()
+          displayError = e
+              .toString()
               .replaceAll(RegExp(r'^ApiException\([^)]+\):\s*'), '')
               .replaceAll(RegExp(r'^Exception:\s*'), '');
         }

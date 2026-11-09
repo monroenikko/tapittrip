@@ -308,15 +308,18 @@ class NextStopCard extends ConsumerWidget {
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 18,
                     vertical: 12,
                   ),
                 ),
                 icon: const Icon(Icons.directions_rounded, size: 18),
-                label: const Text('Directions'),
+                label: const Text(
+                  'Directions',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
               OutlinedButton.icon(
                 onPressed: () async {
@@ -327,15 +330,18 @@ class NextStopCard extends ConsumerWidget {
                 },
                 style: OutlinedButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 18,
                     vertical: 12,
                   ),
                 ),
                 icon: const Icon(Icons.check_rounded, size: 18),
-                label: const Text('Visited'),
+                label: const Text(
+                  'Visited',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),

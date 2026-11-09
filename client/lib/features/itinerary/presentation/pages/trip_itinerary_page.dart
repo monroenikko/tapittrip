@@ -332,7 +332,9 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                             // Compact weather pill in trip header
                             Consumer(
                               builder: (context, ref, _) {
-                                final weatherAsync = ref.watch(tripWeatherProvider(widget.tripId));
+                                final weatherAsync = ref.watch(
+                                  tripWeatherProvider(widget.tripId),
+                                );
                                 return weatherAsync.when(
                                   data: (weather) {
                                     final current = weather.current;
@@ -340,30 +342,52 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                                       padding: const EdgeInsets.only(top: 6),
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(16),
-                                        onTap: () => setState(() => _selectedTabIndex = 3),
+                                        onTap: () => setState(
+                                          () => _selectedTabIndex = 3,
+                                        ),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: current.weatherColor.withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(16),
+                                            color: current.weatherColor
+                                                .withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
                                             border: Border.all(
-                                              color: current.weatherColor.withValues(alpha: 0.3),
+                                              color: current.weatherColor
+                                                  .withValues(alpha: 0.3),
                                             ),
                                           ),
                                           child: Row(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(current.weatherIcon, size: 14, color: current.weatherColor),
+                                              Icon(
+                                                current.weatherIcon,
+                                                size: 14,
+                                                color: current.weatherColor,
+                                              ),
                                               const SizedBox(width: 5),
                                               Text(
                                                 '${current.tempString} • ${current.condition}',
-                                                style: theme.textTheme.labelSmall?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: current.weatherColor,
-                                                ),
+                                                style: theme
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color:
+                                                          current.weatherColor,
+                                                    ),
                                               ),
                                               const SizedBox(width: 4),
-                                              Icon(Icons.chevron_right_rounded, size: 14, color: current.weatherColor),
+                                              Icon(
+                                                Icons.chevron_right_rounded,
+                                                size: 14,
+                                                color: current.weatherColor,
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -398,7 +422,8 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 // Route summary banner
                 Builder(
                   builder: (context) {
-                    final destCurrency = (trip?.destinationCurrency != null &&
+                    final destCurrency =
+                        (trip?.destinationCurrency != null &&
                             trip!.destinationCurrency!.isNotEmpty)
                         ? trip.destinationCurrency!
                         : CountryCurrencyHelper.resolveCurrency(
@@ -406,16 +431,18 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                             defaultCurrency: 'JPY',
                           );
                     final authState = ref.watch(authProvider);
-                    final authUser = authState is Authenticated ? authState.user : null;
+                    final authUser = authState is Authenticated
+                        ? authState.user
+                        : null;
                     final homeCurrency = authUser?.homeCurrency ?? 'PHP';
 
                     final num baseDestCost = destCurrency == 'JPY'
                         ? 18500
                         : (destCurrency == 'PHP'
-                            ? 6800
-                            : (destCurrency == 'EUR'
-                                ? 115
-                                : (destCurrency == 'GBP' ? 95 : 120)));
+                              ? 6800
+                              : (destCurrency == 'EUR'
+                                    ? 115
+                                    : (destCurrency == 'GBP' ? 95 : 120)));
 
                     final formattedDest = CurrencyFormatter.formatAmount(
                       baseDestCost,
@@ -424,18 +451,25 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                     );
 
                     String? costSubtitle;
-                    if (homeCurrency.toUpperCase() != destCurrency.toUpperCase()) {
+                    if (homeCurrency.toUpperCase() !=
+                        destCurrency.toUpperCase()) {
                       final rateAsync = ref.watch(
-                        currencyRateProvider((from: destCurrency, to: homeCurrency)),
+                        currencyRateProvider((
+                          from: destCurrency,
+                          to: homeCurrency,
+                        )),
                       );
                       final rate = rateAsync.asData?.value;
                       if (rate != null) {
                         final converted = baseDestCost * rate.rate;
-                        costSubtitle = '≈ ${CurrencyFormatter.formatAmount(converted, homeCurrency, isMinor: false)}';
+                        costSubtitle =
+                            '≈ ${CurrencyFormatter.formatAmount(converted, homeCurrency, isMinor: false)}';
                       }
                     }
 
-                    final weatherAsync = ref.watch(tripWeatherProvider(widget.tripId));
+                    final weatherAsync = ref.watch(
+                      tripWeatherProvider(widget.tripId),
+                    );
                     final curWeather = weatherAsync.asData?.value.current;
 
                     return RouteSummaryCard(
@@ -498,7 +532,9 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 ? _openAddChecklistItem
                 : _openAddActivitySheet,
             icon: Icon(
-              _selectedTabIndex == 3 ? Icons.umbrella_rounded : Icons.add_rounded,
+              _selectedTabIndex == 3
+                  ? Icons.umbrella_rounded
+                  : Icons.add_rounded,
             ),
             label: Text(
               _selectedTabIndex == 2
@@ -835,8 +871,10 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: ActivityTimelineCard(
+                  child: LiveWeatherActivityTimelineCard(
+                    tripId: widget.tripId,
                     item: item,
+                    onWeatherTap: () => setState(() => _selectedTabIndex = 3),
                     onToggleVisited: () {
                       ref
                           .read(itineraryListProvider(widget.tripId).notifier)

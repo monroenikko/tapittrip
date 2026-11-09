@@ -10,6 +10,32 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — Itinerary Activity Stop Weather Forecasts & Location Resolution
+
+### Completed
+
+- **Backend Location & Sub-Destination Weather API (`GetTripWeatherService`, `TripWeatherController`)**:
+  - Enhanced `GET /api/v1/trips/{trip}/weather` to accept optional `latitude`, `longitude`, and `location` query parameters.
+  - Generates location-specific cache keys (`trip_weather_{tripId}_{locKey}_{dateKey}`) enabling separate caching for individual itinerary stops (e.g. Hakone / Mt. Fuji vs Tokyo, or Taguig / BGC vs Manila).
+  - Implemented `resolveCoordinatesForLocation` with place matching from existing itinerary items and city coordinates dictionary covering international and domestic destinations (Tokyo, Hakone, Kyoto, Osaka, Taguig/BGC, Makati, Manila, Cebu, Boracay, Baguio, Seoul, Bangkok, Singapore, Bali, etc.).
+  - Added feature test `test_trip_weather_with_custom_coordinates_and_location` in `TripWeatherTest.php` (4/4 tests pass, 104 assertions).
+- **Client Offline-First Repository & Riverpod Providers**:
+  - `WeatherRepository.fetchTripWeather`: Accepts optional `latitude`, `longitude`, and `location` parameters with sub-location secure storage caching keys and fallback to main trip weather cache when offline.
+  - `itemLocationWeatherProvider`: Added family provider resolving location-specific forecasts for individual itinerary items.
+- **Itinerary Activity Timeline Card Weather Badges**:
+  - `ActivityTimelineCard`: Added `final TripWeather? weather;` and `final VoidCallback? onWeatherTap;` parameters (100% backward-compatible `StatelessWidget`).
+  - Added `_buildWeatherBadge` displaying scheduled day forecast matching (`item.day?.localDate` or `item.startsAtUtc`): day name prefix, temperature, weather icon, condition text, rain probability badge when $>15\%$, and offline sync indicator.
+  - `LiveWeatherActivityTimelineCard`: Implemented `ConsumerWidget` that automatically watches `itemLocationWeatherProvider` for the venue and gracefully falls back to `tripWeatherProvider`.
+  - Wired `LiveWeatherActivityTimelineCard` into `TripItineraryPage` timeline list; tapping the weather badge navigates directly to the whole-week destination Weather tab.
+- **UI Polish**:
+  - `NextStopCard`: Fixed button styling and padding for `Directions` and `Visited` to prevent font scaling clipping on smaller devices.
+- **Verification**:
+  - `client/test/itinerary_test.dart`: 14/14 tests pass.
+  - `client/test/weather_test.dart`: 10/10 tests pass.
+  - Total Flutter client tests: 161/161 tests pass.
+  - `flutter analyze`: 0 issues found.
+  - Backend PHPUnit `TripWeatherTest`: 4/4 tests pass (104 assertions).
+
 ## 2026-11-09 — Ask TapItTrip AI Assistant with Travel Scoping & Practical Suggestions
 
 ### Completed
