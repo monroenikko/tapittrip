@@ -124,6 +124,28 @@ final class AirportLoungeTest extends TestCase
             ->assertJsonPath('data.amenities', ['buffet', 'showers', 'wifi']);
     }
 
+    public function test_user_can_list_and_search_global_airports(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/airports?q=London');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.0.iata_code', 'LHR');
+    }
+
+    public function test_user_can_search_lounges_by_city_alias(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/airports/LONDON/lounges');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.airport.iata_code', 'LHR');
+    }
+
     public function test_search_unknown_airport_returns_404(): void
     {
         $user = User::factory()->create();

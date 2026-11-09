@@ -25,11 +25,11 @@ class Airport {
 
   factory Airport.fromJson(Map<String, dynamic> json) {
     return Airport(
-      id: json['id'] as String,
-      iataCode: json['iata_code'] as String,
-      name: json['name'] as String,
-      city: json['city'] as String,
-      country: json['country'] as String,
+      id: (json['id'] as String?) ?? (json['iata_code'] as String? ?? ''),
+      iataCode: json['iata_code'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      city: json['city'] as String? ?? '',
+      country: json['country'] as String? ?? '',
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       timezone: json['timezone'] as String? ?? 'UTC',

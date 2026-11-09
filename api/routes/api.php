@@ -120,6 +120,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/sync/push', [SyncController::class, 'push'])->name('sync.push');
         Route::get('/sync/pull', [SyncController::class, 'pull'])->name('sync.pull');
 
+        Route::get('/airports', [AirportLoungeController::class, 'airports'])->name('airports.index');
         Route::get('/airports/{iata}/lounges', [AirportLoungeController::class, 'index'])->name('airports.lounges.index');
         Route::get('/lounges/{lounge}', [AirportLoungeController::class, 'show'])->name('lounges.show');
     });

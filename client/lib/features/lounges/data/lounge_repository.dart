@@ -30,10 +30,48 @@ class LoungeRepository {
 
   /// High-speed in-memory cache for 0ms instant display without blocking spinners.
   static final Map<String, LoungeSearchResult> _memoryCache = {};
+  static List<Airport>? _cachedGlobalAirports;
 
   /// Resets in-memory cache (primarily for tests).
   static void clearMemoryCache() {
     _memoryCache.clear();
+    _cachedGlobalAirports = null;
+  }
+
+  /// Lists and searches worldwide airports and terminals from API.
+  Future<List<Airport>> getGlobalAirports({String? query}) async {
+    final cleanQuery = query?.trim();
+
+    if ((cleanQuery == null || cleanQuery.isEmpty) &&
+        _cachedGlobalAirports != null &&
+        _cachedGlobalAirports!.isNotEmpty) {
+      return _cachedGlobalAirports!;
+    }
+
+    try {
+      final queryParams = <String, dynamic>{};
+      if (cleanQuery != null && cleanQuery.isNotEmpty) {
+        queryParams['q'] = cleanQuery;
+      }
+
+      final response = await apiClient.get(
+        '/airports',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+
+      final rawData = _extractData(response);
+      final list = (rawData as List<dynamic>? ?? [])
+          .map((e) => Airport.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+
+      if (cleanQuery == null || cleanQuery.isEmpty) {
+        _cachedGlobalAirports = list;
+      }
+
+      return list;
+    } catch (_) {
+      return _cachedGlobalAirports ?? [];
+    }
   }
 
   dynamic _extractData(dynamic response) {

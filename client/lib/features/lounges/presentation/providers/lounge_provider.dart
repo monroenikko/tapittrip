@@ -2,10 +2,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../data/lounge_repository.dart';
+import '../../domain/models/airport.dart';
 
 final loungeRepositoryProvider = Provider<LoungeRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return LoungeRepository(apiClient: apiClient);
+});
+
+enum WorldRegion {
+  popular('Global Hubs'),
+  asia('Asia & Pacific'),
+  europe('Europe'),
+  americas('Americas'),
+  middleEast('Middle East & Africa');
+
+  const WorldRegion(this.label);
+  final String label;
+}
+
+class SelectedRegionNotifier extends Notifier<WorldRegion> {
+  @override
+  WorldRegion build() => WorldRegion.popular;
+
+  void select(WorldRegion region) => state = region;
+}
+
+final selectedRegionProvider =
+    NotifierProvider<SelectedRegionNotifier, WorldRegion>(
+      SelectedRegionNotifier.new,
+    );
+
+class AirportSearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void setQuery(String q) => state = q;
+}
+
+final airportSearchQueryProvider =
+    NotifierProvider<AirportSearchQueryNotifier, String>(
+      AirportSearchQueryNotifier.new,
+    );
+
+final globalAirportsProvider = FutureProvider<List<Airport>>((ref) async {
+  final repository = ref.watch(loungeRepositoryProvider);
+  final query = ref.watch(airportSearchQueryProvider);
+  return repository.getGlobalAirports(query: query.isEmpty ? null : query);
 });
 
 class SelectedAirportIataNotifier extends Notifier<String> {

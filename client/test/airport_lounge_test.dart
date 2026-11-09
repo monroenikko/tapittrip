@@ -275,6 +275,31 @@ void main() {
       expect(japanCodes.contains('HND'), true);
       expect(japanCodes.contains('MNL'), true);
     });
+
+    test('getGlobalAirports fetches and caches global airports list', () async {
+      final client = FakeLoungeApiClient();
+      client.getResponse = {
+        'data': [
+          {
+            'iata_code': 'LHR',
+            'name': 'London Heathrow Airport',
+            'city': 'London',
+            'country': 'United Kingdom',
+            'timezone': 'Europe/London',
+            'terminals': [
+              {'code': 'T2', 'name': 'Terminal 2'},
+              {'code': 'T5', 'name': 'Terminal 5'},
+            ],
+          },
+        ],
+      };
+      final repo = LoungeRepository(apiClient: client);
+
+      final airports = await repo.getGlobalAirports(query: 'London');
+      expect(airports.length, 1);
+      expect(airports.first.iataCode, 'LHR');
+      expect(airports.first.terminals.length, 2);
+    });
   });
 
   group('Presentation Widgets', () {

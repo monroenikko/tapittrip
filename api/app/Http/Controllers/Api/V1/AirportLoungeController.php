@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Application\Lounges\Data\SearchAirportLoungesData;
+use App\Application\Lounges\Services\AirportLoungeDirectoryService;
 use App\Application\Lounges\Services\GetAirportLoungeDetailsService;
 use App\Application\Lounges\Services\SearchAirportLoungesService;
 use App\Http\Controllers\Controller;
@@ -13,9 +14,23 @@ use App\Http\Resources\Api\V1\AirportLoungeResource;
 use App\Http\Resources\Api\V1\AirportResource;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 final class AirportLoungeController extends Controller
 {
+    /**
+     * List and search worldwide airports and their terminals.
+     */
+    public function airports(
+        Request $request,
+        ApiResponse $response,
+    ): JsonResponse {
+        $q = $request->query('q');
+        $airports = AirportLoungeDirectoryService::listGlobalAirports($q ? (string) $q : null);
+
+        return $response->success($airports);
+    }
+
     /**
      * Search and filter lounges for an airport by IATA code.
      */

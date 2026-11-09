@@ -17,7 +17,7 @@ final class SearchAirportLoungesService
      */
     public function execute(SearchAirportLoungesData $data): array
     {
-        $iata = strtoupper(trim($data->iataCode));
+        $iata = AirportLoungeDirectoryService::resolveIata($data->iataCode);
         $airport = Airport::with('terminals')->where('iata_code', $iata)->first();
 
         if ($airport === null) {

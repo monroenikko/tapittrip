@@ -13,10 +13,10 @@ class AirportTerminal {
 
   factory AirportTerminal.fromJson(Map<String, dynamic> json) {
     return AirportTerminal(
-      id: json['id'] as String,
-      airportId: json['airport_id'] as String,
-      name: json['name'] as String,
-      code: json['code'] as String,
+      id: (json['id'] as String?) ?? (json['code'] as String? ?? ''),
+      airportId: (json['airport_id'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
+      code: (json['code'] as String?) ?? '',
     );
   }
 
