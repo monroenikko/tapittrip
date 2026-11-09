@@ -72,6 +72,12 @@ final class CurrencyTest extends TestCase
         $this->assertSame('GBP', CountryCurrencyResolver::resolve('GB'));
         $this->assertSame('GBP', CountryCurrencyResolver::resolve('London'));
 
+        // Global country codes worldwide
+        $this->assertSame('BRL', CountryCurrencyResolver::resolve('BR'));
+        $this->assertSame('INR', CountryCurrencyResolver::resolve('IN'));
+        $this->assertSame('NOK', CountryCurrencyResolver::resolve('NO'));
+        $this->assertSame('EGP', CountryCurrencyResolver::resolve('EG'));
+
         $this->assertSame('USD', CountryCurrencyResolver::resolve(null));
         $this->assertSame('USD', CountryCurrencyResolver::resolve(''));
 

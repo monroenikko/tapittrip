@@ -63,6 +63,18 @@ void main() {
       expect(CountryCurrencyHelper.resolveCurrency('US'), 'USD');
       expect(CountryCurrencyHelper.resolveCurrency('United States'), 'USD');
 
+      expect(CountryCurrencyHelper.resolveCurrency('BR'), 'BRL');
+      expect(CountryCurrencyHelper.resolveCurrency('Brazil'), 'BRL');
+
+      expect(CountryCurrencyHelper.resolveCurrency('IN'), 'INR');
+      expect(CountryCurrencyHelper.resolveCurrency('India'), 'INR');
+
+      expect(CountryCurrencyHelper.resolveCurrency('EG'), 'EGP');
+      expect(CountryCurrencyHelper.resolveCurrency('Egypt'), 'EGP');
+
+      expect(CountryCurrencyHelper.resolveCurrency('NO'), 'NOK');
+      expect(CountryCurrencyHelper.resolveCurrency('Norway'), 'NOK');
+
       expect(CountryCurrencyHelper.resolveCurrency('FR'), 'EUR');
       expect(CountryCurrencyHelper.resolveCurrency('France'), 'EUR');
       expect(CountryCurrencyHelper.resolveCurrency('Paris'), 'EUR');
@@ -317,8 +329,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Country of Residence'), findsOneWidget);
-        expect(find.text('Philippines'), findsOneWidget);
-        expect(find.text('Japan'), findsOneWidget);
+        expect(find.byType(TextField), findsOneWidget);
+
+        // Search for Philippines
+        await tester.enterText(find.byType(TextField), 'Philippines');
+        await tester.pumpAndSettle();
+        expect(find.widgetWithText(ListTile, 'Philippines'), findsOneWidget);
 
         // Search for Japan
         await tester.enterText(find.byType(TextField), 'Japan');

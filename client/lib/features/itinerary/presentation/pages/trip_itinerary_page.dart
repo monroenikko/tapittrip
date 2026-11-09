@@ -133,8 +133,10 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (ctx) =>
-            AiItineraryPreviewSheet(tripId: widget.tripId, plan: plan),
+        builder: (ctx) => AiItineraryPreviewSheet(
+          tripId: widget.tripId,
+          plan: plan,
+        ),
       );
 
       if (mounted && saved == true) {
