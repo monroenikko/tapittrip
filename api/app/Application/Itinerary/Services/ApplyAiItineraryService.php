@@ -57,8 +57,8 @@ final class ApplyAiItineraryService
                             'formatted_address' => (string) ($activity['place_address'] ?? $placeName),
                             'latitude' => $lat,
                             'longitude' => $lng,
-                            'google_place_id' => 'place_'.Str::random(16),
-                            'source' => 'ai_planner',
+                            'provider' => 'ai_planner',
+                            'provider_place_id' => 'place_'.Str::random(16),
                         ]);
                         $placeId = $place->id;
                     }
@@ -96,7 +96,7 @@ final class ApplyAiItineraryService
                         'trip_day_id' => $tripDay->id,
                         'place_id' => $placeId,
                         'title' => (string) $activity['title'],
-                        'kind' => (string) ($activity['kind'] ?? 'sightseeing'),
+                        'kind' => substr((string) ($activity['kind'] ?? 'sightseeing'), 0, 32),
                         'status' => 'planned',
                         'notes' => isset($activity['description']) ? (string) $activity['description'] : null,
                         'starts_at_utc' => $startsAtUtc,

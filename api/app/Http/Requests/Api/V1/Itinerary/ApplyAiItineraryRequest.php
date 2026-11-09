@@ -24,7 +24,7 @@ final class ApplyAiItineraryRequest extends FormRequest
             'days.*.title' => ['nullable', 'string', 'max:255'],
             'days.*.theme' => ['nullable', 'string', 'max:255'],
             'days.*.primary_neighborhood' => ['nullable', 'string', 'max:255'],
-            'days.*.activities' => ['required', 'array', 'min:1'],
+            'days.*.activities' => ['nullable', 'array'],
             'days.*.activities.*.title' => ['required', 'string', 'max:255'],
             'days.*.activities.*.kind' => ['nullable', 'string', 'max:50'],
             'days.*.activities.*.description' => ['nullable', 'string'],

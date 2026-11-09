@@ -12,10 +12,12 @@ import 'package:tapittrip/features/checklists/presentation/widgets/add_checklist
 import 'package:tapittrip/features/checklists/presentation/widgets/checklist_template_dialog.dart';
 import 'package:tapittrip/features/checklists/presentation/widgets/checklists_view.dart';
 import 'package:tapittrip/features/expenses/data/currency_repository.dart';
+import 'package:tapittrip/features/itinerary/domain/models/ai_itinerary_plan.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/activity_timeline_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/ai_itinerary_planner_dialog.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/ai_itinerary_preview_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/ask_tapittrip_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/itinerary_filter_tabs.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/route_summary_card.dart';
@@ -104,7 +106,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
     );
   }
 
-  void _openAiPlanner() {
+  Future<void> _openAiPlanner() async {
     final trip = _resolveTrip();
     int initialDays = 3;
     if (trip?.startDate != null && trip?.endDate != null) {
@@ -115,7 +117,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
       }
     }
 
-    showDialog<void>(
+    final plan = await showDialog<AiItineraryPlan>(
       context: context,
       builder: (ctx) => AiItineraryPlannerDialog(
         tripId: widget.tripId,
@@ -125,6 +127,22 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
         initialDays: initialDays,
       ),
     );
+
+    if (plan != null && mounted) {
+      final saved = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) =>
+            AiItineraryPreviewSheet(tripId: widget.tripId, plan: plan),
+      );
+
+      if (mounted && saved == true) {
+        ref.invalidate(itineraryListProvider(widget.tripId));
+        ref.invalidate(tripDaysProvider(widget.tripId));
+        await ref.read(itineraryListProvider(widget.tripId).notifier).refresh();
+      }
+    }
   }
 
   Future<void> _onRefresh() async {

@@ -22,21 +22,161 @@ class AiItineraryPreviewSheet extends ConsumerStatefulWidget {
 
 class _AiItineraryPreviewSheetState
     extends ConsumerState<AiItineraryPreviewSheet> {
+  late List<AiDaySuggestion> _days;
   bool _isApplying = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _days = widget.plan.days
+        .map(
+          (d) => AiDaySuggestion(
+            dayNumber: d.dayNumber,
+            title: d.title,
+            theme: d.theme,
+            primaryNeighborhood: d.primaryNeighborhood,
+            activities: List<AiActivitySuggestion>.from(d.activities),
+            budgetEstimate: d.budgetEstimate,
+            familyTip: d.familyTip,
+          ),
+        )
+        .toList();
+  }
+
+  int get _totalActivities =>
+      _days.fold<int>(0, (sum, d) => sum + d.activities.length);
+
+  void _removeActivity(int dayIndex, int activityIndex) {
+    if (dayIndex < 0 || dayIndex >= _days.length) return;
+    final day = _days[dayIndex];
+    if (activityIndex < 0 || activityIndex >= day.activities.length) return;
+
+    final removed = day.activities[activityIndex];
+
+    setState(() {
+      final updatedActivities = List<AiActivitySuggestion>.from(day.activities)
+        ..removeAt(activityIndex);
+
+      if (updatedActivities.isEmpty) {
+        _days.removeAt(dayIndex);
+      } else {
+        _days[dayIndex] = AiDaySuggestion(
+          dayNumber: day.dayNumber,
+          title: day.title,
+          theme: day.theme,
+          primaryNeighborhood: day.primaryNeighborhood,
+          activities: updatedActivities,
+          budgetEstimate: day.budgetEstimate,
+          familyTip: day.familyTip,
+        );
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Removed "${removed.title}"'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            setState(() {
+              if (dayIndex >= _days.length) {
+                _days.insert(
+                  dayIndex,
+                  AiDaySuggestion(
+                    dayNumber: day.dayNumber,
+                    title: day.title,
+                    theme: day.theme,
+                    primaryNeighborhood: day.primaryNeighborhood,
+                    activities: [removed],
+                    budgetEstimate: day.budgetEstimate,
+                    familyTip: day.familyTip,
+                  ),
+                );
+              } else {
+                final currentDay = _days[dayIndex];
+                final restored = List<AiActivitySuggestion>.from(
+                  currentDay.activities,
+                );
+                final insertAt = activityIndex.clamp(0, restored.length);
+                restored.insert(insertAt, removed);
+                _days[dayIndex] = AiDaySuggestion(
+                  dayNumber: currentDay.dayNumber,
+                  title: currentDay.title,
+                  theme: currentDay.theme,
+                  primaryNeighborhood: currentDay.primaryNeighborhood,
+                  activities: restored,
+                  budgetEstimate: currentDay.budgetEstimate,
+                  familyTip: currentDay.familyTip,
+                );
+              }
+            });
+          },
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _removeDay(int dayIndex) {
+    if (dayIndex < 0 || dayIndex >= _days.length) return;
+    final removedDay = _days[dayIndex];
+
+    setState(() {
+      _days.removeAt(dayIndex);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Removed Day ${removedDay.dayNumber}'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            setState(() {
+              _days.insert(dayIndex.clamp(0, _days.length), removedDay);
+            });
+          },
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _resetPlan() {
+    setState(() {
+      _days = widget.plan.days
+          .map(
+            (d) => AiDaySuggestion(
+              dayNumber: d.dayNumber,
+              title: d.title,
+              theme: d.theme,
+              primaryNeighborhood: d.primaryNeighborhood,
+              activities: List<AiActivitySuggestion>.from(d.activities),
+              budgetEstimate: d.budgetEstimate,
+              familyTip: d.familyTip,
+            ),
+          )
+          .toList();
+    });
+  }
+
   Future<void> _applyPlan() async {
+    final validDays = _days.where((d) => d.activities.isNotEmpty).toList();
+    if (validDays.isEmpty) return;
+
     setState(() => _isApplying = true);
     try {
       final repo = ref.read(aiItineraryRepositoryProvider);
-      await repo.applyPlan(widget.tripId, widget.plan.days);
+      final savedItems = await repo.applyPlan(widget.tripId, validDays);
       await ref.read(itineraryListProvider(widget.tripId).notifier).refresh();
       ref.invalidate(tripDaysProvider(widget.tripId));
 
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('AI itinerary suggestions added to your trip!'),
+          SnackBar(
+            content: Text(
+              '${savedItems.length} activities saved to your itinerary!',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -46,7 +186,7 @@ class _AiItineraryPreviewSheetState
         setState(() => _isApplying = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to apply itinerary: $e'),
+            content: Text('Failed to save itinerary: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -61,7 +201,7 @@ class _AiItineraryPreviewSheetState
     final plan = widget.plan;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.85,
+      initialChildSize: 0.88,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
@@ -109,7 +249,7 @@ class _AiItineraryPreviewSheetState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Suggested Itinerary',
+                                'Overview Suggested Itinerary',
                                 style: theme.textTheme.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -124,9 +264,22 @@ class _AiItineraryPreviewSheetState
                             ],
                           ),
                         ),
+                        if (_totalActivities <
+                            widget.plan.days.fold<int>(
+                              0,
+                              (s, d) => s + d.activities.length,
+                            ))
+                          TextButton.icon(
+                            onPressed: _resetPlan,
+                            icon: const Icon(Icons.restore_rounded, size: 16),
+                            label: const Text('Reset'),
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
 
                     Text(
                       plan.summary,
@@ -136,7 +289,7 @@ class _AiItineraryPreviewSheetState
                     ),
                     const SizedBox(height: 14),
 
-                    // Non-destructive Invariant Notice
+                    // Helpful instructions Banner
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -151,14 +304,14 @@ class _AiItineraryPreviewSheetState
                       child: Row(
                         children: [
                           Icon(
-                            Icons.shield_outlined,
+                            Icons.tune_rounded,
                             size: 20,
                             color: colorScheme.primary,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'AI Suggests, You Approve: Applying this suggestion will add new stops without replacing your existing bookings or activities.',
+                              'Customize your plan: Remove any stops you do not want before saving to your trip.',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: colorScheme.onSurface,
                               ),
@@ -169,8 +322,52 @@ class _AiItineraryPreviewSheetState
                     ),
                     const SizedBox(height: 20),
 
+                    // Empty state if all days/stops were removed
+                    if (_days.isEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 36),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.playlist_remove_rounded,
+                                size: 48,
+                                color: colorScheme.outline,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'All suggested stops removed',
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'You can reset to restore all stops or discard and plan again.',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              FilledButton.tonalIcon(
+                                onPressed: _resetPlan,
+                                icon: const Icon(
+                                  Icons.restore_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text('Restore All Stops'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+
                     // Days & Activities Staging
-                    ...plan.days.map((day) {
+                    ..._days.asMap().entries.map((dayEntry) {
+                      final dayIdx = dayEntry.key;
+                      final day = dayEntry.value;
+
                       return Card(
                         elevation: 0,
                         margin: const EdgeInsets.only(bottom: 16),
@@ -187,6 +384,7 @@ class _AiItineraryPreviewSheetState
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Day Header with Day number, Theme, and Remove Day button
                               Row(
                                 children: [
                                   Container(
@@ -217,9 +415,20 @@ class _AiItineraryPreviewSheetState
                                           ),
                                     ),
                                   ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 18,
+                                    ),
+                                    color: colorScheme.error.withValues(
+                                      alpha: 0.8,
+                                    ),
+                                    tooltip: 'Remove Day ${day.dayNumber}',
+                                    onPressed: () => _removeDay(dayIdx),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 4),
                               Row(
                                 children: [
                                   Icon(
@@ -238,7 +447,12 @@ class _AiItineraryPreviewSheetState
                                 ],
                               ),
                               const Divider(height: 20),
-                              ...day.activities.map((act) {
+
+                              // Activities list with individual remove buttons
+                              ...day.activities.asMap().entries.map((actEntry) {
+                                final actIdx = actEntry.key;
+                                final act = actEntry.value;
+
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: Row(
@@ -298,10 +512,23 @@ class _AiItineraryPreviewSheetState
                                           ],
                                         ),
                                       ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.remove_circle_outline_rounded,
+                                          size: 20,
+                                        ),
+                                        color: colorScheme.error.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                        tooltip: 'Remove stop',
+                                        onPressed: () =>
+                                            _removeActivity(dayIdx, actIdx),
+                                      ),
                                     ],
                                   ),
                                 );
                               }),
+
                               if (day.familyTip != null) ...[
                                 Container(
                                   padding: const EdgeInsets.all(10),
@@ -387,7 +614,7 @@ class _AiItineraryPreviewSheetState
                       child: OutlinedButton(
                         onPressed: _isApplying
                             ? null
-                            : () => Navigator.of(context).pop(),
+                            : () => Navigator.of(context).pop(false),
                         child: const Text('Discard'),
                       ),
                     ),
@@ -406,9 +633,13 @@ class _AiItineraryPreviewSheetState
                               )
                             : const Icon(Icons.check_rounded, size: 18),
                         label: Text(
-                          _isApplying ? 'Applying...' : 'Accept Full Plan',
+                          _isApplying
+                              ? 'Saving Itinerary...'
+                              : 'Save Itinerary ($_totalActivities ${_totalActivities == 1 ? 'stop' : 'stops'})',
                         ),
-                        onPressed: _isApplying ? null : _applyPlan,
+                        onPressed: (_isApplying || _totalActivities == 0)
+                            ? null
+                            : _applyPlan,
                       ),
                     ),
                   ],

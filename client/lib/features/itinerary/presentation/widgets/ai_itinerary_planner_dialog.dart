@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_exceptions.dart';
 import '../providers/itinerary_provider.dart';
-import 'ai_itinerary_preview_sheet.dart';
 
 class AiItineraryPlannerDialog extends ConsumerStatefulWidget {
   const AiItineraryPlannerDialog({
@@ -73,14 +72,7 @@ class _AiItineraryPlannerDialogState
       );
 
       if (mounted) {
-        Navigator.of(context).pop();
-        showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (ctx) =>
-              AiItineraryPreviewSheet(tripId: widget.tripId, plan: plan),
-        );
+        Navigator.of(context).pop(plan);
       }
     } catch (e) {
       if (mounted) {

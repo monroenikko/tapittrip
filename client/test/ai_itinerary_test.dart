@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tapittrip/core/network/api_client.dart';
 import 'package:tapittrip/core/storage/token_storage.dart';
@@ -13,8 +14,17 @@ class FakeAiApiClient extends ApiClient {
   FakeAiApiClient() : super(tokenStorage: InMemoryTokenStorage());
 
   dynamic postResponse;
+  dynamic getResponse;
   String? lastPath;
   dynamic lastData;
+
+  @override
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    return getResponse ?? {'data': []};
+  }
 
   @override
   Future<dynamic> post(
@@ -65,6 +75,10 @@ class FakeAiApiClient extends ApiClient {
 }
 
 void main() {
+  setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+  });
+
   group('AiItineraryPlan Model & Deserialization', () {
     test('deserializes JSON plan correctly', () {
       final json = {
@@ -139,45 +153,39 @@ void main() {
       expect(plan.days.length, 1);
     });
 
-    test(
-      'generatePlan parses untyped Map<dynamic, dynamic> with data envelope without casting error',
-      () async {
-        final fakeApi = FakeAiApiClient();
-        fakeApi.postResponse = <dynamic, dynamic>{
-          'data': <dynamic, dynamic>{
-            'destination': 'Hong Kong',
-            'summary': '3-day Hong Kong family trip',
-            'travel_party': 'family_kids',
-            'pace': 'balanced',
-            'days': <dynamic>[
-              <dynamic, dynamic>{
-                'day_number': 1,
-                'title': 'Day 1: Island Magic',
-                'theme': 'Island Magic',
-                'primary_neighborhood': 'Central',
-                'activities': <dynamic>[
-                  <dynamic, dynamic>{
-                    'title': 'Victoria Peak',
-                    'kind': 'sightseeing',
-                    'neighborhood': 'Central',
-                    'place_name': 'Victoria Peak',
-                  },
-                ],
-              },
-            ],
-          },
-        };
-        final repo = AiItineraryRepository(apiClient: fakeApi);
+    test('generatePlan parses untyped Map<dynamic, dynamic> with data envelope without casting error', () async {
+      final fakeApi = FakeAiApiClient();
+      fakeApi.postResponse = <dynamic, dynamic>{
+        'data': <dynamic, dynamic>{
+          'destination': 'Hong Kong',
+          'summary': '3-day Hong Kong family trip',
+          'travel_party': 'family_kids',
+          'pace': 'balanced',
+          'days': <dynamic>[
+            <dynamic, dynamic>{
+              'day_number': 1,
+              'title': 'Day 1: Island Magic',
+              'theme': 'Island Magic',
+              'primary_neighborhood': 'Central',
+              'activities': <dynamic>[
+                <dynamic, dynamic>{
+                  'title': 'Victoria Peak',
+                  'kind': 'sightseeing',
+                  'neighborhood': 'Central',
+                  'place_name': 'Victoria Peak',
+                },
+              ],
+            },
+          ],
+        },
+      };
+      final repo = AiItineraryRepository(apiClient: fakeApi);
 
-        final plan = await repo.generatePlan(
-          'trip-hk',
-          destination: 'Hong Kong',
-        );
-        expect(plan.destination, 'Hong Kong');
-        expect(plan.days.length, 1);
-        expect(plan.days.first.activities.first.title, 'Victoria Peak');
-      },
-    );
+      final plan = await repo.generatePlan('trip-hk', destination: 'Hong Kong');
+      expect(plan.destination, 'Hong Kong');
+      expect(plan.days.length, 1);
+      expect(plan.days.first.activities.first.title, 'Victoria Peak');
+    });
 
     test('applyPlan posts structured days to apply endpoint', () async {
       final fakeApi = FakeAiApiClient();
@@ -245,7 +253,10 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [aiItineraryRepositoryProvider.overrideWithValue(repo)],
+            overrides: [
+              apiClientProvider.overrideWithValue(fakeApi),
+              aiItineraryRepositoryProvider.overrideWithValue(repo),
+            ],
             child: const MaterialApp(
               home: Scaffold(
                 body: AiItineraryPreviewSheet(tripId: 'trip-123', plan: plan),
@@ -255,11 +266,11 @@ void main() {
         );
 
         // Verify header and destination
-        expect(find.text('Suggested Itinerary'), findsOneWidget);
+        expect(find.textContaining('Suggested Itinerary'), findsOneWidget);
         expect(find.text('Tokyo, Japan'), findsOneWidget);
 
-        // Verify non-destructive invariant notice
-        expect(find.textContaining('AI Suggests, You Approve'), findsOneWidget);
+        // Verify customize instructions notice
+        expect(find.textContaining('Customize your plan'), findsOneWidget);
 
         // Verify day theme and activity
         expect(
@@ -269,6 +280,10 @@ void main() {
         expect(find.text('Asakusa & Taito'), findsOneWidget);
         expect(find.text('Senso-ji Temple'), findsOneWidget);
         expect(find.text('Stroller friendly pavements'), findsOneWidget);
+
+        // Verify remove button exists on the activity
+        expect(find.byTooltip('Remove stop'), findsOneWidget);
+
         // Scroll down to check weather note
         await tester.drag(find.byType(ListView), const Offset(0, -300));
         await tester.pumpAndSettle();
@@ -277,7 +292,83 @@ void main() {
 
         // Verify Action buttons
         expect(find.text('Discard'), findsOneWidget);
-        expect(find.text('Accept Full Plan'), findsOneWidget);
+        expect(find.textContaining('Save Itinerary'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'removing an activity updates stop count and saves remaining plan',
+      (tester) async {
+        final fakeApi = FakeAiApiClient();
+        fakeApi.postResponse = {'data': []};
+        final repo = AiItineraryRepository(apiClient: fakeApi);
+
+        const plan = AiItineraryPlan(
+          destination: 'Tokyo, Japan',
+          summary: 'Multi-stop Tokyo adventure',
+          travelParty: 'family',
+          pace: 'balanced',
+          days: [
+            AiDaySuggestion(
+              dayNumber: 1,
+              title: 'Day 1',
+              theme: 'Historic Asakusa',
+              primaryNeighborhood: 'Asakusa',
+              activities: [
+                AiActivitySuggestion(
+                  title: 'Stop 1: Senso-ji',
+                  kind: 'sightseeing',
+                  neighborhood: 'Asakusa',
+                ),
+                AiActivitySuggestion(
+                  title: 'Stop 2: Nakamise Shopping',
+                  kind: 'sightseeing',
+                  neighborhood: 'Asakusa',
+                ),
+              ],
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              apiClientProvider.overrideWithValue(fakeApi),
+              aiItineraryRepositoryProvider.overrideWithValue(repo),
+            ],
+            child: const MaterialApp(
+              home: Scaffold(
+                body: AiItineraryPreviewSheet(tripId: 'trip-123', plan: plan),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('Stop 1: Senso-ji'), findsOneWidget);
+        expect(find.text('Stop 2: Nakamise Shopping'), findsOneWidget);
+        expect(find.text('Save Itinerary (2 stops)'), findsOneWidget);
+
+        // Tap remove on Stop 2
+        final removeButtons = find.byTooltip('Remove stop');
+        expect(removeButtons, findsNWidgets(2));
+        await tester.tap(removeButtons.last);
+        await tester.pumpAndSettle();
+
+        // Stop 2 is removed, count decreases to 1
+        expect(find.text('Stop 2: Nakamise Shopping'), findsNothing);
+        expect(find.text('Save Itinerary (1 stop)'), findsOneWidget);
+
+        // Tap Save Itinerary
+        await tester.tap(find.text('Save Itinerary (1 stop)'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 4));
+
+        expect(fakeApi.lastPath, '/trips/trip-123/ai-plan/apply');
+        final appliedDays = (fakeApi.lastData['days'] as List);
+        expect(appliedDays.length, 1);
+        final appliedActivities = (appliedDays.first['activities'] as List);
+        expect(appliedActivities.length, 1);
+        expect(appliedActivities.first['title'], 'Stop 1: Senso-ji');
       },
     );
   });
