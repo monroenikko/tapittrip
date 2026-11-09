@@ -34,14 +34,14 @@ class TripWeatherView extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Unable to load trip weather',
+                'No internet connection',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                err.toString(),
+                'Connect to the internet to sync and update the latest destination forecast.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
@@ -51,7 +51,7 @@ class TripWeatherView extends ConsumerWidget {
               FilledButton.icon(
                 onPressed: () => ref.invalidate(tripWeatherProvider(tripId)),
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Retry'),
+                label: const Text('Check Connection & Retry'),
               ),
             ],
           ),
@@ -63,6 +63,42 @@ class TripWeatherView extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (weather.isOfflineSynced)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.cloud_off_rounded,
+                      size: 16,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'No internet connection — showing your last synced forecast.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Current Weather Hero
             Container(
               padding: const EdgeInsets.all(20),

@@ -10,6 +10,7 @@ class TripWeather {
     required this.current,
     this.forecast = const [],
     this.providerAttribution = 'Live Weather',
+    this.isOfflineSynced = false,
   });
 
   final String destination;
@@ -19,6 +20,29 @@ class TripWeather {
   final WeatherCondition current;
   final List<DailyForecast> forecast;
   final String providerAttribution;
+  final bool isOfflineSynced;
+
+  TripWeather copyWith({
+    String? destination,
+    double? latitude,
+    double? longitude,
+    String? timezone,
+    WeatherCondition? current,
+    List<DailyForecast>? forecast,
+    String? providerAttribution,
+    bool? isOfflineSynced,
+  }) {
+    return TripWeather(
+      destination: destination ?? this.destination,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      timezone: timezone ?? this.timezone,
+      current: current ?? this.current,
+      forecast: forecast ?? this.forecast,
+      providerAttribution: providerAttribution ?? this.providerAttribution,
+      isOfflineSynced: isOfflineSynced ?? this.isOfflineSynced,
+    );
+  }
 
   factory TripWeather.fromJson(Map<String, dynamic> json) {
     final rawCurrent = json['current'];
@@ -39,6 +63,7 @@ class TripWeather {
           .toList(),
       providerAttribution:
           (json['provider_attribution'] as String?) ?? 'Live Weather',
+      isOfflineSynced: (json['is_offline_synced'] as bool?) ?? false,
     );
   }
 
@@ -51,6 +76,7 @@ class TripWeather {
       'current': current.toJson(),
       'forecast': forecast.map((e) => e.toJson()).toList(),
       'provider_attribution': providerAttribution,
+      'is_offline_synced': isOfflineSynced,
     };
   }
 }

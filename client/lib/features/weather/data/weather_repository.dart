@@ -41,13 +41,14 @@ class WeatherRepository {
 
       return weather;
     } catch (e) {
-      // Try offline cached copy
+      // Return last synced copy if available while offline
       final cached = await _storage.read(key: _cacheKey(tripId));
       if (cached != null) {
         try {
           final decoded = jsonDecode(cached);
           if (decoded is Map) {
-            return TripWeather.fromJson(Map<String, dynamic>.from(decoded));
+            final weather = TripWeather.fromJson(Map<String, dynamic>.from(decoded));
+            return weather.copyWith(isOfflineSynced: true);
           }
         } catch (_) {
           // Ignore cache decoding error and rethrow original error

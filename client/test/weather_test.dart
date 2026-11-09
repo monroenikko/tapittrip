@@ -240,6 +240,49 @@ void main() {
       expect(find.textContaining('Weather Backup Ideas'), findsWidgets);
       expect(find.textContaining('Open-Meteo'), findsOneWidget);
     });
+
+    testWidgets('renders beautiful message when viewing offline synced weather', (tester) async {
+      const mockOfflineWeather = TripWeather(
+        destination: 'Taguig, PH',
+        latitude: 14.55,
+        longitude: 121.05,
+        timezone: 'Asia/Manila',
+        isOfflineSynced: true,
+        current: WeatherCondition(
+          temperatureC: 28.0,
+          temperatureF: 82.4,
+          condition: 'Clear Sky',
+          icon: 'sunny',
+          humidity: 60,
+          windKph: 9.0,
+          precipitationProbability: 0,
+          advisory: 'Sunny weather in Taguig',
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tripWeatherProvider('test-offline-trip').overrideWith(
+              (ref) => Future.value(mockOfflineWeather),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: TripWeatherView(tripId: 'test-offline-trip'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('No internet connection — showing your last synced forecast.'),
+        findsOneWidget,
+      );
+      expect(find.text('28°C'), findsWidgets);
+    });
   });
 
   group('LiveWeatherTripCard Widget', () {
