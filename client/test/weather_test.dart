@@ -172,6 +172,13 @@ void main() {
 
   group('TripWeatherView Widget', () {
     testWidgets('renders forecast days and destination climate', (tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       const mockTripWeather = TripWeather(
         destination: 'Taguig, PH',
         latitude: 14.55,
@@ -282,6 +289,163 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('28°C'), findsWidgets);
+    });
+
+    testWidgets('TripWeatherView renders full climate hero and 7-day forecast inside a ListView', (tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      const mockWeather = TripWeather(
+        destination: 'Taguig',
+        latitude: 14.55,
+        longitude: 121.05,
+        timezone: 'Asia/Manila',
+        current: WeatherCondition(
+          temperatureC: 29.0,
+          temperatureF: 84.2,
+          condition: 'Partly Cloudy',
+          icon: 'partly_cloudy',
+          humidity: 70,
+          windKph: 12.0,
+          precipitationProbability: 20,
+          advisory: 'Pleasant weather — ideal conditions for walking tours.',
+        ),
+        forecast: [
+          DailyForecast(
+            date: '2026-11-09',
+            dayName: 'Today',
+            tempMaxC: 30.0,
+            tempMinC: 24.0,
+            tempMaxF: 86.0,
+            tempMinF: 75.2,
+            condition: 'Partly Cloudy',
+            icon: 'partly_cloudy',
+            precipitationProbability: 20,
+          ),
+          DailyForecast(
+            date: '2026-11-10',
+            dayName: 'Tomorrow',
+            tempMaxC: 31.0,
+            tempMinC: 25.0,
+            tempMaxF: 87.8,
+            tempMinF: 77.0,
+            condition: 'Clear Sky',
+            icon: 'sunny',
+            precipitationProbability: 10,
+          ),
+          DailyForecast(
+            date: '2026-11-11',
+            dayName: 'Wednesday',
+            tempMaxC: 29.0,
+            tempMinC: 23.0,
+            tempMaxF: 84.2,
+            tempMinF: 73.4,
+            condition: 'Rain Showers',
+            icon: 'rain',
+            precipitationProbability: 60,
+          ),
+          DailyForecast(
+            date: '2026-11-12',
+            dayName: 'Thursday',
+            tempMaxC: 30.0,
+            tempMinC: 24.0,
+            tempMaxF: 86.0,
+            tempMinF: 75.2,
+            condition: 'Partly Cloudy',
+            icon: 'partly_cloudy',
+            precipitationProbability: 15,
+          ),
+          DailyForecast(
+            date: '2026-11-13',
+            dayName: 'Friday',
+            tempMaxC: 31.0,
+            tempMinC: 24.0,
+            tempMaxF: 87.8,
+            tempMinF: 75.2,
+            condition: 'Clear Sky',
+            icon: 'sunny',
+            precipitationProbability: 10,
+          ),
+          DailyForecast(
+            date: '2026-11-14',
+            dayName: 'Saturday',
+            tempMaxC: 32.0,
+            tempMinC: 25.0,
+            tempMaxF: 89.6,
+            tempMinF: 77.0,
+            condition: 'Clear Sky',
+            icon: 'sunny',
+            precipitationProbability: 10,
+          ),
+          DailyForecast(
+            date: '2026-11-15',
+            dayName: 'Sunday',
+            tempMaxC: 30.0,
+            tempMinC: 24.0,
+            tempMaxF: 86.0,
+            tempMinF: 75.2,
+            condition: 'Partly Cloudy',
+            icon: 'partly_cloudy',
+            precipitationProbability: 20,
+          ),
+        ],
+        providerAttribution: 'Live Weather via Open-Meteo',
+      );
+
+      // Render inside a parent ListView, exactly like TripItineraryPage
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tripWeatherProvider('trip-bgc').overrideWith(
+              (ref) => Future.value(mockWeather),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: ListView(
+                children: const [
+                  TripWeatherView(tripId: 'trip-bgc'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Current weather hero
+      expect(find.text('Taguig'), findsOneWidget);
+      expect(find.text('Live Weather & Climate (Asia/Manila)'), findsOneWidget);
+      expect(find.text('29°C'), findsWidgets);
+      expect(find.text('(84°F)'), findsOneWidget);
+      expect(find.text('Partly Cloudy'), findsWidgets);
+      expect(find.text('Feels Like'), findsOneWidget);
+      expect(find.text('Humidity'), findsOneWidget);
+      expect(find.text('Wind'), findsOneWidget);
+
+      // Advisory
+      expect(find.text('Destination Weather Advisory'), findsOneWidget);
+      expect(find.text('Pleasant weather — ideal conditions for walking tours.'), findsOneWidget);
+
+      // 7-day forecast
+      expect(find.text('Forecast for Trip Days'), findsOneWidget);
+      expect(find.textContaining('Expected weather for the whole week'), findsOneWidget);
+      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('Tomorrow'), findsOneWidget);
+      expect(find.text('Wednesday'), findsOneWidget);
+      expect(find.text('Thursday'), findsOneWidget);
+      expect(find.text('Friday'), findsOneWidget);
+      expect(find.text('Saturday'), findsOneWidget);
+      expect(find.text('Sunday'), findsOneWidget);
+      expect(find.text('24° / 30°C'), findsWidgets);
+
+      // AI Backup Ideas
+      expect(find.text('Ask TapItTrip for Weather Backup Ideas'), findsOneWidget);
     });
   });
 

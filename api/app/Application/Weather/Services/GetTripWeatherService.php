@@ -316,7 +316,7 @@ final class GetTripWeatherService
         );
 
         $forecast = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 7; $i++) {
             $dayDate = $now->addDays($i);
             $dayName = $i === 0 ? 'Today' : ($i === 1 ? 'Tomorrow' : $dayDate->format('l'));
             $maxC = $tempC + ($i % 2 === 0 ? 1.0 : -0.5);

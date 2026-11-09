@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tapittrip/core/network/api_client.dart';
 import 'package:tapittrip/core/storage/token_storage.dart';
 import 'package:tapittrip/core/theme/app_theme.dart';
-import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/trips/data/trip_repository.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';

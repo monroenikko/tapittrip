@@ -49,6 +49,27 @@ class DailyForecast {
     }
   }
 
+  Color get weatherColor {
+    switch (icon.toLowerCase()) {
+      case 'sunny':
+        return Colors.orangeAccent.shade700;
+      case 'partly_cloudy':
+        return Colors.amber.shade700;
+      case 'cloudy':
+      case 'fog':
+        return Colors.blueGrey;
+      case 'rain':
+      case 'heavy_rain':
+        return Colors.blue.shade600;
+      case 'snow':
+        return Colors.cyan.shade600;
+      case 'thunderstorm':
+        return Colors.deepPurpleAccent;
+      default:
+        return Colors.amber.shade800;
+    }
+  }
+
   factory DailyForecast.fromJson(Map<String, dynamic> json) {
     return DailyForecast(
       date: (json['date'] as String?) ?? '',

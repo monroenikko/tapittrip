@@ -178,6 +178,21 @@
   - Mobile Flutter Analyzer: 0 issues.
   - Feature Document: Created `docs/features/travel-journal-and-memories.md`.
 
+## 2026-11-09 — Itinerary Weather Tab Layout Fix & Whole-Week Forecast Display
+
+### Completed
+
+- **Itinerary Page Weather Tab Layout Fix (`TripWeatherView`)**:
+  - Identified cause of blank white screen when selecting the "Weather" tab on `TripItineraryPage`: `TripWeatherView` was returning an unconstrained `ListView` inside the outer page `ListView`, which triggered Flutter's unhandled `Vertical viewport was given unbounded height` layout error and caused the tab's contents to collapse into a blank area.
+  - Replaced the inner `ListView` with a responsive `Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [...])`, allowing current weather metrics and the 7-day forecast to lay out and scroll naturally within the page.
+  - Updated forecast header to display expected weather for the whole week with daily temperature highs, lows, condition icons, and precipitation probability badges.
+  - Added `weatherColor` mapping on `DailyForecast` model for consistent, accessible condition styling.
+  - Extended fallback/offline weather generator in `GetTripWeatherService.php` from 5 days to 7 full days so travelers always see the complete week.
+- **Automated Verification**:
+  - Mobile Flutter Tests: 160/160 tests passed (`flutter test`), including test specifically asserting that switching to the Weather tab in `TripItineraryPage` renders current conditions and whole-week forecast cards without layout or unbounded height errors.
+  - Mobile Analyzer: 0 issues found (`flutter analyze`).
+  - Backend PHPUnit: 139/139 tests passed.
+
 ## 2026-11-09 — Automatic AI & Manual Itinerary Setup in Trip Creation Flow
 
 ### Completed

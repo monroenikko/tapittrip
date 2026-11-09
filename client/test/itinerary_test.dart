@@ -14,6 +14,7 @@ import 'package:tapittrip/features/itinerary/presentation/widgets/route_summary_
 import 'package:tapittrip/features/itinerary/presentation/widgets/timeline_day_badge.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
+import 'package:tapittrip/features/weather/domain/models/daily_forecast.dart';
 import 'package:tapittrip/features/weather/domain/models/trip_weather.dart';
 import 'package:tapittrip/features/weather/domain/models/weather_condition.dart';
 import 'package:tapittrip/features/weather/presentation/providers/weather_provider.dart';
@@ -363,6 +364,97 @@ void main() {
       expect(find.text('Check your connection and try again.'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
       expect(find.textContaining('private provider payload'), findsNothing);
+    });
+
+    testWidgets('TripItineraryPage switching to Weather tab renders TripWeatherView with whole week forecast without layout errors', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const mockWeather = TripWeather(
+        destination: 'BGC Taguig',
+        latitude: 14.55,
+        longitude: 121.05,
+        timezone: 'Asia/Manila',
+        current: WeatherCondition(
+          temperatureC: 29.0,
+          temperatureF: 84.2,
+          condition: 'Partly Cloudy',
+          icon: 'partly_cloudy',
+          humidity: 68,
+          windKph: 12.0,
+          precipitationProbability: 15,
+          advisory: 'Warm and pleasant in Taguig.',
+        ),
+        forecast: [
+          DailyForecast(
+            date: '2026-11-09',
+            dayName: 'Today',
+            tempMaxC: 30.0,
+            tempMinC: 24.0,
+            tempMaxF: 86.0,
+            tempMinF: 75.2,
+            condition: 'Partly Cloudy',
+            icon: 'partly_cloudy',
+            precipitationProbability: 20,
+          ),
+          DailyForecast(
+            date: '2026-11-10',
+            dayName: 'Tomorrow',
+            tempMaxC: 31.0,
+            tempMinC: 25.0,
+            tempMaxF: 87.8,
+            tempMinF: 77.0,
+            condition: 'Clear Sky',
+            icon: 'sunny',
+            precipitationProbability: 10,
+          ),
+        ],
+        providerAttribution: 'Live Weather via Open-Meteo',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            itineraryListProvider('trip-1')
+                .overrideWith(() => _FakeItineraryListNotifier('trip-1')),
+            tripDaysProvider('trip-1').overrideWith((ref) => Future.value([])),
+            tripWeatherProvider('trip-1')
+                .overrideWith((ref) => Future.value(mockWeather)),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const TripItineraryPage(
+              tripId: 'trip-1',
+              initialTrip: sampleTrip,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Tap the Weather filter tab in ItineraryFilterTabs
+      final weatherTab = find.descendant(
+        of: find.byType(ItineraryFilterTabs),
+        matching: find.text('Weather'),
+      );
+      await tester.tap(weatherTab);
+      await tester.pumpAndSettle();
+
+      // Verify the full weather view is rendered seamlessly
+      expect(find.text('BGC Taguig'), findsWidgets);
+      expect(find.text('Live Weather & Climate (Asia/Manila)'), findsOneWidget);
+      expect(find.text('29°C'), findsWidgets);
+      expect(find.text('Destination Weather Advisory'), findsOneWidget);
+      expect(find.text('Warm and pleasant in Taguig.'), findsOneWidget);
+      expect(find.text('Forecast for Trip Days'), findsOneWidget);
+      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('Tomorrow'), findsOneWidget);
+      expect(find.text('Ask TapItTrip for Weather Backup Ideas'), findsOneWidget);
     });
   });
 }
