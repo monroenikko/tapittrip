@@ -14,6 +14,9 @@ import 'package:tapittrip/features/itinerary/presentation/widgets/route_summary_
 import 'package:tapittrip/features/itinerary/presentation/widgets/timeline_day_badge.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
+import 'package:tapittrip/features/weather/domain/models/trip_weather.dart';
+import 'package:tapittrip/features/weather/domain/models/weather_condition.dart';
+import 'package:tapittrip/features/weather/presentation/providers/weather_provider.dart';
 
 const samplePlace = Place(
   id: 'place-1',
@@ -191,6 +194,32 @@ void main() {
       expect(find.text('22 kg'), findsOneWidget);
     });
 
+    testWidgets('RouteSummaryCard renders weather metric when provided', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(
+            body: RouteSummaryCard(
+              distance: '210 km',
+              estimatedCost: '₱6800.00',
+              co2Saved: '18 kg',
+              weatherText: '28°C',
+              weatherIcon: Icons.wb_sunny_rounded,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('210 km'), findsOneWidget);
+      expect(find.text('₱6800.00'), findsOneWidget);
+      expect(find.text('18 kg'), findsOneWidget);
+      expect(find.text('Weather'), findsOneWidget);
+      expect(find.text('28°C'), findsOneWidget);
+      expect(find.byIcon(Icons.wb_sunny_rounded), findsOneWidget);
+    });
+
     testWidgets('ItineraryFilterTabs renders selectable tabs', (tester) async {
       int selected = 0;
 
@@ -250,6 +279,51 @@ void main() {
       expect(find.text('Senso-ji Temple Morning Visit'), findsOneWidget);
       expect(find.text('Directions'), findsOneWidget);
       expect(find.text('Add Activity'), findsWidgets);
+    });
+
+    testWidgets('TripItineraryPage renders weather chip when provider emits', (
+      tester,
+    ) async {
+      const mockWeather = TripWeather(
+        destination: 'Tokyo, Japan',
+        latitude: 35.6762,
+        longitude: 139.6503,
+        timezone: 'Asia/Tokyo',
+        current: WeatherCondition(
+          temperatureC: 18.0,
+          temperatureF: 64.4,
+          condition: 'Clear Sky',
+          icon: 'sunny',
+          humidity: 45,
+          windKph: 8.5,
+          precipitationProbability: 0,
+          advisory: 'Sunny skies',
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            itineraryListProvider('trip-1')
+                .overrideWith(() => _FakeItineraryListNotifier('trip-1')),
+            tripDaysProvider('trip-1').overrideWith((ref) => Future.value([])),
+            tripWeatherProvider('trip-1')
+                .overrideWith((ref) => Future.value(mockWeather)),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const TripItineraryPage(
+              tripId: 'trip-1',
+              initialTrip: sampleTrip,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('18°C • Clear Sky'), findsOneWidget);
+      expect(find.text('18°C'), findsWidgets);
     });
 
     testWidgets('keeps a large error responsive without exposing it', (

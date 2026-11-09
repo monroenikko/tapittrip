@@ -7,14 +7,22 @@ class RouteSummaryCard extends StatelessWidget {
     this.estimatedCost = '\$1,240',
     this.estimatedCostSubtitle,
     this.co2Saved = '18 kg',
+    this.weatherText,
+    this.weatherIcon,
+    this.weatherColor,
     this.onOptimizeTap,
+    this.onWeatherTap,
   });
 
   final String distance;
   final String estimatedCost;
   final String? estimatedCostSubtitle;
   final String co2Saved;
+  final String? weatherText;
+  final IconData? weatherIcon;
+  final Color? weatherColor;
   final VoidCallback? onOptimizeTap;
+  final VoidCallback? onWeatherTap;
 
   @override
   Widget build(BuildContext context) {
@@ -87,9 +95,11 @@ class RouteSummaryCard extends StatelessWidget {
           const SizedBox(height: 14),
           const Divider(height: 1),
           const SizedBox(height: 12),
-          // 3 stat chips
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Stat chips: Distance, Est. Cost, CO2, and destination Weather
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            runSpacing: 10,
+            spacing: 12,
             children: [
               _StatItem(
                 icon: Icons.straighten_rounded,
@@ -107,6 +117,17 @@ class RouteSummaryCard extends StatelessWidget {
                 label: 'CO₂ Saved',
                 value: co2Saved,
               ),
+              if (weatherText != null && weatherText!.isNotEmpty)
+                InkWell(
+                  onTap: onWeatherTap,
+                  borderRadius: BorderRadius.circular(8),
+                  child: _StatItem(
+                    icon: weatherIcon ?? Icons.wb_sunny_rounded,
+                    iconColor: weatherColor,
+                    label: 'Weather',
+                    value: weatherText!,
+                  ),
+                ),
             ],
           ),
         ],
@@ -120,12 +141,14 @@ class _StatItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.iconColor,
     this.subtitle,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final Color? iconColor;
   final String? subtitle;
 
   @override
@@ -134,8 +157,9 @@ class _StatItem extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+        Icon(icon, size: 16, color: iconColor ?? colorScheme.onSurfaceVariant),
         const SizedBox(width: 6),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,

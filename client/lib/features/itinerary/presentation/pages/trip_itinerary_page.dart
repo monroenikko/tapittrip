@@ -128,6 +128,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
   }
 
   Future<void> _onRefresh() async {
+    ref.invalidate(tripWeatherProvider(widget.tripId));
     if (_selectedTabIndex == 2) {
       await ref.read(stayListProvider(widget.tripId).notifier).refresh();
     } else {
@@ -434,11 +435,18 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                       }
                     }
 
+                    final weatherAsync = ref.watch(tripWeatherProvider(widget.tripId));
+                    final curWeather = weatherAsync.asData?.value.current;
+
                     return RouteSummaryCard(
                       distance: '142 km',
                       estimatedCost: formattedDest,
                       estimatedCostSubtitle: costSubtitle,
                       co2Saved: '18 kg',
+                      weatherText: curWeather?.tempString,
+                      weatherIcon: curWeather?.weatherIcon,
+                      weatherColor: curWeather?.weatherColor,
+                      onWeatherTap: () => setState(() => _selectedTabIndex = 3),
                     );
                   },
                 ),
