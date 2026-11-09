@@ -14,6 +14,13 @@ class JournalRepository {
   final ApiClient apiClient;
   final FlutterSecureStorage _storage;
 
+  dynamic _extractData(dynamic response) {
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      return response['data'];
+    }
+    return response;
+  }
+
   Future<List<JournalEntry>> getJournalEntries(
     String tripId, {
     String? date,
@@ -28,7 +35,8 @@ class JournalRepository {
         '/trips/$tripId/journal',
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
-      final rawList = (response['data'] as List<dynamic>?) ?? [];
+      final rawData = _extractData(response);
+      final rawList = (rawData as List<dynamic>?) ?? [];
       final entries = rawList
           .map((item) => JournalEntry.fromJson(item as Map<String, dynamic>))
           .toList();
@@ -85,7 +93,7 @@ class JournalRepository {
       '/trips/$tripId/journal',
       data: payload,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return JournalEntry.fromJson(data);
   }
 
@@ -116,7 +124,7 @@ class JournalRepository {
       '/journal-entries/$entryId',
       data: payload,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return JournalEntry.fromJson(data);
   }
 
@@ -137,7 +145,7 @@ class JournalRepository {
       '/journal-entries/$entryId/photos',
       data: formData,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return JournalEntry.fromJson(data);
   }
 }

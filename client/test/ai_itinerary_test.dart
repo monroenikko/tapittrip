@@ -131,7 +131,7 @@ void main() {
         interests: ['food', 'culture'],
       );
 
-      expect(fakeApi.lastPath, '/v1/trips/trip-123/ai-plan/generate');
+      expect(fakeApi.lastPath, '/trips/trip-123/ai-plan/generate');
       expect(fakeApi.lastData['destination'], 'Tokyo, Japan');
       expect(fakeApi.lastData['duration_days'], 2);
       expect(fakeApi.lastData['budget_tier'], 'moderate');
@@ -163,7 +163,7 @@ void main() {
 
       final result = await repo.applyPlan('trip-123', days);
 
-      expect(fakeApi.lastPath, '/v1/trips/trip-123/ai-plan/apply');
+      expect(fakeApi.lastPath, '/trips/trip-123/ai-plan/apply');
       expect(result, isEmpty);
     });
   });
@@ -284,7 +284,7 @@ void main() {
       await tester.tap(find.text('Preview Plan'));
       await tester.pump();
 
-      expect(fakeApi.lastPath, '/v1/trips/trip-123/ai-plan/generate');
+      expect(fakeApi.lastPath, '/trips/trip-123/ai-plan/generate');
       expect(fakeApi.lastData['destination'], 'Tokyo, Japan');
       expect(fakeApi.lastData['duration_days'], 3);
     });

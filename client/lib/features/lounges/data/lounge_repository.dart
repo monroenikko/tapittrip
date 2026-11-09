@@ -27,6 +27,13 @@ class LoungeRepository {
   final ApiClient apiClient;
   final FlutterSecureStorage storage;
 
+  dynamic _extractData(dynamic response) {
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      return response['data'];
+    }
+    return response;
+  }
+
   Future<LoungeSearchResult> searchLounges(
     String iata, {
     String? terminal,
@@ -48,11 +55,11 @@ class LoungeRepository {
       }
 
       final response = await apiClient.get(
-        '/v1/airports/${iata.toUpperCase()}/lounges',
+        '/airports/${iata.toUpperCase()}/lounges',
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
 
-      final data = response['data'] as Map<String, dynamic>;
+      final data = _extractData(response) as Map<String, dynamic>;
 
       // Cache raw payload for offline access
       await storage.write(key: cacheKey, value: jsonEncode(data));
@@ -106,8 +113,8 @@ class LoungeRepository {
   }
 
   Future<AirportLounge> fetchLoungeDetails(String loungeId) async {
-    final response = await apiClient.get('/v1/lounges/$loungeId');
-    final data = response['data'] as Map<String, dynamic>;
+    final response = await apiClient.get('/lounges/$loungeId');
+    final data = _extractData(response) as Map<String, dynamic>;
     return AirportLounge.fromJson(data);
   }
 }

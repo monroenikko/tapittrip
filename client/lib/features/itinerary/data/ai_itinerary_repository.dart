@@ -8,6 +8,13 @@ class AiItineraryRepository {
 
   final ApiClient apiClient;
 
+  dynamic _extractData(dynamic response) {
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      return response['data'];
+    }
+    return response;
+  }
+
   Future<AiItineraryPlan> generatePlan(
     String tripId, {
     String? destination,
@@ -38,10 +45,10 @@ class AiItineraryRepository {
     }
 
     final response = await apiClient.post(
-      '/v1/trips/$tripId/ai-plan/generate',
+      '/trips/$tripId/ai-plan/generate',
       data: payload,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return AiItineraryPlan.fromJson(data);
   }
 
@@ -52,10 +59,10 @@ class AiItineraryRepository {
     final payload = {'days': days.map((d) => d.toJson()).toList()};
 
     final response = await apiClient.post(
-      '/v1/trips/$tripId/ai-plan/apply',
+      '/trips/$tripId/ai-plan/apply',
       data: payload,
     );
-    final data = response['data'] as List<dynamic>;
+    final data = _extractData(response) as List<dynamic>;
     return data
         .map((e) => ItineraryItem.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
@@ -76,10 +83,10 @@ class AiItineraryRepository {
     }
 
     final response = await apiClient.post(
-      '/v1/trips/$tripId/assistant/query',
+      '/trips/$tripId/assistant/query',
       data: payload,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return TripAssistantResponse.fromJson(data);
   }
 }

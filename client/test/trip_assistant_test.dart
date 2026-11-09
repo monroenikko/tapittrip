@@ -84,7 +84,7 @@ void main() {
         query: 'Where should we eat near our hotel?',
       );
 
-      expect(fakeApi.lastPath, '/v1/trips/trip-456/assistant/query');
+      expect(fakeApi.lastPath, '/trips/trip-456/assistant/query');
       expect(fakeApi.lastData['query'], 'Where should we eat near our hotel?');
       expect(result.category, 'dining');
       expect(result.reply, contains('Shinjuku Granbell Hotel'));
@@ -127,7 +127,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify API was called
-        expect(fakeApi.lastPath, '/v1/trips/trip-456/assistant/query');
+        expect(fakeApi.lastPath, '/trips/trip-456/assistant/query');
 
         // Verify category badge and response reply
         expect(find.text('Dining & Hotel'), findsOneWidget);

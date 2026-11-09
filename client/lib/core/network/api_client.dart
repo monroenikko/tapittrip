@@ -44,11 +44,23 @@ class ApiClient {
 
   Dio get dio => _dio;
 
+  String _normalizePath(String path) {
+    if (path.startsWith('/api/v1/')) {
+      return path.substring(7);
+    }
+    if (path.startsWith('/v1/')) {
+      return path.substring(3);
+    }
+    return path;
+  }
+
   Future<dynamic> get(
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
-    return _send(() => _dio.get(path, queryParameters: queryParameters));
+    return _send(
+      () => _dio.get(_normalizePath(path), queryParameters: queryParameters),
+    );
   }
 
   Future<dynamic> post(
@@ -57,7 +69,11 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
   }) async {
     return _send(
-      () => _dio.post(path, data: data, queryParameters: queryParameters),
+      () => _dio.post(
+        _normalizePath(path),
+        data: data,
+        queryParameters: queryParameters,
+      ),
     );
   }
 
@@ -67,7 +83,11 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
   }) async {
     return _send(
-      () => _dio.put(path, data: data, queryParameters: queryParameters),
+      () => _dio.put(
+        _normalizePath(path),
+        data: data,
+        queryParameters: queryParameters,
+      ),
     );
   }
 
@@ -77,7 +97,11 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
   }) async {
     return _send(
-      () => _dio.patch(path, data: data, queryParameters: queryParameters),
+      () => _dio.patch(
+        _normalizePath(path),
+        data: data,
+        queryParameters: queryParameters,
+      ),
     );
   }
 
@@ -85,7 +109,9 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
-    return _send(() => _dio.delete(path, queryParameters: queryParameters));
+    return _send(
+      () => _dio.delete(_normalizePath(path), queryParameters: queryParameters),
+    );
   }
 
   Future<dynamic> _send(Future<Response<dynamic>> Function() call) async {

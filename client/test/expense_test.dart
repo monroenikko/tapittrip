@@ -315,7 +315,7 @@ void main() {
         final repo = ExpenseRepository(apiClient: fakeApi);
 
         final expenses = await repo.getExpenses('t-1');
-        expect(fakeApi.lastGetPath, '/v1/trips/t-1/expenses');
+        expect(fakeApi.lastGetPath, '/trips/t-1/expenses');
         expect(expenses.length, 1);
         expect(expenses.first.title, 'Ramen in Shibuya');
 
@@ -327,12 +327,12 @@ void main() {
           currency: 'USD',
           expenseDate: '2026-11-10',
         );
-        expect(fakeApi.lastPostPath, '/v1/trips/t-1/expenses');
+        expect(fakeApi.lastPostPath, '/trips/t-1/expenses');
         expect(fakeApi.lastPostData['title'], 'Sushi Lunch');
         expect(created.id, 'exp-2');
 
         await repo.deleteExpense('exp-1');
-        expect(fakeApi.lastDeletePath, '/v1/expenses/exp-1');
+        expect(fakeApi.lastDeletePath, '/expenses/exp-1');
       },
     );
   });
@@ -406,7 +406,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(fakeApi.lastPostPath, '/v1/trips/t-1/expenses');
+      expect(fakeApi.lastPostPath, '/trips/t-1/expenses');
       expect(fakeApi.lastPostData['title'], 'Matcha Latte');
       expect(fakeApi.lastPostData['amount_minor'], 650);
     });
@@ -483,7 +483,7 @@ void main() {
       final repo = ExpenseRepository(apiClient: fakeApi);
 
       final balances = await repo.getGroupBalances('t-1');
-      expect(fakeApi.lastGetPath, '/v1/trips/t-1/settlements');
+      expect(fakeApi.lastGetPath, '/trips/t-1/settlements');
       expect(balances.balances.length, 2);
       expect(balances.suggestedSettlements.first.payerName, 'Bob');
 
@@ -495,7 +495,7 @@ void main() {
         currency: 'USD',
         notes: 'Cash payment',
       );
-      expect(fakeApi.lastPostPath, '/v1/trips/t-1/settlements');
+      expect(fakeApi.lastPostPath, '/trips/t-1/settlements');
       expect(fakeApi.lastPostData['amount_minor'], 3000);
       expect(settlement.notes, 'Cash payment');
     });
@@ -546,7 +546,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 200));
 
-        expect(fakeApi.lastPostPath, '/v1/trips/t-1/settlements');
+        expect(fakeApi.lastPostPath, '/trips/t-1/settlements');
         expect(fakeApi.lastPostData['amount_minor'], 3000);
       },
     );

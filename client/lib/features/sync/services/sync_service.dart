@@ -30,6 +30,13 @@ class SyncService {
   final OutboxStorage outboxStorage;
   final String deviceKey;
 
+  dynamic _extractData(dynamic response) {
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      return response['data'];
+    }
+    return response;
+  }
+
   static String _generateDeviceKey() {
     final rand = Random();
     return 'device_${DateTime.now().millisecondsSinceEpoch}_${rand.nextInt(999999)}';
@@ -73,8 +80,8 @@ class SyncService {
       'operations': toSend.map((op) => op.toJson()).toList(),
     };
 
-    final response = await apiClient.post('/v1/sync/push', data: payload);
-    final data = response['data'] as Map<String, dynamic>;
+    final response = await apiClient.post('/sync/push', data: payload);
+    final data = _extractData(response) as Map<String, dynamic>;
     final rawResults = (data['results'] as List<dynamic>? ?? [])
         .map(
           (e) =>
@@ -117,10 +124,10 @@ class SyncService {
     }
 
     final response = await apiClient.get(
-      '/v1/sync/pull',
+      '/sync/pull',
       queryParameters: queryParams,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     final pullResult = PullResult.fromJson(data);
 
     if (pullResult.cursor > cursor) {

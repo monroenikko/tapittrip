@@ -15,12 +15,19 @@ class ExpenseRepository {
   final ApiClient apiClient;
   final FlutterSecureStorage _storage;
 
+  dynamic _extractData(dynamic response) {
+    if (response is Map<String, dynamic> && response.containsKey('data')) {
+      return response['data'];
+    }
+    return response;
+  }
+
   Future<TripBudget?> getBudget(String tripId) async {
     try {
-      final response = await apiClient.get('/v1/trips/$tripId/budget');
-      final data = response['data'];
-      if (data == null) return null;
-      final budget = TripBudget.fromJson(data as Map<String, dynamic>);
+      final response = await apiClient.get('/trips/$tripId/budget');
+      final data = _extractData(response);
+      if (data == null || data is! Map) return null;
+      final budget = TripBudget.fromJson(Map<String, dynamic>.from(data));
       await _storage.write(
         key: 'cached_budget_$tripId',
         value: jsonEncode(budget.toJson()),
@@ -41,15 +48,19 @@ class ExpenseRepository {
     required int totalBudgetMinor,
     int? dailyBudgetMinor,
   }) async {
+    final payload = <String, dynamic>{
+      'currency': currency,
+      'total_budget_minor': totalBudgetMinor,
+    };
+    if (dailyBudgetMinor != null) {
+      payload['daily_budget_minor'] = dailyBudgetMinor;
+    }
+
     final response = await apiClient.put(
-      '/v1/trips/$tripId/budget',
-      data: {
-        'currency': currency,
-        'total_budget_minor': totalBudgetMinor,
-        'daily_budget_minor': ?dailyBudgetMinor,
-      },
+      '/trips/$tripId/budget',
+      data: payload,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     final budget = TripBudget.fromJson(data);
     await _storage.write(
       key: 'cached_budget_$tripId',
@@ -73,10 +84,11 @@ class ExpenseRepository {
 
     try {
       final response = await apiClient.get(
-        '/v1/trips/$tripId/expenses',
+        '/trips/$tripId/expenses',
         queryParameters: queryParams.isNotEmpty ? queryParams : null,
       );
-      final list = (response['data'] as List<dynamic>? ?? [])
+      final rawData = _extractData(response);
+      final list = (rawData as List<dynamic>? ?? [])
           .map((e) => Expense.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
 
@@ -116,23 +128,25 @@ class ExpenseRepository {
     String splitType = 'single',
     String? receiptUrl,
   }) async {
+    final payload = <String, dynamic>{
+      'category': category,
+      'title': title,
+      'amount_minor': amountMinor,
+      'currency': currency,
+      'expense_date': expenseDate,
+      'split_type': splitType,
+    };
+    if (exchangeRate != null) payload['exchange_rate'] = exchangeRate;
+    if (notes != null) payload['notes'] = notes;
+    if (itineraryItemId != null) payload['itinerary_item_id'] = itineraryItemId;
+    if (stayId != null) payload['stay_id'] = stayId;
+    if (receiptUrl != null) payload['receipt_url'] = receiptUrl;
+
     final response = await apiClient.post(
-      '/v1/trips/$tripId/expenses',
-      data: {
-        'category': category,
-        'title': title,
-        'amount_minor': amountMinor,
-        'currency': currency,
-        'exchange_rate': ?exchangeRate,
-        'expense_date': expenseDate,
-        'notes': ?notes,
-        'itinerary_item_id': ?itineraryItemId,
-        'stay_id': ?stayId,
-        'split_type': splitType,
-        'receipt_url': ?receiptUrl,
-      },
+      '/trips/$tripId/expenses',
+      data: payload,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return Expense.fromJson(data);
   }
 
@@ -160,23 +174,21 @@ class ExpenseRepository {
     if (stayId != null) payload['stay_id'] = stayId;
 
     final response = await apiClient.patch(
-      '/v1/expenses/$expenseId',
+      '/expenses/$expenseId',
       data: payload,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return Expense.fromJson(data);
   }
 
   Future<void> deleteExpense(String expenseId) async {
-    await apiClient.delete('/v1/expenses/$expenseId');
+    await apiClient.delete('/expenses/$expenseId');
   }
 
   Future<ExpenseSummary> getSummary(String tripId) async {
     try {
-      final response = await apiClient.get(
-        '/v1/trips/$tripId/expenses/summary',
-      );
-      final data = response['data'] as Map<String, dynamic>;
+      final response = await apiClient.get('/trips/$tripId/expenses/summary');
+      final data = _extractData(response) as Map<String, dynamic>;
       final summary = ExpenseSummary.fromJson(data);
       await _storage.write(
         key: 'cached_summary_$tripId',
@@ -196,8 +208,8 @@ class ExpenseRepository {
 
   Future<GroupBalances> getGroupBalances(String tripId) async {
     try {
-      final response = await apiClient.get('/v1/trips/$tripId/settlements');
-      final data = response['data'] as Map<String, dynamic>;
+      final response = await apiClient.get('/trips/$tripId/settlements');
+      final data = _extractData(response) as Map<String, dynamic>;
       final balances = GroupBalances.fromJson(data);
       await _storage.write(
         key: 'cached_settlements_$tripId',
@@ -224,27 +236,29 @@ class ExpenseRepository {
     String? settledAt,
     String? notes,
   }) async {
+    final payload = <String, dynamic>{
+      'payer_id': payerId,
+      'payee_id': payeeId,
+      'amount_minor': amountMinor,
+      'currency': currency,
+    };
+    if (settledAt != null) payload['settled_at'] = settledAt;
+    if (notes != null) payload['notes'] = notes;
+
     final response = await apiClient.post(
-      '/v1/trips/$tripId/settlements',
-      data: {
-        'payer_id': payerId,
-        'payee_id': payeeId,
-        'amount_minor': amountMinor,
-        'currency': currency,
-        'settled_at': ?settledAt,
-        'notes': ?notes,
-      },
+      '/trips/$tripId/settlements',
+      data: payload,
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return SettlementRecord.fromJson(data);
   }
 
   Future<Expense> uploadReceipt(String expenseId, String filePath) async {
     final response = await apiClient.post(
-      '/v1/expenses/$expenseId/receipt',
+      '/expenses/$expenseId/receipt',
       data: {'file_path': filePath},
     );
-    final data = response['data'] as Map<String, dynamic>;
+    final data = _extractData(response) as Map<String, dynamic>;
     return Expense.fromJson(data);
   }
 }
