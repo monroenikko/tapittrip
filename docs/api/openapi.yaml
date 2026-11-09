@@ -412,6 +412,44 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /trips/{trip}/weather:
+    get:
+      operationId: getTripWeather
+      summary: Get live weather and forecast for trip destination
+      tags:
+        - Trips
+        - Weather
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Live trip weather and 7-day forecast.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TripWeatherResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Trip not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /trips/{trip}/days:
     get:
       operationId: listTripDays
@@ -3778,6 +3816,115 @@ components:
         local_time:
           type: string
           format: date-time
+        weather:
+          $ref: "#/components/schemas/WeatherCondition"
+          nullable: true
+
+    TripWeatherResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          $ref: "#/components/schemas/TripWeather"
+
+    TripWeather:
+      type: object
+      additionalProperties: false
+      required:
+        - destination
+        - latitude
+        - longitude
+        - timezone
+        - current
+        - forecast
+        - provider_attribution
+      properties:
+        destination:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        timezone:
+          type: string
+        current:
+          $ref: "#/components/schemas/WeatherCondition"
+        forecast:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyForecast"
+        provider_attribution:
+          type: string
+
+    WeatherCondition:
+      type: object
+      additionalProperties: false
+      required:
+        - temperature_c
+        - temperature_f
+        - condition
+        - icon
+        - humidity
+        - wind_kph
+        - precipitation_probability
+        - advisory
+      properties:
+        temperature_c:
+          type: number
+        temperature_f:
+          type: number
+        feels_like_c:
+          type: number
+        feels_like_f:
+          type: number
+        condition:
+          type: string
+        icon:
+          type: string
+        humidity:
+          type: integer
+        wind_kph:
+          type: number
+        precipitation_probability:
+          type: integer
+        advisory:
+          type: string
+
+    DailyForecast:
+      type: object
+      additionalProperties: false
+      required:
+        - date
+        - day_name
+        - temp_max_c
+        - temp_min_c
+        - temp_max_f
+        - temp_min_f
+        - condition
+        - icon
+        - precipitation_probability
+      properties:
+        date:
+          type: string
+          format: date
+        day_name:
+          type: string
+        temp_max_c:
+          type: number
+        temp_min_c:
+          type: number
+        temp_max_f:
+          type: number
+        temp_min_f:
+          type: number
+        condition:
+          type: string
+        icon:
+          type: string
+        precipitation_probability:
+          type: integer
 
     Checklist:
       type: object

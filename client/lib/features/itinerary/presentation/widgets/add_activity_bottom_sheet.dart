@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/network/api_exceptions.dart';
 import '../../domain/models/itinerary_item.dart';
 import '../../domain/models/trip_day.dart';
 import 'place_autocomplete_field.dart';
@@ -90,10 +91,13 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
     try {
       Map<String, dynamic>? inlinePlace;
       if (_placeNameController.text.trim().isNotEmpty) {
+        final address = _placeAddressController.text.trim();
         inlinePlace = {
           'name': _placeNameController.text.trim(),
-          if (_placeAddressController.text.trim().isNotEmpty)
-            'formatted_address': _placeAddressController.text.trim(),
+          if (address.isNotEmpty) ...{
+            'formatted_address': address,
+            'address': address,
+          },
           if (_latitude != null) 'latitude': _latitude,
           if (_longitude != null) 'longitude': _longitude,
           'provider': 'manual',
@@ -116,13 +120,26 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
       }
     } catch (e) {
       if (mounted) {
+        String displayError;
+        if (e is ValidationException) {
+          displayError = e.fieldErrors.isNotEmpty
+              ? e.fieldErrors.join(', ')
+              : e.message;
+        } else if (e is ApiException) {
+          displayError = e.message;
+        } else {
+          displayError = e.toString()
+              .replaceAll(RegExp(r'^ApiException\([^)]+\):\s*'), '')
+              .replaceAll(RegExp(r'^Exception:\s*'), '');
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               widget.initialItem != null
-                  ? 'Error updating activity: $e'
-                  : 'Error adding activity: $e',
+                  ? 'Error updating activity: $displayError'
+                  : 'Error adding activity: $displayError',
             ),
+            backgroundColor: Colors.redAccent,
           ),
         );
       }

@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
+import 'package:tapittrip/features/weather/domain/models/trip_weather.dart';
+import 'package:tapittrip/features/weather/domain/models/weather_condition.dart';
+import 'package:tapittrip/features/weather/presentation/providers/weather_provider.dart';
 
 class TripCard extends StatelessWidget {
   const TripCard({
     super.key,
     required this.trip,
+    this.weather,
     this.onTap,
     this.onEdit,
     this.onDelete,
   });
 
   final Trip trip;
+  final TripWeather? weather;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -168,19 +174,28 @@ class TripCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (trip.destinationCountry != null) ...[
+                    if (weather != null || trip.destinationCountry != null)
                       const Spacer(),
+                    if (weather != null) ...[
+                      _buildWeatherBadge(context, weather!.current),
+                      if (trip.destinationCountry != null)
+                        const SizedBox(width: 8),
+                    ],
+                    if (trip.destinationCountry != null) ...[
                       Icon(
                         Icons.place_outlined,
                         size: 16,
                         color: colorScheme.secondary,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        trip.destinationCountry!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.bold,
+                      Flexible(
+                        child: Text(
+                          trip.destinationCountry!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -191,6 +206,74 @@ class TripCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildWeatherBadge(BuildContext context, WeatherCondition condition) {
+    final theme = Theme.of(context);
+    final color = condition.weatherColor;
+
+    return Tooltip(
+      message: '${condition.tempDualString} • ${condition.condition}',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withValues(alpha: 0.25),
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              condition.weatherIcon,
+              size: 13,
+              color: color,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              condition.tempString,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A wrapper around [TripCard] that observes [tripWeatherProvider] to display
+/// live destination weather automatically.
+class LiveWeatherTripCard extends ConsumerWidget {
+  const LiveWeatherTripCard({
+    super.key,
+    required this.trip,
+    this.onTap,
+    this.onEdit,
+    this.onDelete,
+  });
+
+  final Trip trip;
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final weather = ref.watch(tripWeatherProvider(trip.id)).asData?.value;
+    return TripCard(
+      trip: trip,
+      weather: weather,
+      onTap: onTap,
+      onEdit: onEdit,
+      onDelete: onDelete,
     );
   }
 }

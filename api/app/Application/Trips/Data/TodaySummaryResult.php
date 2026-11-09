@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Trips\Data;
 
+use App\Application\Weather\Data\WeatherConditionData;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Stays\Models\Stay;
 use App\Domain\Trips\Models\Trip;
@@ -28,5 +29,6 @@ final readonly class TodaySummaryResult
         public string $timezone,
         public string $localTime,
         public ?array $budgetPacing = null,
+        public ?WeatherConditionData $weather = null,
     ) {}
 }

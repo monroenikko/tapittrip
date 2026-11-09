@@ -28,6 +28,8 @@ import 'package:tapittrip/features/stays/presentation/widgets/stay_card.dart';
 import 'package:tapittrip/features/sync/presentation/widgets/sync_status_indicator.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
+import 'package:tapittrip/features/weather/presentation/providers/weather_provider.dart';
+import 'package:tapittrip/features/weather/presentation/widgets/trip_weather_view.dart';
 
 class TripItineraryPage extends ConsumerStatefulWidget {
   const TripItineraryPage({super.key, required this.tripId, this.initialTrip});
@@ -326,6 +328,52 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                                 color: colorScheme.onSurfaceVariant,
                               ),
                             ),
+                            // Compact weather pill in trip header
+                            Consumer(
+                              builder: (context, ref, _) {
+                                final weatherAsync = ref.watch(tripWeatherProvider(widget.tripId));
+                                return weatherAsync.when(
+                                  data: (weather) {
+                                    final current = weather.current;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 6),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(16),
+                                        onTap: () => setState(() => _selectedTabIndex = 3),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: current.weatherColor.withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(
+                                              color: current.weatherColor.withValues(alpha: 0.3),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(current.weatherIcon, size: 14, color: current.weatherColor),
+                                              const SizedBox(width: 5),
+                                              Text(
+                                                '${current.tempString} • ${current.condition}',
+                                                style: theme.textTheme.labelSmall?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  color: current.weatherColor,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Icon(Icons.chevron_right_rounded, size: 14, color: current.weatherColor),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  loading: () => const SizedBox.shrink(),
+                                  error: (_, _) => const SizedBox.shrink(),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -411,8 +459,10 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 else if (_selectedTabIndex == 1)
                   _buildTransportTab(theme, colorScheme, items)
                 else if (_selectedTabIndex == 3)
-                  ChecklistsView(tripId: widget.tripId)
+                  TripWeatherView(tripId: widget.tripId)
                 else if (_selectedTabIndex == 4)
+                  ChecklistsView(tripId: widget.tripId)
+                else if (_selectedTabIndex == 5)
                   _buildRecommendationsTab(theme, colorScheme)
                 else
                   _buildItineraryTab(theme, colorScheme, items),
@@ -435,19 +485,39 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
             onPressed: _selectedTabIndex == 2
                 ? () => AddStayBottomSheet.show(context, widget.tripId)
                 : _selectedTabIndex == 3
+                ? _openRainyDayActivityPlanner
+                : _selectedTabIndex == 4
                 ? _openAddChecklistItem
                 : _openAddActivitySheet,
-            icon: const Icon(Icons.add_rounded),
+            icon: Icon(
+              _selectedTabIndex == 3 ? Icons.umbrella_rounded : Icons.add_rounded,
+            ),
             label: Text(
               _selectedTabIndex == 2
                   ? 'Add Accommodation'
                   : _selectedTabIndex == 3
+                  ? 'Rainy Day Alternatives'
+                  : _selectedTabIndex == 4
                   ? 'Add Packing Item'
                   : 'Add Activity',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _openRainyDayActivityPlanner() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => AskTapItTripSheet(
+        tripId: widget.tripId,
+        initialQuery: 'What should we do if it rains?',
       ),
     );
   }

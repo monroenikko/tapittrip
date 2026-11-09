@@ -178,7 +178,41 @@
   - Mobile Flutter Analyzer: 0 issues.
   - Feature Document: Created `docs/features/travel-journal-and-memories.md`.
 
-## 2026-11-08 — Milestone M8b: Automatic Travel Destination Currency & Residing Country Conversion
+## 2026-11-09 — Trip Weather Integration, AI Stop Creation & Trip Form Robustness
+
+### Completed
+
+- **Trip & Dashboard Live Weather**:
+  - Backend Service (`GetTripWeatherService`): Resolves destination coordinates from active stays, itinerary places, or destination city dictionary; fetches current conditions and 7-day daily forecast via Open-Meteo with 30-minute caching, WMO weather code mapping, and offline seasonal fallback.
+  - Endpoints: `GET /api/v1/trips/{trip}/weather` (`TripWeatherController`) and embedded `weather` object in `GET /api/v1/trips/{trip}/today`.
+  - Mobile Client:
+    - Domain models: `WeatherCondition`, `DailyForecast`, `TripWeather`.
+    - `TodayWeatherCard`: Embedded in `TodayDashboardPage` showing temperature, feels-like, humidity, rain probability, and weather advisory tip.
+    - `TodayHeroCard`: Status row compact weather badge with responsive wrap layout.
+    - `TripWeatherView`: Dedicated tab in `TripItineraryPage` displaying destination climate, current metrics, trip day forecast cards, and one-tap rainy-day alternative planner.
+    - `ItineraryFilterTabs`: Added `'Weather'` tab alongside Itinerary, Transport, Stay, Checklists, and Recommendations.
+    - Trip Header: Added compact weather pill next to trip date/style in `TripItineraryPage`.
+    - Trips List Page (`TripListPage`): Added `LiveWeatherTripCard` displaying live temperature pill (e.g. `☀️ 28°C` / `🌤️ 18°C`) beside the destination on each trip card in "Your Trips", with interactive tooltip, color-coded status, and responsive overflow safety.
+- **AI Suggested Activities & Itinerary Validation Fix**:
+  - Problem: When adding AI-suggested activities from Ask TapItTrip, non-whitelisted categories (e.g. `museum`, `coffee`, `park`, `entertainment`) or empty/unformatted place maps triggered `422 validation_failed: The given data was invalid`.
+  - Fix in `StoreItineraryItemRequest` & `UpdateItineraryItemRequest`:
+    - In `prepareForValidation`: Intelligently maps any activity description/category to canonical kinds (`attraction`, `meal`, `transport`, `flight`, `hotel`, `custom`).
+    - Maps `place.address` to `place.formatted_address` and defaults provider to `manual`.
+    - Handles empty place names by cleanly merging null place instead of throwing required-field validation errors.
+  - Fix in `AskTapItTripSheet` & `AddActivityBottomSheet`:
+    - Normalized category handling in `_normalizeActivityKind`.
+    - Sanitized place payload with `name`, `formatted_address`, `address`, and `provider: 'manual'`.
+    - Replaced raw exception string printing with clean user feedback and inline success feedback (`Added "[Name]" to your itinerary!`).
+- **Trip Creation & API Exception Resilience**:
+  - `ApiClient`: Safely decodes `DioException.response.data` maps without strict type assumptions that previously swallowed validation errors or caused generic connection error messages.
+  - `TripCreatePage`: Cleaned exception display to show exact server error messages rather than confusing connection prompts.
+- **Automated Verification**:
+  - Backend PHPUnit: 139/139 tests passed (847 assertions) on PostgreSQL test database.
+  - Backend Pint: 326 files pass code style checks cleanly.
+  - Mobile Flutter Tests: 150/150 tests passed.
+  - Mobile Analyzer: 0 issues found.
+
+## 2026-11-08 — Milestone M9: Travel Journal, Timeline Memories & Trip Export
 
 ### Completed
 

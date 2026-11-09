@@ -234,4 +234,61 @@ final class ItineraryItemTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.kind', 'meal');
     }
+
+    public function test_ai_suggested_activities_with_arbitrary_kinds_and_places_succeed(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+
+        // Museum (arbitrary kind -> attraction), place with address instead of formatted_address
+        $payload = [
+            'title' => 'Explore The Mind Museum',
+            'kind' => 'museum',
+            'place' => [
+                'name' => 'The Mind Museum',
+                'address' => 'JY Campos Park, 3rd Ave, BGC, Taguig',
+            ],
+            'notes' => 'Interactive science exhibitions.',
+        ];
+
+        $response = $this->postJson("/api/v1/trips/{$trip->id}/itinerary-items", $payload);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.title', 'Explore The Mind Museum')
+            ->assertJsonPath('data.kind', 'attraction')
+            ->assertJsonPath('data.place.name', 'The Mind Museum')
+            ->assertJsonPath('data.place.formatted_address', 'JY Campos Park, 3rd Ave, BGC, Taguig');
+
+        // Coffee / Bakery (mapped to meal)
+        $cafeResponse = $this->postJson("/api/v1/trips/{$trip->id}/itinerary-items", [
+            'title' => 'Morning Coffee at % Arabica',
+            'kind' => 'coffee & pastries',
+            'place' => [
+                'name' => '% Arabica Manila BGC',
+            ],
+        ]);
+
+        $cafeResponse
+            ->assertCreated()
+            ->assertJsonPath('data.kind', 'meal');
+
+        // Empty place name safely converts to null place rather than 422 failure
+        $emptyPlaceResponse = $this->postJson("/api/v1/trips/{$trip->id}/itinerary-items", [
+            'title' => 'Quiet Stroll & Toddler Recharge',
+            'kind' => 'relaxation',
+            'place' => [
+                'name' => '',
+            ],
+        ]);
+
+        $emptyPlaceResponse
+            ->assertCreated()
+            ->assertJsonPath('data.title', 'Quiet Stroll & Toddler Recharge')
+            ->assertJsonPath('data.kind', 'attraction')
+            ->assertJsonPath('data.place', null);
+    }
 }

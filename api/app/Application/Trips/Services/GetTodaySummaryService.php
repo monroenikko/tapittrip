@@ -6,6 +6,7 @@ namespace App\Application\Trips\Services;
 
 use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Application\Trips\Data\TodaySummaryResult;
+use App\Application\Weather\Services\GetTripWeatherService;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Stays\Models\Stay;
 use App\Domain\Trips\Models\Trip;
@@ -14,6 +15,10 @@ use Illuminate\Support\Collection;
 
 final class GetTodaySummaryService
 {
+    public function __construct(
+        private readonly GetTripWeatherService $weatherService,
+    ) {}
+
     /**
      * Compute today's dashboard summary for the given trip.
      */
@@ -157,6 +162,8 @@ final class GetTodaySummaryService
             ];
         }
 
+        $weather = $this->weatherService?->getCurrentWeather($trip);
+
         return new TodaySummaryResult(
             trip: $trip,
             tripStatus: $tripStatus,
@@ -169,6 +176,7 @@ final class GetTodaySummaryService
             timezone: $timezone,
             localTime: $now->toIso8601String(),
             budgetPacing: $budgetPacing,
+            weather: $weather,
         );
     }
 }

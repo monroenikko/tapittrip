@@ -313,7 +313,7 @@ class _TripListPageState extends ConsumerState<TripListPage> {
 
                 return Column(
                   children: trips.map((trip) {
-                    return TripCard(
+                    return LiveWeatherTripCard(
                       trip: trip,
                       onTap: () => context.push(
                         '/trips/${trip.id}/itinerary',

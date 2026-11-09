@@ -160,7 +160,18 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
       }
 
       final payload = action.payload;
-      final stopTitle = (payload['title'] as String?) ?? 'Suggested Stop';
+      final rawTitle = (payload['title'] as String?)?.trim();
+      final rawPlaceName = (payload['place_name'] as String?)?.trim();
+      final stopTitle = (rawTitle != null && rawTitle.isNotEmpty)
+          ? rawTitle
+          : (rawPlaceName != null && rawPlaceName.isNotEmpty
+              ? rawPlaceName
+              : (action.label.isNotEmpty ? action.label : 'Suggested Activity'));
+
+      final rawAddress =
+          (payload['place_address'] ?? payload['address'] ?? payload['formatted_address'])
+              as String?;
+      final address = rawAddress?.trim();
 
       setState(() {
         _pendingActionKeys.add(actionKey);
@@ -172,18 +183,26 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
         final rawKind = payload['kind'] as String?;
         final normalizedKind = _normalizeActivityKind(rawKind);
 
+        final Map<String, dynamic>? inlinePlace =
+            (rawPlaceName != null && rawPlaceName.isNotEmpty)
+                ? {
+                    'name': rawPlaceName,
+                    if (address != null && address.isNotEmpty) ...{
+                      'formatted_address': address,
+                      'address': address,
+                    },
+                    'provider': 'manual',
+                    'attribution': 'TapItTrip Assistant',
+                  }
+                : null;
+
         await ref
             .read(itineraryListProvider(widget.tripId).notifier)
             .addItem(
               title: stopTitle,
               kind: normalizedKind,
               notes: payload['notes'] as String?,
-              inlinePlace: payload['place_name'] != null
-                  ? {
-                      'name': payload['place_name'],
-                      'address': payload['place_address'],
-                    }
-                  : null,
+              inlinePlace: inlinePlace,
             );
 
         if (mounted) {
@@ -215,11 +234,17 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
         }
       } catch (e) {
         if (mounted) {
-          String displayError = e.toString();
+          String displayError;
           if (e is ValidationException) {
-            displayError = e.fieldErrors.join(', ');
+            displayError = e.fieldErrors.isNotEmpty
+                ? e.fieldErrors.join(', ')
+                : e.message;
           } else if (e is ApiException) {
             displayError = e.message;
+          } else {
+            displayError = e.toString()
+                .replaceAll(RegExp(r'^ApiException\([^)]+\):\s*'), '')
+                .replaceAll(RegExp(r'^Exception:\s*'), '');
           }
           setState(() {
             _pendingActionKeys.remove(actionKey);
@@ -237,30 +262,50 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
   }
 
   String _normalizeActivityKind(String? raw) {
-    switch (raw?.toLowerCase().trim()) {
-      case 'sightseeing':
-      case 'activity':
-      case 'nature':
-      case 'culture':
-      case 'shopping':
-        return 'attraction';
-      case 'dining':
-      case 'food':
-      case 'restaurant':
-      case 'cafe':
-      case 'bar':
-        return 'meal';
-      case 'transit':
-      case 'train':
-      case 'bus':
-      case 'rideshare':
-        return 'transport';
-      case 'stay':
-      case 'accommodation':
-        return 'hotel';
-      default:
-        return (raw != null && raw.isNotEmpty) ? raw : 'attraction';
+    if (raw == null || raw.trim().isEmpty) return 'attraction';
+    final lower = raw.toLowerCase().trim();
+    if (lower.contains('food') ||
+        lower.contains('dine') ||
+        lower.contains('dining') ||
+        lower.contains('restaurant') ||
+        lower.contains('cafe') ||
+        lower.contains('bar') ||
+        lower.contains('meal') ||
+        lower.contains('eat') ||
+        lower.contains('lunch') ||
+        lower.contains('dinner') ||
+        lower.contains('breakfast') ||
+        lower.contains('bakery') ||
+        lower.contains('coffee') ||
+        lower.contains('snack') ||
+        lower.contains('drink')) {
+      return 'meal';
     }
+    if (lower.contains('flight') || lower.contains('airline')) {
+      return 'flight';
+    }
+    if (lower.contains('transit') ||
+        lower.contains('train') ||
+        lower.contains('bus') ||
+        lower.contains('taxi') ||
+        lower.contains('rideshare') ||
+        lower.contains('subway') ||
+        lower.contains('metro') ||
+        lower.contains('ferry') ||
+        lower.contains('transfer') ||
+        lower.contains('transport')) {
+      return 'transport';
+    }
+    if (lower.contains('stay') ||
+        lower.contains('hotel') ||
+        lower.contains('resort') ||
+        lower.contains('accommodation') ||
+        lower.contains('hostel') ||
+        lower.contains('lodging')) {
+      return 'hotel';
+    }
+    if (lower == 'custom') return 'custom';
+    return 'attraction';
   }
 
   @override

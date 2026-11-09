@@ -9,6 +9,7 @@ class ItineraryFilterTabs extends StatelessWidget {
       'Itinerary',
       'Transport',
       'Stay',
+      'Weather',
       'Checklists',
       'Recommendations',
     ],

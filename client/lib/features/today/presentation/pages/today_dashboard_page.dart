@@ -13,6 +13,7 @@ import '../widgets/next_stop_card.dart';
 import '../widgets/quick_actions_grid.dart';
 import '../widgets/today_budget_card.dart';
 import '../widgets/today_hero_card.dart';
+import '../widgets/today_weather_card.dart';
 import '../widgets/trip_progress_card.dart';
 
 import 'package:tapittrip/features/itinerary/presentation/widgets/ask_tapittrip_sheet.dart';
@@ -375,6 +376,10 @@ class _TodayDashboardPageState extends ConsumerState<TodayDashboardPage> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                   children: [
                     TodayHeroCard(summary: summary),
+                    if (summary.weather != null) ...[
+                      const SizedBox(height: 16),
+                      TodayWeatherCard(summary: summary),
+                    ],
                     const SizedBox(height: 16),
                     QuickActionsGrid(
                       summary: summary,

@@ -34,6 +34,7 @@ final class TodaySummaryResource extends JsonResource
                 : null,
             'metrics' => $this->resource->metrics,
             'budget_pacing' => $this->resource->budgetPacing,
+            'weather' => $this->resource->weather?->toArray(),
             'timezone' => $this->resource->timezone,
             'local_time' => $this->resource->localTime,
         ];

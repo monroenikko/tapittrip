@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\TripDayController;
 use App\Http\Controllers\Api\V1\TripExpenseController;
 use App\Http\Controllers\Api\V1\TripJournalController;
 use App\Http\Controllers\Api\V1\TripTodayController;
+use App\Http\Controllers\Api\V1\TripWeatherController;
 use App\Http\Controllers\Api\V1\VisitEventController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +43,7 @@ Route::prefix('v1')->group(function (): void {
 
         Route::apiResource('trips', TripController::class);
         Route::get('/trips/{trip}/today', [TripTodayController::class, 'show'])->name('trips.today.show');
+        Route::get('/trips/{trip}/weather', [TripWeatherController::class, 'show'])->name('trips.weather.show');
 
         Route::get('/trips/{trip}/days', [TripDayController::class, 'index'])->name('trips.days.index');
         Route::post('/trips/{trip}/days', [TripDayController::class, 'store'])->name('trips.days.store');

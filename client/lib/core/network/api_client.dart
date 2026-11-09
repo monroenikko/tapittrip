@@ -138,30 +138,35 @@ class ApiClient {
       return const NetworkException();
     }
 
-    final data = e.response?.data;
-    if (data is Map<String, dynamic> && data.containsKey('error')) {
-      final errorMap = data['error'] as Map<String, dynamic>;
-      final code = errorMap['code'] as String? ?? 'error';
-      final message =
-          errorMap['message'] as String? ?? 'An unexpected error occurred.';
-      final details = errorMap['details'] as Map<String, dynamic>? ?? {};
+    final rawData = e.response?.data;
+    if (rawData is Map) {
+      final errorMap = rawData['error'];
+      if (errorMap is Map) {
+        final code = errorMap['code'] as String? ?? 'error';
+        final message =
+            errorMap['message'] as String? ?? 'An unexpected error occurred.';
+        final rawDetails = errorMap['details'];
+        final Map<String, dynamic> details = rawDetails is Map
+            ? Map<String, dynamic>.from(rawDetails)
+            : const {};
 
-      if (code == 'validation_failed') {
-        return ValidationException(
+        if (code == 'validation_failed') {
+          return ValidationException(
+            message: message,
+            details: details,
+            statusCode: e.response?.statusCode ?? 422,
+          );
+        }
+        if (e.response?.statusCode == 401 || code == 'unauthenticated') {
+          return UnauthenticatedException(message);
+        }
+        return ApiException(
+          code: code,
           message: message,
+          statusCode: e.response?.statusCode,
           details: details,
-          statusCode: e.response?.statusCode ?? 422,
         );
       }
-      if (e.response?.statusCode == 401 || code == 'unauthenticated') {
-        return UnauthenticatedException(message);
-      }
-      return ApiException(
-        code: code,
-        message: message,
-        statusCode: e.response?.statusCode,
-        details: details,
-      );
     }
 
     return ApiException(

@@ -197,10 +197,12 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: Scaffold(
-            body: TripCard(trip: trip, onEdit: () => editTapped = true),
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: TripCard(trip: trip, onEdit: () => editTapped = true),
+            ),
           ),
         ),
       );

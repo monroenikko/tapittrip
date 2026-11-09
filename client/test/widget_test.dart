@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tapittrip/core/config/app_config.dart';
 import 'package:tapittrip/core/theme/app_colors.dart';
@@ -8,6 +9,8 @@ import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/planning_mode_selector.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/trip_card.dart';
+import 'package:tapittrip/features/weather/domain/models/trip_weather.dart';
+import 'package:tapittrip/features/weather/domain/models/weather_condition.dart';
 
 void main() {
   group('AppConfig and Environment', () {
@@ -100,13 +103,15 @@ void main() {
       bool deleted = false;
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: Scaffold(
-            body: TripCard(
-              trip: trip,
-              onTap: () => tapped = true,
-              onDelete: () => deleted = true,
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: TripCard(
+                trip: trip,
+                onTap: () => tapped = true,
+                onDelete: () => deleted = true,
+              ),
             ),
           ),
         ),
@@ -123,6 +128,53 @@ void main() {
 
       await tester.tap(find.byTooltip('Delete trip'));
       expect(deleted, isTrue);
+    });
+
+    testWidgets('renders current weather pill when weather is provided', (
+      tester,
+    ) async {
+      const trip = Trip(
+        id: 'trip-jp',
+        ownerId: 'user-1',
+        title: 'Japan',
+        destinationCountry: 'JP',
+        planningMode: PlanningMode.diy,
+      );
+
+      const weather = TripWeather(
+        destination: 'Tokyo, Japan',
+        latitude: 35.6762,
+        longitude: 139.6503,
+        timezone: 'Asia/Tokyo',
+        current: WeatherCondition(
+          temperatureC: 18.0,
+          temperatureF: 64.4,
+          condition: 'Clear Sky',
+          icon: 'sunny',
+          humidity: 45,
+          windKph: 8.5,
+          precipitationProbability: 0,
+          advisory: 'Sunny and pleasant',
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const Scaffold(
+              body: TripCard(
+                trip: trip,
+                weather: weather,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('18°C'), findsOneWidget);
+      expect(find.byIcon(Icons.wb_sunny_rounded), findsOneWidget);
+      expect(find.text('JP'), findsOneWidget);
     });
   });
 

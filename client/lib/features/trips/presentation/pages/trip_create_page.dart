@@ -109,7 +109,12 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
         } else if (e is ApiException) {
           _errorMessage = e.message;
         } else {
-          _errorMessage = 'Failed to create trip: ${e.toString()}';
+          final clean = e.toString()
+              .replaceAll(RegExp(r'^ApiException\([^)]+\):\s*'), '')
+              .replaceAll(RegExp(r'^Exception:\s*'), '');
+          _errorMessage = clean.isNotEmpty
+              ? clean
+              : 'Unable to create trip. Please try again.';
         }
       });
     }

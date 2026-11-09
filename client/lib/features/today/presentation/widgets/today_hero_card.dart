@@ -39,31 +39,69 @@ class TodayHeroCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Status Badge (Day X of Y / Pre-trip countdown)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: summary.isActive
-                            ? colorScheme.primary
-                            : (summary.isPreTrip
-                                  ? colorScheme.secondaryContainer
-                                  : colorScheme.surfaceContainerHighest),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        summary.statusBadgeText,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: summary.isActive
-                              ? Colors.white
-                              : (summary.isPreTrip
-                                    ? colorScheme.onSecondaryContainer
-                                    : colorScheme.onSurfaceVariant),
-                          fontWeight: FontWeight.bold,
+                    // Status Badge & Weather Badge
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: summary.isActive
+                                ? colorScheme.primary
+                                : (summary.isPreTrip
+                                      ? colorScheme.secondaryContainer
+                                      : colorScheme.surfaceContainerHighest),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            summary.statusBadgeText,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: summary.isActive
+                                  ? Colors.white
+                                  : (summary.isPreTrip
+                                        ? colorScheme.onSecondaryContainer
+                                        : colorScheme.onSurfaceVariant),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (summary.weather != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: summary.weather!.weatherColor.withValues(
+                                alpha: 0.15,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  summary.weather!.weatherIcon,
+                                  size: 13,
+                                  color: summary.weather!.weatherColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  summary.weather!.tempString,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: summary.weather!.weatherColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(

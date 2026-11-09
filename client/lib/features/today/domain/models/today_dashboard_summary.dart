@@ -1,6 +1,7 @@
 import '../../../itinerary/domain/models/itinerary_item.dart';
 import '../../../stays/domain/models/stay.dart';
 import '../../../trips/domain/models/trip.dart';
+import '../../../weather/domain/models/weather_condition.dart';
 
 class ActiveDayInfo {
   const ActiveDayInfo({
@@ -125,6 +126,7 @@ class TodayDashboardSummary {
     required this.timezone,
     this.localTime,
     this.budgetPacing,
+    this.weather,
   });
 
   final Trip trip;
@@ -138,6 +140,7 @@ class TodayDashboardSummary {
   final String timezone;
   final DateTime? localTime;
   final BudgetPacing? budgetPacing;
+  final WeatherCondition? weather;
 
   bool get isPreTrip => tripStatus == 'pre_trip';
   bool get isActive => tripStatus == 'active';
@@ -187,6 +190,11 @@ class TodayDashboardSummary {
       budgetPacing: json['budget_pacing'] != null
           ? BudgetPacing.fromJson(json['budget_pacing'] as Map<String, dynamic>)
           : null,
+      weather: json['weather'] != null
+          ? WeatherCondition.fromJson(
+              Map<String, dynamic>.from(json['weather'] as Map),
+            )
+          : null,
     );
   }
 
@@ -203,6 +211,7 @@ class TodayDashboardSummary {
       'timezone': timezone,
       'local_time': localTime?.toIso8601String(),
       'budget_pacing': budgetPacing?.toJson(),
+      if (weather != null) 'weather': weather!.toJson(),
     };
   }
 }
