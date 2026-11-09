@@ -100,11 +100,4 @@ class CurrencyFormatter {
     final secondary = formatAmount(toUnits, toCurrency, isMinor: false);
     return '$primary (≈ $secondary)';
   }
-
-  static String _commaSeparate(String s) {
-    return s.replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    );
-  }
 }
