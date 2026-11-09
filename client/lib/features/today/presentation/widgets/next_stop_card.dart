@@ -310,7 +310,10 @@ class NextStopCard extends ConsumerWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 icon: const Icon(Icons.directions_rounded, size: 18),
                 label: const Text('Directions'),
