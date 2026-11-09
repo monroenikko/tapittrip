@@ -10,6 +10,27 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — Destination Country Flag in Trip Card and Itinerary Header
+
+### Completed
+
+- **Country Flag Resolution (`CountryCurrencyHelper.resolveFlag`)**:
+  - Implemented `resolveFlag` in `client/lib/core/constants/countries.dart` supporting:
+    - 2-letter ISO country codes (`PH`, `JP`, `HK`, `US`, `FR`, `SG`, etc.) with fallback conversion to Unicode regional indicator symbols for any arbitrary valid 2-letter country code.
+    - Full country names and keyword matches across all supported international destinations.
+    - City / region landmarks (e.g. `BGC`, `Taguig`, `Manila` $\rightarrow$ 🇵🇭, `Tokyo`, `Osaka`, `Kyoto`, `Hakone` $\rightarrow$ 🇯🇵, `Hong Kong` $\rightarrow$ 🇭🇰, `Paris` $\rightarrow$ 🇫🇷, `Seoul` $\rightarrow$ 🇰🇷, `Bali` $\rightarrow$ 🇮🇩, etc.).
+- **Trip Card Flag Display (`TripCard`)**:
+  - Displayed the resolved country flag emoji directly adjacent to `trip.title` with clean typography and spacing.
+  - Added flag badge next to `trip.destinationCountry` in the bottom tag row of the trip card.
+  - Avoids duplicate emojis if the user-inputted title already begins with the flag emoji.
+- **Itinerary Header Flag Display (`TripItineraryPage`)**:
+  - Displayed the destination country flag emoji before the trip title in the main itinerary header.
+- **Verification**:
+  - Added unit tests in `currency_test.dart` verifying flag resolution across country codes, country names, and cities.
+  - Updated widget test in `trip_test.dart` verifying flag rendering inside `TripCard`.
+  - Ran `flutter test`: 166/166 passed.
+  - Ran `flutter analyze`: 0 issues found.
+
 ## 2026-11-09 — Automatic AI Starter Itinerary Generation on Trip Creation Fix
 
 ### Completed
