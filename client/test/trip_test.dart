@@ -274,6 +274,7 @@ void main() {
       );
 
       expect(find.text('Osaka & Kyoto'), findsOneWidget);
+      expect(find.text('🇯🇵'), findsAtLeastNWidgets(1));
       expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.edit_outlined));

@@ -313,12 +313,36 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              trip.title,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
+                            Builder(
+                              builder: (context) {
+                                final flag = CountryCurrencyHelper.resolveFlag(
+                                      trip.destinationCountry,
+                                    ) ??
+                                    CountryCurrencyHelper.resolveFlag(trip.title);
+
+                                return Row(
+                                  children: [
+                                    if (flag != null &&
+                                        !trip.title.startsWith(flag)) ...[
+                                      Text(
+                                        flag,
+                                        style: const TextStyle(fontSize: 22),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    Expanded(
+                                      child: Text(
+                                        trip.title,
+                                        style: theme.textTheme.headlineSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: colorScheme.onSurface,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                             const SizedBox(height: 4),
                             Text(

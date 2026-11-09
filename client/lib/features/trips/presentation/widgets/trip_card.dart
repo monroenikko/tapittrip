@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:tapittrip/core/constants/countries.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 import 'package:tapittrip/features/weather/domain/models/trip_weather.dart';
 import 'package:tapittrip/features/weather/domain/models/weather_condition.dart';
@@ -35,6 +36,8 @@ class TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final flag = CountryCurrencyHelper.resolveFlag(trip.destinationCountry) ??
+        CountryCurrencyHelper.resolveFlag(trip.title);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -85,12 +88,28 @@ class TripCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            trip.title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
-                            ),
+                          Row(
+                            children: [
+                              if (flag != null &&
+                                  !trip.title.startsWith(flag)) ...[
+                                Text(
+                                  flag,
+                                  style: const TextStyle(fontSize: 18),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  trip.title,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Row(
@@ -182,12 +201,20 @@ class TripCard extends StatelessWidget {
                         const SizedBox(width: 8),
                     ],
                     if (trip.destinationCountry != null) ...[
-                      Icon(
-                        Icons.place_outlined,
-                        size: 16,
-                        color: colorScheme.secondary,
-                      ),
-                      const SizedBox(width: 4),
+                      if (flag != null) ...[
+                        Text(
+                          flag,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        const SizedBox(width: 4),
+                      ] else ...[
+                        Icon(
+                          Icons.place_outlined,
+                          size: 16,
+                          color: colorScheme.secondary,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       Flexible(
                         child: Text(
                           trip.destinationCountry!,

@@ -85,6 +85,37 @@ void main() {
       expect(jp?.currency, 'JPY');
       expect(jp?.flag, '🇯🇵');
     });
+
+    test('resolves country flags accurately from country codes, names, and destinations', () {
+      expect(CountryCurrencyHelper.resolveFlag('PH'), '🇵🇭');
+      expect(CountryCurrencyHelper.resolveFlag('Philippines'), '🇵🇭');
+      expect(CountryCurrencyHelper.resolveFlag('BGC Taguig'), '🇵🇭');
+      expect(CountryCurrencyHelper.resolveFlag('Manila'), '🇵🇭');
+
+      expect(CountryCurrencyHelper.resolveFlag('JP'), '🇯🇵');
+      expect(CountryCurrencyHelper.resolveFlag('Japan'), '🇯🇵');
+      expect(CountryCurrencyHelper.resolveFlag('Tokyo, Japan'), '🇯🇵');
+      expect(CountryCurrencyHelper.resolveFlag('Hakone'), '🇯🇵');
+
+      expect(CountryCurrencyHelper.resolveFlag('HK'), '🇭🇰');
+      expect(CountryCurrencyHelper.resolveFlag('Hong Kong Trip'), '🇭🇰');
+
+      expect(CountryCurrencyHelper.resolveFlag('FR'), '🇫🇷');
+      expect(CountryCurrencyHelper.resolveFlag('Paris'), '🇫🇷');
+
+      expect(CountryCurrencyHelper.resolveFlag('US'), '🇺🇸');
+      expect(CountryCurrencyHelper.resolveFlag('New York'), '🇺🇸');
+
+      expect(CountryCurrencyHelper.resolveFlag('SG'), '🇸🇬');
+      expect(CountryCurrencyHelper.resolveFlag('Singapore'), '🇸🇬');
+
+      expect(CountryCurrencyHelper.resolveFlag('AU'), '🇦🇺');
+      expect(CountryCurrencyHelper.resolveFlag('Sydney'), '🇦🇺');
+
+      expect(CountryCurrencyHelper.resolveFlag('NZ'), '🇳🇿'); // Arbitrary ISO code converts to emoji
+      expect(CountryCurrencyHelper.resolveFlag(null), isNull);
+      expect(CountryCurrencyHelper.resolveFlag(''), isNull);
+    });
   });
 
   group('Models & Deserialization', () {
