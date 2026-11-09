@@ -160,6 +160,8 @@ class _SetBudgetDialogState extends ConsumerState<SetBudgetDialog> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final isEditing = widget.initialTotalBudgetMinor != null;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
@@ -186,7 +188,7 @@ class _SetBudgetDialogState extends ConsumerState<SetBudgetDialog> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Trip Budget',
+                    isEditing ? 'Edit Trip Budget' : 'Set Trip Budget',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -200,6 +202,7 @@ class _SetBudgetDialogState extends ConsumerState<SetBudgetDialog> {
                 initialValue: _currency,
                 decoration: InputDecoration(
                   labelText: 'Base Currency',
+                  helperText: 'Currency follows your residency by default',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -279,7 +282,11 @@ class _SetBudgetDialogState extends ConsumerState<SetBudgetDialog> {
                     flex: 2,
                     child: FilledButton(
                       onPressed: _isLoading ? null : _submit,
-                      child: Text(_isLoading ? 'Saving...' : 'Set Budget'),
+                      child: Text(
+                        _isLoading
+                            ? 'Saving...'
+                            : (isEditing ? 'Save Changes' : 'Set Budget'),
+                      ),
                     ),
                   ),
                 ],

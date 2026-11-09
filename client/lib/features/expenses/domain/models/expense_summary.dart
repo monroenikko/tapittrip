@@ -1,3 +1,5 @@
+import '../../../../core/utils/currency_formatter.dart';
+
 class CategorySpending {
   const CategorySpending({
     required this.category,
@@ -75,6 +77,11 @@ class ExpenseSummary {
       totalBudgetMinor != null ? totalBudgetMinor! / 100.0 : null;
   double? get remainingBudget =>
       remainingBudgetMinor != null ? remainingBudgetMinor! / 100.0 : null;
+
+  String formatBaseAmount(int? amountMinor) {
+    if (amountMinor == null) return '';
+    return CurrencyFormatter.formatAmount(amountMinor, baseCurrency, isMinor: true);
+  }
 
   factory ExpenseSummary.fromJson(Map<String, dynamic> json) {
     return ExpenseSummary(

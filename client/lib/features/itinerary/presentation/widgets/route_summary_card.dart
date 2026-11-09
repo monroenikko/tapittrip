@@ -5,12 +5,14 @@ class RouteSummaryCard extends StatelessWidget {
     super.key,
     this.distance = '142 km',
     this.estimatedCost = '\$1,240',
+    this.estimatedCostSubtitle,
     this.co2Saved = '18 kg',
     this.onOptimizeTap,
   });
 
   final String distance;
   final String estimatedCost;
+  final String? estimatedCostSubtitle;
   final String co2Saved;
   final VoidCallback? onOptimizeTap;
 
@@ -98,6 +100,7 @@ class RouteSummaryCard extends StatelessWidget {
                 icon: Icons.account_balance_wallet_outlined,
                 label: 'Est. Cost',
                 value: estimatedCost,
+                subtitle: estimatedCostSubtitle,
               ),
               _StatItem(
                 icon: Icons.eco_outlined,
@@ -117,11 +120,13 @@ class _StatItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.subtitle,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +155,15 @@ class _StatItem extends StatelessWidget {
                 color: colorScheme.onSurface,
               ),
             ),
+            if (subtitle != null && subtitle!.isNotEmpty)
+              Text(
+                subtitle!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.primary,
+                ),
+              ),
           ],
         ),
       ],

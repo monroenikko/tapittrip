@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/currency_formatter.dart';
+
 class Expense {
   const Expense({
     required this.id,
@@ -46,33 +48,12 @@ class Expense {
   double get amount => amountMinor / 100.0;
   double get baseAmount => baseAmountMinor / 100.0;
 
-  String formatAmount({bool useBaseCurrency = false}) {
-    final val = useBaseCurrency ? baseAmount : amount;
-    final symbol = _currencySymbol(useBaseCurrency ? 'USD' : currency);
-    final isZeroDecimal = currency.toUpperCase() == 'JPY' && !useBaseCurrency;
-    if (isZeroDecimal) {
-      return '$symbol${amountMinor.toString()}';
-    }
-    return '$symbol${val.toStringAsFixed(2)}';
-  }
-
-  static String _currencySymbol(String cur) {
-    switch (cur.toUpperCase()) {
-      case 'USD':
-        return '\$';
-      case 'EUR':
-        return '€';
-      case 'GBP':
-        return '£';
-      case 'JPY':
-        return '¥';
-      case 'PHP':
-        return '₱';
-      case 'SGD':
-        return 'S\$';
-      default:
-        return '$cur ';
-    }
+  String formatAmount({String? baseCurrency, bool useBaseCurrency = false}) {
+    final cur = (useBaseCurrency && baseCurrency != null && baseCurrency.isNotEmpty)
+        ? baseCurrency
+        : (useBaseCurrency ? 'USD' : currency);
+    final minor = useBaseCurrency ? baseAmountMinor : amountMinor;
+    return CurrencyFormatter.formatAmount(minor, cur, isMinor: true);
   }
 
   static IconData getCategoryIcon(String category) {

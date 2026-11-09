@@ -198,19 +198,11 @@ class TripExpensesPage extends ConsumerWidget {
                                     color: colorScheme.primary,
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    'Market rate: 1 $destinationCurrency ≈ ${rate.rate.toStringAsFixed(4)} $homeCurrency',
-                                    style: theme.textTheme.labelMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    rate.isOffline ? 'Cached' : 'Live',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: rate.isOffline
-                                          ? colorScheme.outline
-                                          : Colors.green,
-                                      fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Text(
+                                      'Market rate: 1 $destinationCurrency ≈ ${rate.rate.toStringAsFixed(4)} $homeCurrency',
+                                      style: theme.textTheme.labelMedium
+                                          ?.copyWith(fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
@@ -283,11 +275,29 @@ class TripExpensesPage extends ConsumerWidget {
                                           ),
                                     ),
                                   ),
+                                  if (hasBudget) ...[
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined, size: 16),
+                                      tooltip: 'Edit Budget',
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () {
+                                        final currentBudget = budgetAsync.asData?.value;
+                                        SetBudgetDialog.show(
+                                          context,
+                                          tripId: tripId,
+                                          initialCurrency: currentBudget?.currency ?? summary.baseCurrency,
+                                          initialTotalBudgetMinor: currentBudget?.totalBudgetMinor,
+                                          initialDailyBudgetMinor: currentBudget?.dailyBudgetMinor,
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ],
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                '\$${(summary.totalSpentBaseMinor / 100.0).toStringAsFixed(2)}',
+                                summary.formatBaseAmount(summary.totalSpentBaseMinor),
                                 style: theme.textTheme.headlineMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: colorScheme.onSurface,
@@ -316,7 +326,7 @@ class TripExpensesPage extends ConsumerWidget {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Budget: \$${(summary.totalBudgetMinor! / 100.0).toStringAsFixed(2)}',
+                                      'Budget: ${summary.formatBaseAmount(summary.totalBudgetMinor)}',
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: colorScheme.onSurfaceVariant,
@@ -324,8 +334,8 @@ class TripExpensesPage extends ConsumerWidget {
                                     ),
                                     Text(
                                       isOver
-                                          ? 'Over budget by \$${((-summary.remainingBudgetMinor!) / 100.0).toStringAsFixed(2)}'
-                                          : 'Remaining: \$${(summary.remainingBudgetMinor! / 100.0).toStringAsFixed(2)}',
+                                          ? 'Over budget by ${summary.formatBaseAmount(-summary.remainingBudgetMinor!)}'
+                                          : 'Remaining: ${summary.formatBaseAmount(summary.remainingBudgetMinor)}',
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: isOver
@@ -342,7 +352,7 @@ class TripExpensesPage extends ConsumerWidget {
                                     SetBudgetDialog.show(
                                       context,
                                       tripId: tripId,
-                                      initialCurrency: summary.baseCurrency,
+                                      initialCurrency: authUser?.homeCurrency ?? summary.baseCurrency,
                                     );
                                   },
                                   icon: const Icon(Icons.add, size: 16),
@@ -500,7 +510,7 @@ class TripExpensesPage extends ConsumerWidget {
                                       ),
                                       if (isForeign) ...[
                                         Text(
-                                          '≈ ${expense.formatAmount(useBaseCurrency: true)}',
+                                          '≈ ${expense.formatAmount(useBaseCurrency: true, baseCurrency: summaryAsync.asData?.value.baseCurrency ?? (authUser?.homeCurrency ?? destinationCurrency))}',
                                           style: theme.textTheme.labelSmall
                                               ?.copyWith(
                                                 color: colorScheme

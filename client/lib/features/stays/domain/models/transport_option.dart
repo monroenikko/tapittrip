@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/currency_formatter.dart';
 import 'stay.dart';
 
 class TransportOption {
@@ -53,15 +54,12 @@ class TransportOption {
   final String explanation;
 
   String get formattedCost {
-    final amount = estimatedCostMinor / 100.0;
-    if (currency.toUpperCase() == 'USD') {
-      return '\$${amount.toStringAsFixed(amount.truncateToDouble() == amount ? 0 : 2)}';
-    } else if (currency.toUpperCase() == 'EUR') {
-      return '€${amount.toStringAsFixed(amount.truncateToDouble() == amount ? 0 : 2)}';
-    } else if (currency.toUpperCase() == 'JPY') {
-      return '¥${(estimatedCostMinor).toString()}';
-    }
-    return '$currency ${amount.toStringAsFixed(2)}';
+    return CurrencyFormatter.formatAmount(
+      estimatedCostMinor,
+      currency,
+      isMinor: true,
+      trimZeroCents: true,
+    );
   }
 
   String get formattedDuration {

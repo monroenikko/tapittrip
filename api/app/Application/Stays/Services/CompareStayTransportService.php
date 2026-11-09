@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Stays\Services;
 
+use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Application\Stays\Data\CompareStayTransportData;
 use App\Domain\Stays\Models\Stay;
 
@@ -46,8 +47,12 @@ final class CompareStayTransportService
         $totalLuggageBurden = ($data->checkedBags * 2) + ($data->oversized * 3) + ($data->stroller ? 3 : 0) + $data->carryOns;
         $isHeavyLuggage = $totalLuggageBurden >= 4 || $data->stroller || $data->luggagePreset === 'heavy';
 
+        $destinationCurrency = CountryCurrencyResolver::resolve(
+            $stay->trip?->destination_country ?? $stay->address ?? $stay->name ?? 'USD'
+        );
+
         // Calculate costs
-        $privateCost = $data->partySize > 4 ? 11000 : 7500; // in minor units (e.g. $75.00)
+        $privateCost = $data->partySize > 4 ? 11000 : 7500; // in minor units
         $railCostPerPerson = 2200;
         $railTotalCost = $railCostPerPerson * $data->partySize;
         $transitCostPerPerson = 650;
@@ -72,7 +77,7 @@ final class CompareStayTransportService
             'provider' => 'Airport Transfer Partner & Local Taxi',
             'estimated_duration_minutes' => 45,
             'estimated_cost_minor' => $privateCost,
-            'currency' => 'USD',
+            'currency' => $destinationCurrency,
             'transfers' => 0,
             'walking_meters' => 50,
             'boarding_location' => "{$origin} Arrivals Terminal Taxi Stand",
@@ -103,7 +108,7 @@ final class CompareStayTransportService
             'provider' => 'Regional Airport Express Line',
             'estimated_duration_minutes' => 35,
             'estimated_cost_minor' => $railTotalCost,
-            'currency' => 'USD',
+            'currency' => $destinationCurrency,
             'transfers' => 1,
             'walking_meters' => $transitInfo['walking_distance_meters'],
             'boarding_location' => "{$origin} Express Station Platform",
@@ -134,7 +139,7 @@ final class CompareStayTransportService
             'provider' => 'Metropolitan Transit Authority',
             'estimated_duration_minutes' => 60,
             'estimated_cost_minor' => $transitTotalCost,
-            'currency' => 'USD',
+            'currency' => $destinationCurrency,
             'transfers' => 2,
             'walking_meters' => $transitInfo['walking_distance_meters'] + 300,
             'boarding_location' => "{$origin} Ground Transit Bus Bay 3",

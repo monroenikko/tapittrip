@@ -125,7 +125,7 @@ final class TripExpenseController extends Controller
     ): JsonResponse {
         Gate::authorize('view', $trip);
 
-        $result = $service->execute($trip);
+        $result = $service->execute($trip, $request->user());
 
         return (new TripExpenseSummaryResource($result))
             ->response();

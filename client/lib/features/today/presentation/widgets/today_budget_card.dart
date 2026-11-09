@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/countries.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../domain/models/today_dashboard_summary.dart';
 import '../../../expenses/presentation/widgets/add_expense_bottom_sheet.dart';
 
@@ -20,13 +21,18 @@ class TodayBudgetCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final symbol = pacing.currency == 'EUR'
-        ? '€'
-        : pacing.currency == 'GBP'
-        ? '£'
-        : pacing.currency == 'JPY'
-        ? '¥'
-        : '\$';
+    final formattedSpent = CurrencyFormatter.formatAmount(
+      pacing.spentTodayMinor,
+      pacing.currency,
+      isMinor: true,
+    );
+    final formattedTarget = pacing.dailyBudgetMinor != null
+        ? CurrencyFormatter.formatAmount(
+            pacing.dailyBudgetMinor!,
+            pacing.currency,
+            isMinor: true,
+          )
+        : '';
 
     final hasDailyBudget =
         pacing.dailyBudgetMinor != null && pacing.dailyBudgetMinor! > 0;
@@ -103,7 +109,7 @@ class TodayBudgetCard extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                '$symbol${(pacing.spentTodayMinor / 100.0).toStringAsFixed(2)}',
+                formattedSpent,
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
@@ -111,7 +117,7 @@ class TodayBudgetCard extends StatelessWidget {
               ),
               if (hasDailyBudget) ...[
                 Text(
-                  'Target: $symbol${(pacing.dailyBudgetMinor! / 100.0).toStringAsFixed(2)}',
+                  'Target: $formattedTarget',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -151,8 +157,8 @@ class TodayBudgetCard extends StatelessWidget {
                 ),
                 Text(
                   isDailyOver
-                      ? 'Over by $symbol${(((pacing.spentTodayMinor - pacing.dailyBudgetMinor!) / 100.0)).toStringAsFixed(2)}'
-                      : 'Remaining: $symbol${(((pacing.dailyBudgetMinor! - pacing.spentTodayMinor) / 100.0)).toStringAsFixed(2)}',
+                      ? 'Over by ${CurrencyFormatter.formatAmount((pacing.spentTodayMinor - pacing.dailyBudgetMinor!).abs(), pacing.currency, isMinor: true)}'
+                      : 'Remaining: ${CurrencyFormatter.formatAmount(pacing.dailyBudgetMinor! - pacing.spentTodayMinor, pacing.currency, isMinor: true)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: isDailyOver ? Colors.redAccent : Colors.green,
                     fontWeight: FontWeight.bold,

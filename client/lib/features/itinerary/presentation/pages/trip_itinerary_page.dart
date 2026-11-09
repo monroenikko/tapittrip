@@ -3,10 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:tapittrip/core/constants/countries.dart';
+import 'package:tapittrip/core/utils/currency_formatter.dart';
+import 'package:tapittrip/features/auth/domain/models/auth_state.dart';
+import 'package:tapittrip/features/auth/presentation/providers/auth_provider.dart';
 import 'package:tapittrip/features/checklists/presentation/providers/checklist_provider.dart';
 import 'package:tapittrip/features/checklists/presentation/widgets/add_checklist_item_bottom_sheet.dart';
 import 'package:tapittrip/features/checklists/presentation/widgets/checklist_template_dialog.dart';
 import 'package:tapittrip/features/checklists/presentation/widgets/checklists_view.dart';
+import 'package:tapittrip/features/expenses/data/currency_repository.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/activity_timeline_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart';
@@ -325,10 +330,52 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 ],
 
                 // Route summary banner
-                const RouteSummaryCard(
-                  distance: '142 km',
-                  estimatedCost: '\$1,240',
-                  co2Saved: '18 kg',
+                Builder(
+                  builder: (context) {
+                    final destCurrency = (trip?.destinationCurrency != null &&
+                            trip!.destinationCurrency!.isNotEmpty)
+                        ? trip.destinationCurrency!
+                        : CountryCurrencyHelper.resolveCurrency(
+                            trip?.destinationCountry ?? trip?.title,
+                            defaultCurrency: 'JPY',
+                          );
+                    final authState = ref.watch(authProvider);
+                    final authUser = authState is Authenticated ? authState.user : null;
+                    final homeCurrency = authUser?.homeCurrency ?? 'PHP';
+
+                    final num baseDestCost = destCurrency == 'JPY'
+                        ? 18500
+                        : (destCurrency == 'PHP'
+                            ? 6800
+                            : (destCurrency == 'EUR'
+                                ? 115
+                                : (destCurrency == 'GBP' ? 95 : 120)));
+
+                    final formattedDest = CurrencyFormatter.formatAmount(
+                      baseDestCost,
+                      destCurrency,
+                      isMinor: false,
+                    );
+
+                    String? costSubtitle;
+                    if (homeCurrency.toUpperCase() != destCurrency.toUpperCase()) {
+                      final rateAsync = ref.watch(
+                        currencyRateProvider((from: destCurrency, to: homeCurrency)),
+                      );
+                      final rate = rateAsync.asData?.value;
+                      if (rate != null) {
+                        final converted = baseDestCost * rate.rate;
+                        costSubtitle = '≈ ${CurrencyFormatter.formatAmount(converted, homeCurrency, isMinor: false)}';
+                      }
+                    }
+
+                    return RouteSummaryCard(
+                      distance: '142 km',
+                      estimatedCost: formattedDest,
+                      estimatedCostSubtitle: costSubtitle,
+                      co2Saved: '18 kg',
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
 

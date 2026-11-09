@@ -6,16 +6,21 @@ namespace App\Application\Expenses\Services;
 
 use App\Application\Expenses\Data\TripExpensesSummaryResult;
 use App\Domain\Trips\Models\Trip;
+use App\Models\User;
 
 final class GetTripExpensesSummaryService
 {
     /**
      * Aggregate total spent, category distribution, daily breakdown, and remaining budget.
      */
-    public function execute(Trip $trip): TripExpensesSummaryResult
+    public function execute(Trip $trip, ?User $user = null): TripExpensesSummaryResult
     {
         $budget = $trip->budget;
-        $baseCurrency = $budget?->currency ?? 'USD';
+        $baseCurrency = $budget?->currency
+            ?? $user?->home_currency
+            ?? $trip->owner?->home_currency
+            ?? CountryCurrencyResolver::resolve($trip->destination_country ?? $trip->title)
+            ?? 'USD';
         $totalBudgetMinor = $budget?->total_budget_minor;
         $dailyBudgetMinor = $budget?->daily_budget_minor;
 

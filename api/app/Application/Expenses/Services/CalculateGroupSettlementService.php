@@ -15,9 +15,13 @@ final class CalculateGroupSettlementService
     /**
      * Compute member net balances and simplified debt settlement transfers.
      */
-    public function execute(Trip $trip): GroupSettlementResult
+    public function execute(Trip $trip, ?User $user = null): GroupSettlementResult
     {
-        $baseCurrency = $trip->budget?->currency ?? 'USD';
+        $baseCurrency = $trip->budget?->currency
+            ?? $user?->home_currency
+            ?? $trip->owner?->home_currency
+            ?? CountryCurrencyResolver::resolve($trip->destination_country ?? $trip->title)
+            ?? 'USD';
 
         // 1. Gather all trip users
         $users = $trip->users()->get();

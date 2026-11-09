@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/map_launcher.dart';
+import '../../../auth/domain/models/auth_state.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../expenses/data/currency_repository.dart';
 import '../../domain/models/luggage_profile.dart';
 import '../../domain/models/stay.dart';
 import '../../domain/models/transport_option.dart';
@@ -555,6 +559,26 @@ class _TransportComparisonSheetState
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final authState = ref.watch(authProvider);
+    final authUser = authState is Authenticated ? authState.user : null;
+    final homeCurrency = authUser?.homeCurrency;
+
+    String? convertedCost;
+    if (homeCurrency != null &&
+        homeCurrency.toUpperCase() != option.currency.toUpperCase()) {
+      final rateAsync = ref.watch(
+        currencyRateProvider((from: option.currency, to: homeCurrency)),
+      );
+      final rate = rateAsync.asData?.value;
+      if (rate != null) {
+        final zeroDec = CurrencyFormatter.isZeroDecimal(option.currency);
+        final baseUnits = zeroDec
+            ? option.estimatedCostMinor.toDouble()
+            : (option.estimatedCostMinor / 100.0);
+        final converted = baseUnits * rate.rate;
+        convertedCost = '≈ ${CurrencyFormatter.formatAmount(converted, homeCurrency, isMinor: false)}';
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -690,12 +714,26 @@ class _TransportComparisonSheetState
                   ),
                 ),
                 // Cost badge
-                Text(
-                  option.formattedCost,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.primary,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      option.formattedCost,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    if (convertedCost != null)
+                      Text(
+                        convertedCost,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
