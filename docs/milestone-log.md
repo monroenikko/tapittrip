@@ -10,6 +10,24 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — Automatic AI Starter Itinerary Generation on Trip Creation Fix
+
+### Completed
+
+- **Trip Creation AI Starter Itinerary Pipeline (`TripCreatePage`)**:
+  - Mapped user-selected trip types (`leisure`, `business`, `group`, `solo`, `family`) to valid domain travel party identifiers (`couple`, `solo`, `friends`, `solo`, `family_kids`) prior to invoking AI generation.
+  - Automatically invokes `aiRepo.generatePlan` and `aiRepo.applyPlan` when `_autoGenerateItinerary` is toggled on during trip creation.
+  - Invalidates cache and safely passes populated trip state so the itinerary timeline immediately renders all AI-generated activities upon navigation.
+  - Added test in `trip_test.dart` verifying that `TripCreatePage` triggers both `/ai-plan/generate` and `/ai-plan/apply` with correctly mapped travel party (`couple` for `leisure`).
+- **Backend AI Plan Request Normalization (`GenerateAiItineraryRequest`)**:
+  - Added request normalization mapping `leisure`, `group`, `business`, `family`, `couple`, and `solo` aliases to valid travel parties.
+  - Expanded validation rules to accept `leisure`, `business`, and `group` as valid inputs without throwing 422 `validation_failed`.
+  - Added feature test `test_user_can_generate_ai_itinerary_with_trip_type_as_travel_party` in `AiItineraryTest.php`.
+- **Verification**:
+  - Backend PHPUnit `AiItineraryTest.php`: 6/6 tests passed (28 assertions).
+  - Client Flutter test suite: 165/165 tests passed.
+  - `flutter analyze`: 0 issues found.
+
 ## 2026-11-09 — Destination Forex Currency Alignment & Permanent Address in Profile & Registration
 
 ### Completed
