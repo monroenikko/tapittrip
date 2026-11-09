@@ -28,16 +28,20 @@
 - **Mobile Client Enhancements (`AskTapItTripSheet`)**:
   - Upgraded to a conversational chat history thread where user questions and AI suggestions stay visible and scrollable.
   - User messages appear in right-aligned primary bubbles; assistant responses render in rich cards with category badges, advisory notice, and one-tap action buttons.
+  - **In-Sheet Action State & Live Success Feedback**:
+    - Replaced hidden background Scaffold SnackBar with an in-sheet animated notification banner pinned prominently inside the bottom sheet with a direct "View" shortcut.
+    - Added live button state transitions: button disables and displays a spinner with *"Adding to itinerary..."* during execution, then smoothly transitions into a green completed badge (*"Added to Itinerary ✓"*) to prevent duplicate taps and reassure the traveler.
+    - Added in-sheet error banner with human-readable error descriptions if validation fails.
   - Expanded quick suggestion chips: *"What should I pack for this trip?"*, *"Local tipping & payment etiquette"*, *"Top hidden gems and spots to visit"*, etc.
   - Added visual guardrail indicator styling when an out-of-scope prompt is entered.
 - **OpenAPI & Automated Verification**:
   - Updated `docs/api/openapi.yaml` with expanded categories (`packing`, `culture`, `transit`, `itinerary`, `safety`, `out_of_scope`).
   - Added unit test suite `tests/Unit/GeminiAssistantServiceTest.php` testing key absence, travel query resolution, suggested actions normalization, out-of-scope redirection, and error resilience.
   - Expanded `tests/Feature/TripAssistantTest.php` testing live AI mocking and guardrail redirects.
-  - Added Flutter widget test `renders out of scope response with travel guardrail category label` in `client/test/trip_assistant_test.dart`.
+  - Added Flutter widget test `renders out of scope response with travel guardrail category label` and `tapping action button adds stop, shows in-sheet success banner, and updates button state` in `client/test/trip_assistant_test.dart`.
   - Backend PHPUnit: 135/135 tests pass (754 assertions).
   - Backend Pint: 0 style issues across 318 files.
-  - Mobile Flutter: 142/142 tests pass.
+  - Mobile Flutter: 143/143 tests pass.
   - Mobile Analyzer: 0 issues found.
 
 ## 2026-11-09 — Itinerary Activity Kind Alias Normalization & AI Assistant Feedback Hardening

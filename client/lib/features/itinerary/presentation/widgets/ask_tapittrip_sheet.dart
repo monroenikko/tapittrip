@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -46,6 +48,12 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
   final ScrollController _scrollController = ScrollController();
   final List<_AssistantChatMessage> _messages = [];
 
+  final Set<String> _pendingActionKeys = {};
+  final Set<String> _completedActionKeys = {};
+  String? _actionSuccessMessage;
+  String? _actionErrorMessage;
+  Timer? _bannerTimer;
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -72,6 +80,7 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
 
   @override
   void dispose() {
+    _bannerTimer?.cancel();
     _queryController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -131,6 +140,11 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
     }
   }
 
+  String _getActionKey(AssistantSuggestedAction action) {
+    final title = action.payload['title'] ?? action.label;
+    return '${action.kind}_$title';
+  }
+
   Future<void> _handleAction(AssistantSuggestedAction action) async {
     if (action.kind == 'navigate_lounge_finder') {
       Navigator.of(context).pop();
@@ -139,7 +153,21 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
     }
 
     if (action.kind == 'add_activity') {
+      final actionKey = _getActionKey(action);
+      if (_pendingActionKeys.contains(actionKey) ||
+          _completedActionKeys.contains(actionKey)) {
+        return;
+      }
+
       final payload = action.payload;
+      final stopTitle = (payload['title'] as String?) ?? 'Suggested Stop';
+
+      setState(() {
+        _pendingActionKeys.add(actionKey);
+        _actionSuccessMessage = null;
+        _actionErrorMessage = null;
+      });
+
       try {
         final rawKind = payload['kind'] as String?;
         final normalizedKind = _normalizeActivityKind(rawKind);
@@ -147,7 +175,7 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
         await ref
             .read(itineraryListProvider(widget.tripId).notifier)
             .addItem(
-              title: (payload['title'] as String?) ?? 'Suggested Stop',
+              title: stopTitle,
               kind: normalizedKind,
               notes: payload['notes'] as String?,
               inlinePlace: payload['place_name'] != null
@@ -159,12 +187,31 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
             );
 
         if (mounted) {
+          setState(() {
+            _pendingActionKeys.remove(actionKey);
+            _completedActionKeys.add(actionKey);
+            _actionSuccessMessage = 'Added "$stopTitle" to your itinerary!';
+          });
+
+          // Also trigger a snackbar in case the sheet is dismissed
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Added "${payload['title']}" to your itinerary!'),
+              content: Text('Added "$stopTitle" to your itinerary!'),
               backgroundColor: Colors.green,
             ),
           );
+
+          // Auto-hide in-sheet banner after 4.5 seconds
+          _bannerTimer?.cancel();
+          _bannerTimer = Timer(const Duration(milliseconds: 4500), () {
+            if (mounted) {
+              setState(() {
+                if (_actionSuccessMessage == 'Added "$stopTitle" to your itinerary!') {
+                  _actionSuccessMessage = null;
+                }
+              });
+            }
+          });
         }
       } catch (e) {
         if (mounted) {
@@ -174,6 +221,10 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
           } else if (e is ApiException) {
             displayError = e.message;
           }
+          setState(() {
+            _pendingActionKeys.remove(actionKey);
+            _actionErrorMessage = 'Failed to add stop: $displayError';
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to add stop: $displayError'),
@@ -513,15 +564,71 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                                 ),
                                 const SizedBox(height: 8),
                                 ...response.suggestedActions.map((action) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: FilledButton.tonalIcon(
-                                      icon: const Icon(
-                                        Icons.add_task_rounded,
-                                        size: 16,
+                                  final actionKey = _getActionKey(action);
+                                  final isPending =
+                                      _pendingActionKeys.contains(actionKey);
+                                  final isCompleted =
+                                      _completedActionKeys.contains(actionKey);
+
+                                  if (isCompleted) {
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 10,
                                       ),
-                                      label: Text(action.label),
-                                      onPressed: () => _handleAction(action),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: Colors.green.withValues(alpha: 0.35),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.check_circle_rounded,
+                                            color: Colors.green,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Added to Itinerary',
+                                            style: theme.textTheme.labelMedium
+                                                ?.copyWith(
+                                                  color: Colors.green.shade800,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: FilledButton.tonalIcon(
+                                      icon: isPending
+                                          ? const SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(
+                                              Icons.add_task_rounded,
+                                              size: 16,
+                                            ),
+                                      label: Text(
+                                        isPending
+                                            ? 'Adding to itinerary...'
+                                            : action.label,
+                                      ),
+                                      onPressed: (isPending || _isLoading)
+                                          ? null
+                                          : () => _handleAction(action),
                                     ),
                                   );
                                 }),
@@ -581,6 +688,121 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
                   ],
                 ),
               ),
+
+              // In-Sheet Live Action Success Banner
+              if (_actionSuccessMessage != null) ...[
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade700,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _actionSuccessMessage!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text(
+                          'View',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white70,
+                          size: 18,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          setState(() => _actionSuccessMessage = null);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // In-Sheet Live Action Error Banner
+              if (_actionErrorMessage != null) ...[
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline_rounded,
+                        color: colorScheme.onErrorContainer,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _actionErrorMessage!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: colorScheme.onErrorContainer,
+                          size: 18,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          setState(() => _actionErrorMessage = null);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               // Pinned Bottom Query Input
               Container(

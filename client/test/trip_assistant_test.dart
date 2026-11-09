@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tapittrip/core/network/api_client.dart';
 import 'package:tapittrip/core/storage/token_storage.dart';
 import 'package:tapittrip/features/itinerary/data/ai_itinerary_repository.dart';
+import 'package:tapittrip/features/itinerary/data/itinerary_repository.dart';
+import 'package:tapittrip/features/itinerary/domain/models/itinerary_item.dart';
 import 'package:tapittrip/features/itinerary/domain/models/trip_assistant_response.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/ask_tapittrip_sheet.dart';
@@ -26,7 +28,8 @@ class FakeAssistantApiClient extends ApiClient {
     return postResponse ??
         {
           'data': {
-            'reply': 'Since you are staying at Shinjuku Granbell Hotel, here are local dining spots within 5 minutes walk.',
+            'reply':
+                'Since you are staying at Shinjuku Granbell Hotel, here are local dining spots within 5 minutes walk.',
             'category': 'dining',
             'context_summary': {
               'has_stay': true,
@@ -44,6 +47,40 @@ class FakeAssistantApiClient extends ApiClient {
             ],
           },
         };
+  }
+}
+
+class FakeItineraryRepository extends ItineraryRepository {
+  FakeItineraryRepository({required super.apiClient});
+
+  @override
+  Future<List<ItineraryItem>> fetchItems(
+    String tripId, {
+    String? tripDayId,
+  }) async => [];
+
+  @override
+  Future<ItineraryItem> createItem(
+    String tripId, {
+    required String title,
+    String kind = 'attraction',
+    String? tripDayId,
+    String? placeId,
+    Map<String, dynamic>? inlinePlace,
+    String? notes,
+    String? startsAtUtc,
+    String? endsAtUtc,
+    String? timezone,
+  }) async {
+    return ItineraryItem(
+      id: 'item-123',
+      tripId: tripId,
+      title: title,
+      kind: kind,
+      sortOrder: 0,
+      status: 'planned',
+      version: 1,
+    );
   }
 }
 
@@ -178,6 +215,54 @@ void main() {
           find.textContaining('focused exclusively on travel advice'),
           findsOneWidget,
         );
+      },
+    );
+
+    testWidgets(
+      'tapping action button adds stop, shows in-sheet success banner, and updates button state',
+      (tester) async {
+        final fakeApi = FakeAssistantApiClient();
+        final repo = AiItineraryRepository(apiClient: fakeApi);
+        final itineraryRepo = FakeItineraryRepository(apiClient: fakeApi);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              aiItineraryRepositoryProvider.overrideWithValue(repo),
+              itineraryRepositoryProvider.overrideWithValue(itineraryRepo),
+            ],
+            child: const MaterialApp(
+              home: Scaffold(body: AskTapItTripSheet(tripId: 'trip-456')),
+            ),
+          ),
+        );
+
+        // Submit query
+        await tester.tap(find.text('Where should we eat near our hotel?'));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(find.text('Add Dinner near Hotel'), findsOneWidget);
+
+        // Tap the action button
+        await tester.tap(find.text('Add Dinner near Hotel'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Verify button changed to completed state
+        expect(find.text('Added to Itinerary'), findsOneWidget);
+
+        // Verify in-sheet success banner is visible
+        expect(
+          find.text(
+            'Added "Dinner near Shinjuku Granbell Hotel" to your itinerary!',
+          ),
+          findsAtLeastNWidgets(1),
+        );
+        expect(find.text('View'), findsOneWidget);
+
+        // Advance timer
+        await tester.pump(const Duration(seconds: 5));
       },
     );
   });
