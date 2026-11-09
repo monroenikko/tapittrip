@@ -121,19 +121,28 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
                 : 3;
 
             final aiRepo = ref.read(aiItineraryRepositoryProvider);
+            final travelParty = switch (_selectedTripType) {
+              'family' => 'family_kids',
+              'group' => 'friends',
+              'business' => 'solo',
+              'solo' => 'solo',
+              'leisure' => 'couple',
+              _ => 'couple',
+            };
+
             final plan = await aiRepo.generatePlan(
               result.id,
               destination: destinationQuery,
               durationDays: duration,
               interests: _selectedInterests.toList(),
-              travelParty: _selectedTripType,
+              travelParty: travelParty,
             );
 
             if (plan.days.isNotEmpty) {
               await aiRepo.applyPlan(result.id, plan.days);
             }
-          } catch (aiErr) {
-            debugPrint('Auto-itinerary generation non-fatal fallback: $aiErr');
+          } catch (aiErr, stackTrace) {
+            debugPrint('Auto-itinerary generation non-fatal fallback: $aiErr\n$stackTrace');
           }
         } else if (_addManualStop && _firstStopTitleController.text.trim().isNotEmpty) {
           setState(() {
@@ -160,7 +169,7 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
           _isLoading = false;
         });
 
-        // Refresh itinerary and trip day caches for this trip
+        // Refresh itinerary and trip day caches for this trip so timeline is populated
         ref.invalidate(itineraryListProvider(result.id));
         ref.invalidate(tripDaysProvider(result.id));
 

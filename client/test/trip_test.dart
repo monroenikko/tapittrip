@@ -15,6 +15,8 @@ class FakeAiApiClient extends ApiClient {
   FakeAiApiClient() : super(tokenStorage: InMemoryTokenStorage());
 
   dynamic postResponse;
+  final List<String> postedPaths = [];
+  final List<dynamic> postedPayloads = [];
 
   @override
   Future<dynamic> post(
@@ -22,6 +24,8 @@ class FakeAiApiClient extends ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
   }) async {
+    postedPaths.add(path);
+    postedPayloads.add(data);
     if (path.contains('/ai-plan/generate')) {
       return {
         'data': {
@@ -399,6 +403,20 @@ void main() {
         // Trip was created in repository
         expect(fakeRepo.trips.length, 1);
         expect(fakeRepo.trips.first.title, 'Tokyo Trip');
+
+        // AI starter itinerary was generated and applied
+        expect(
+          fakeApi.postedPaths.any((p) => p.contains('/ai-plan/generate')),
+          isTrue,
+        );
+        expect(
+          fakeApi.postedPaths.any((p) => p.contains('/ai-plan/apply')),
+          isTrue,
+        );
+        final generateCall = fakeApi.postedPayloads.firstWhere(
+          (p) => p is Map && p['destination'] != null,
+        ) as Map<String, dynamic>;
+        expect(generateCall['travel_party'], 'couple'); // leisure mapped to couple
       },
     );
   });

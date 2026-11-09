@@ -188,4 +188,38 @@ final class AiItineraryTest extends TestCase
             ->assertJsonPath('data.pace', 'packed')
             ->assertJsonCount(4, 'data.days');
     }
+
+    public function test_user_can_generate_ai_itinerary_with_trip_type_as_travel_party(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $trip = Trip::factory()->create([
+            'owner_id' => $user->id,
+            'title' => 'BGC Taguig',
+            'destination_country' => 'PH',
+        ]);
+
+        // Test with leisure (default trip type on trip create)
+        $response = $this->postJson("/api/v1/trips/{$trip->id}/ai-plan/generate", [
+            'destination' => 'BGC Taguig',
+            'duration_days' => 3,
+            'travel_party' => 'leisure',
+            'interests' => ['sightseeing', 'dining', 'culture'],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.travel_party', 'couple')
+            ->assertJsonCount(3, 'data.days');
+
+        // Test with group
+        $responseGroup = $this->postJson("/api/v1/trips/{$trip->id}/ai-plan/generate", [
+            'destination' => 'BGC Taguig',
+            'duration_days' => 2,
+            'travel_party' => 'group',
+        ]);
+
+        $responseGroup->assertStatus(200)
+            ->assertJsonPath('data.travel_party', 'friends');
+    }
 }
