@@ -153,4 +153,47 @@ final class CountryCurrencyResolver
 
         return $default;
     }
+
+    /**
+     * Check whether an ISO 4217 currency is zero-decimal (no fractional cents).
+     */
+    public static function isZeroDecimal(string $currency): bool
+    {
+        $cur = strtoupper(trim($currency));
+
+        return in_array($cur, ['JPY', 'KRW', 'VND'], true);
+    }
+
+    /**
+     * Accurately convert an amount from one currency to another in minor integer units,
+     * accounting for zero-decimal vs fractional (cents) currency scales.
+     */
+    public static function convertAmountMinor(
+        int $amountMinor,
+        string $fromCurrency,
+        string $toCurrency,
+        float $exchangeRate,
+    ): int {
+        $from = strtoupper(trim($fromCurrency));
+        $to = strtoupper(trim($toCurrency));
+
+        if ($from === $to) {
+            return $amountMinor;
+        }
+
+        $rate = $exchangeRate > 0 ? $exchangeRate : 1.0;
+
+        // Step 1: Normalize source amount to major units
+        $sourceMajor = self::isZeroDecimal($from)
+            ? (float) $amountMinor
+            : ($amountMinor / 100.0);
+
+        // Step 2: Convert using exchange rate
+        $targetMajor = $sourceMajor * $rate;
+
+        // Step 3: Convert to target currency's minor units
+        return self::isZeroDecimal($to)
+            ? (int) round($targetMajor)
+            : (int) round($targetMajor * 100.0);
+    }
 }

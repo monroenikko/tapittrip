@@ -28,7 +28,12 @@ final class UpdateExpenseService
                 $exchangeRate = 1.0;
             } else {
                 $exchangeRate = $exchangeRate > 0 ? $exchangeRate : 1.0;
-                $baseAmountMinor = (int) round($amountMinor * $exchangeRate);
+                $baseAmountMinor = CountryCurrencyResolver::convertAmountMinor(
+                    $amountMinor,
+                    $currency,
+                    $baseCurrency,
+                    $exchangeRate,
+                );
             }
 
             $attributes = [

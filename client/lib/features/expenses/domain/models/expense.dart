@@ -45,7 +45,9 @@ class Expense {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  double get amount => amountMinor / 100.0;
+  double get amount => CurrencyFormatter.isZeroDecimal(currency)
+      ? amountMinor.toDouble()
+      : amountMinor / 100.0;
   double get baseAmount => baseAmountMinor / 100.0;
 
   String formatAmount({String? baseCurrency, bool useBaseCurrency = false}) {

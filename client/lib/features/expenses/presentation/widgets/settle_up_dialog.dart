@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/currency_formatter.dart';
 import '../providers/expense_provider.dart';
 
 class SettleUpDialog extends ConsumerStatefulWidget {
@@ -84,7 +85,7 @@ class _SettleUpDialogState extends ConsumerState<SettleUpDialog> {
       return;
     }
 
-    final isZeroDecimal = widget.currency == 'JPY';
+    final isZeroDecimal = CurrencyFormatter.isZeroDecimal(widget.currency);
     final amountMinor = isZeroDecimal
         ? amountParsed.round()
         : (amountParsed * 100).round();

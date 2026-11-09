@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/currency_formatter.dart';
 import '../../data/currency_repository.dart';
 import '../../domain/models/expense.dart';
 import '../providers/expense_provider.dart';
@@ -92,7 +93,7 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
     _titleController = TextEditingController(text: expense?.title ?? '');
 
     if (expense != null) {
-      final isZeroDecimal = expense.currency.toUpperCase() == 'JPY';
+      final isZeroDecimal = CurrencyFormatter.isZeroDecimal(expense.currency);
       _amountController = TextEditingController(
         text: isZeroDecimal
             ? expense.amountMinor.toString()
@@ -206,7 +207,7 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
       return;
     }
 
-    final isZeroDecimal = _currency.toUpperCase() == 'JPY';
+    final isZeroDecimal = CurrencyFormatter.isZeroDecimal(_currency);
     final amountMinor = isZeroDecimal
         ? parsedAmount.round()
         : (parsedAmount * 100.0).round();

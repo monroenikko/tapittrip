@@ -26,7 +26,12 @@ final class CreateExpenseService
                 $exchangeRate = 1.0;
             } else {
                 $exchangeRate = $data->exchangeRate > 0 ? $data->exchangeRate : 1.0;
-                $baseAmountMinor = (int) round($data->amountMinor * $exchangeRate);
+                $baseAmountMinor = CountryCurrencyResolver::convertAmountMinor(
+                    $data->amountMinor,
+                    $data->currency,
+                    $baseCurrency,
+                    $exchangeRate,
+                );
             }
 
             /** @var Expense $expense */
@@ -54,7 +59,12 @@ final class CreateExpenseService
                     $splitAmount = (int) $split['amount_minor'];
                     $splitBase = isset($split['base_amount_minor'])
                         ? (int) $split['base_amount_minor']
-                        : (int) round($splitAmount * $exchangeRate);
+                        : CountryCurrencyResolver::convertAmountMinor(
+                            $splitAmount,
+                            $data->currency,
+                            $baseCurrency,
+                            $exchangeRate,
+                        );
 
                     ExpenseSplit::create([
                         'expense_id' => $expense->id,

@@ -61,13 +61,13 @@ final class TripExpenseTest extends TestCase
             ->assertJsonPath('data.title', 'Ramen Lunch in Shinjuku')
             ->assertJsonPath('data.amount_minor', 3000)
             ->assertJsonPath('data.currency', 'JPY')
-            ->assertJsonPath('data.base_amount_minor', 20); // 3000 * 0.0067 = 20.1 -> 20 USD cents
+            ->assertJsonPath('data.base_amount_minor', 2010); // 3000 JPY * 0.0067 = $20.10 -> 2010 USD cents
 
         $this->assertDatabaseHas('expenses', [
             'trip_id' => $this->trip->id,
             'title' => 'Ramen Lunch in Shinjuku',
             'amount_minor' => 3000,
-            'base_amount_minor' => 20,
+            'base_amount_minor' => 2010,
         ]);
     }
 

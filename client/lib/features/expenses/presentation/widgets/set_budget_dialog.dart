@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/currency_formatter.dart';
 import '../providers/expense_provider.dart';
 
 class SetBudgetDialog extends ConsumerStatefulWidget {
@@ -70,7 +71,7 @@ class _SetBudgetDialogState extends ConsumerState<SetBudgetDialog> {
     super.initState();
     _currency = widget.initialCurrency;
 
-    final isZeroDecimal = _currency.toUpperCase() == 'JPY';
+    final isZeroDecimal = CurrencyFormatter.isZeroDecimal(_currency);
     final total = widget.initialTotalBudgetMinor;
     _totalBudgetController = TextEditingController(
       text: total != null
@@ -106,7 +107,7 @@ class _SetBudgetDialogState extends ConsumerState<SetBudgetDialog> {
       return;
     }
 
-    final isZeroDecimal = _currency.toUpperCase() == 'JPY';
+    final isZeroDecimal = CurrencyFormatter.isZeroDecimal(_currency);
     final totalMinor = isZeroDecimal
         ? parsedTotal.round()
         : (parsedTotal * 100.0).round();

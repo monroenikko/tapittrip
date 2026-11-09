@@ -65,7 +65,12 @@ final class CalculateGroupSettlementService
                         }
                     }
 
-                    $splitBase = $split->base_amount_minor ?? (int) round($split->amount_minor * ((float) ($expense->exchange_rate ?: 1.0)));
+                    $splitBase = $split->base_amount_minor ?? CountryCurrencyResolver::convertAmountMinor(
+                        $split->amount_minor,
+                        $expense->currency,
+                        $baseCurrency,
+                        (float) ($expense->exchange_rate ?: 1.0),
+                    );
                     $netBalances[$split->user_id] = ($netBalances[$split->user_id] ?? 0) - $splitBase;
                 }
             } elseif ($expense->split_type === 'equal') {

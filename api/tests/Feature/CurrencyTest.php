@@ -94,4 +94,27 @@ final class CurrencyTest extends TestCase
             ->assertJsonPath('data.destination_country', 'JP')
             ->assertJsonPath('data.destination_currency', 'JPY');
     }
+
+    public function test_currency_minor_conversion_handles_zero_decimal_scales(): void
+    {
+        // 1,000 JPY to PHP at rate 0.3980: 1000 JPY = 398.00 PHP -> 39,800 centavos
+        $phpMinor = CountryCurrencyResolver::convertAmountMinor(1000, 'JPY', 'PHP', 0.3980);
+        $this->assertSame(39800, $phpMinor);
+
+        // 3,000 JPY to USD at rate 0.0067: 3000 JPY = $20.10 USD -> 2010 cents
+        $usdMinor = CountryCurrencyResolver::convertAmountMinor(3000, 'JPY', 'USD', 0.0067);
+        $this->assertSame(2010, $usdMinor);
+
+        // 398.00 PHP (39800 centavos) to JPY at rate 2.51: 398 * 2.51 = 998.98 -> 999 JPY
+        $jpyMinor = CountryCurrencyResolver::convertAmountMinor(39800, 'PHP', 'JPY', 2.51);
+        $this->assertSame(999, $jpyMinor);
+
+        // 10.00 USD (1000 cents) to PHP at rate 58.50: 10 * 58.50 = 585.00 PHP -> 58,500 centavos
+        $phpFromUsd = CountryCurrencyResolver::convertAmountMinor(1000, 'USD', 'PHP', 58.50);
+        $this->assertSame(58500, $phpFromUsd);
+
+        // Same currency returns exact amount
+        $same = CountryCurrencyResolver::convertAmountMinor(5000, 'PHP', 'PHP', 1.0);
+        $this->assertSame(5000, $same);
+    }
 }
