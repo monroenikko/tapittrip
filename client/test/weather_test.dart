@@ -1,18 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tapittrip/core/network/api_client.dart';
+import 'package:tapittrip/core/storage/token_storage.dart';
 import 'package:tapittrip/features/today/domain/models/today_dashboard_summary.dart';
 import 'package:tapittrip/features/today/presentation/widgets/today_weather_card.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/trip_card.dart';
+import 'package:tapittrip/features/weather/data/weather_repository.dart';
 import 'package:tapittrip/features/weather/domain/models/daily_forecast.dart';
 import 'package:tapittrip/features/weather/domain/models/trip_weather.dart';
 import 'package:tapittrip/features/weather/domain/models/weather_condition.dart';
 import 'package:tapittrip/features/weather/presentation/providers/weather_provider.dart';
 import 'package:tapittrip/features/weather/presentation/widgets/trip_weather_view.dart';
 
+class FakeWeatherApiClient extends ApiClient {
+  FakeWeatherApiClient() : super(tokenStorage: InMemoryTokenStorage());
+
+  dynamic getResponse;
+
+  @override
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    return getResponse;
+  }
+}
+
 void main() {
+  setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+  });
   group('Weather Models', () {
     test('WeatherCondition parses from JSON correctly', () {
       final json = {
@@ -270,6 +291,67 @@ void main() {
       expect(find.text('Taguig'), findsOneWidget);
       expect(find.text('28°C'), findsOneWidget);
       expect(find.byIcon(Icons.wb_sunny_rounded), findsOneWidget);
+    });
+  });
+
+  group('WeatherRepository Unit Tests', () {
+    test('parses unwrapped API response correctly without type error', () async {
+      final fakeApi = FakeWeatherApiClient()
+        ..getResponse = {
+          'destination': 'Taguig',
+          'latitude': 14.55,
+          'longitude': 121.05,
+          'timezone': 'Asia/Manila',
+          'current': {
+            'temperature_c': 28.0,
+            'temperature_f': 82.4,
+            'condition': 'Clear Sky',
+            'icon': 'sunny',
+            'humidity': 60,
+            'wind_kph': 10.0,
+            'precipitation_probability': 0,
+            'advisory': 'Warm and pleasant.',
+          },
+          'forecast': [],
+          'provider_attribution': 'Live Weather',
+        };
+
+      final repo = WeatherRepository(apiClient: fakeApi);
+      final weather = await repo.fetchTripWeather('trip-bgc-1');
+
+      expect(weather.destination, 'Taguig');
+      expect(weather.current.temperatureC, 28.0);
+      expect(weather.current.condition, 'Clear Sky');
+    });
+
+    test('parses nested data wrapped API response correctly', () async {
+      final fakeApi = FakeWeatherApiClient()
+        ..getResponse = {
+          'data': {
+            'destination': 'Tokyo',
+            'latitude': 35.67,
+            'longitude': 139.65,
+            'timezone': 'Asia/Tokyo',
+            'current': {
+              'temperature_c': 18.0,
+              'temperature_f': 64.4,
+              'condition': 'Sunny',
+              'icon': 'sunny',
+              'humidity': 45,
+              'wind_kph': 8.0,
+              'precipitation_probability': 0,
+              'advisory': 'Pleasant day.',
+            },
+            'forecast': [],
+            'provider_attribution': 'Live Weather',
+          },
+        };
+
+      final repo = WeatherRepository(apiClient: fakeApi);
+      final weather = await repo.fetchTripWeather('trip-tokyo-1');
+
+      expect(weather.destination, 'Tokyo');
+      expect(weather.current.temperatureC, 18.0);
     });
   });
 }

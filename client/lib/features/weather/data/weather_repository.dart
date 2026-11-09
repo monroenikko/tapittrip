@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_exceptions.dart';
 import '../domain/models/trip_weather.dart';
 
 class WeatherRepository {
@@ -17,7 +18,19 @@ class WeatherRepository {
   Future<TripWeather> fetchTripWeather(String tripId) async {
     try {
       final response = await apiClient.get('/trips/$tripId/weather');
-      final data = Map<String, dynamic>.from(response['data'] as Map);
+      final Map<String, dynamic> data;
+      if (response is Map) {
+        if (response.containsKey('data') && response['data'] is Map) {
+          data = Map<String, dynamic>.from(response['data'] as Map);
+        } else {
+          data = Map<String, dynamic>.from(response);
+        }
+      } else {
+        throw ApiException(
+          code: 'invalid_response',
+          message: 'Invalid weather response format received from server.',
+        );
+      }
       final weather = TripWeather.fromJson(data);
 
       // Cache locally for offline access
@@ -31,8 +44,14 @@ class WeatherRepository {
       // Try offline cached copy
       final cached = await _storage.read(key: _cacheKey(tripId));
       if (cached != null) {
-        final decoded = jsonDecode(cached) as Map<String, dynamic>;
-        return TripWeather.fromJson(decoded);
+        try {
+          final decoded = jsonDecode(cached);
+          if (decoded is Map) {
+            return TripWeather.fromJson(Map<String, dynamic>.from(decoded));
+          }
+        } catch (_) {
+          // Ignore cache decoding error and rethrow original error
+        }
       }
       rethrow;
     }

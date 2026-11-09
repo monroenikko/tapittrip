@@ -21,7 +21,10 @@ class TripWeather {
   final String providerAttribution;
 
   factory TripWeather.fromJson(Map<String, dynamic> json) {
-    final currentJson = json['current'] as Map<String, dynamic>? ?? {};
+    final rawCurrent = json['current'];
+    final currentJson = rawCurrent is Map
+        ? Map<String, dynamic>.from(rawCurrent)
+        : <String, dynamic>{};
     final rawForecast = json['forecast'] as List<dynamic>? ?? [];
 
     return TripWeather(
@@ -31,7 +34,8 @@ class TripWeather {
       timezone: (json['timezone'] as String?) ?? 'UTC',
       current: WeatherCondition.fromJson(currentJson),
       forecast: rawForecast
-          .map((e) => DailyForecast.fromJson(Map<String, dynamic>.from(e as Map)))
+          .whereType<Map>()
+          .map((e) => DailyForecast.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       providerAttribution:
           (json['provider_attribution'] as String?) ?? 'Live Weather',
