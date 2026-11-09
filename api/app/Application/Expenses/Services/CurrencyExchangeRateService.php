@@ -37,8 +37,8 @@ final class CurrencyExchangeRateService
         $cacheKey = "forex_rate_{$from}_{$to}";
 
         /** @var float $rate */
-        $rate = Cache::remember($cacheKey, 3600, function () use ($from, $to) {
-            return $this->provider->getRate($from, $to);
+        $rate = (float) Cache::remember($cacheKey, 3600, function () use ($from, $to) {
+            return (float) $this->provider->getRate($from, $to);
         });
 
         $reciprocalRate = $rate > 0 ? round(1.0 / $rate, 6) : 0.0;
@@ -46,8 +46,8 @@ final class CurrencyExchangeRateService
         return new ExchangeRateData(
             from: $from,
             to: $to,
-            rate: $rate,
-            reciprocalRate: $reciprocalRate,
+            rate: (float) $rate,
+            reciprocalRate: (float) $reciprocalRate,
             asOf: Carbon::now()->toIso8601String(),
             provider: $this->provider instanceof FakeExchangeRateProvider ? 'fake' : 'open_exchange_rates',
         );

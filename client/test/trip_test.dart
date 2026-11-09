@@ -1,12 +1,75 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tapittrip/core/network/api_client.dart';
+import 'package:tapittrip/core/storage/token_storage.dart';
 import 'package:tapittrip/core/theme/app_theme.dart';
+import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/trips/data/trip_repository.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
+import 'package:tapittrip/features/trips/presentation/pages/trip_create_page.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/trip_card.dart';
+
+class FakeAiApiClient extends ApiClient {
+  FakeAiApiClient() : super(tokenStorage: InMemoryTokenStorage());
+
+  dynamic postResponse;
+
+  @override
+  Future<dynamic> post(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    if (path.contains('/ai-plan/generate')) {
+      return {
+        'data': {
+          'destination': 'Tokyo, Japan',
+          'summary': 'Curated 3-day itinerary',
+          'travel_party': 'leisure',
+          'pace': 'balanced',
+          'total_estimated_budget': {'currency': 'JPY', 'amount': 15000},
+          'days': [
+            {
+              'day_number': 1,
+              'title': 'Day 1: Historic Asakusa',
+              'theme': 'Historic Sights',
+              'primary_neighborhood': 'Asakusa',
+              'budget_estimate': {'currency': 'JPY', 'amount': 5000},
+              'activities': [
+                {
+                  'title': 'Senso-ji Temple',
+                  'kind': 'attraction',
+                  'neighborhood': 'Asakusa',
+                  'place_name': 'Senso-ji',
+                  'description': 'Tokyo oldest Buddhist temple',
+                }
+              ],
+            }
+          ],
+        }
+      };
+    }
+    if (path.contains('/ai-plan/apply')) {
+      return {
+        'data': [
+          {
+            'id': 'item-1',
+            'trip_id': 'trip-1',
+            'title': 'Senso-ji Temple',
+            'kind': 'attraction',
+            'status': 'planned',
+            'sort_order': 1,
+            'version': 1,
+          }
+        ]
+      };
+    }
+    return postResponse ?? {'data': {}};
+  }
+}
 
 class FakeTripRepository implements TripRepository {
   final List<Trip> trips = [];
@@ -213,5 +276,131 @@ void main() {
       await tester.tap(find.byIcon(Icons.edit_outlined));
       expect(editTapped, isTrue);
     });
+
+    testWidgets(
+      'TripCreatePage renders itinerary setup with AI auto-generate toggle and interest chips',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final fakeRepo = FakeTripRepository();
+        final fakeApi = FakeAiApiClient();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tripRepositoryProvider.overrideWithValue(fakeRepo),
+              apiClientProvider.overrideWithValue(fakeApi),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripCreatePage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('New Trip'), findsOneWidget);
+        expect(find.text('Trip title *'), findsOneWidget);
+        expect(find.text('Itinerary Setup'), findsOneWidget);
+        expect(
+          find.text('✨ Auto-generate starter itinerary with AI'),
+          findsOneWidget,
+        );
+        expect(find.text('Interests & Focus:'), findsOneWidget);
+        expect(find.textContaining('Sightseeing'), findsOneWidget);
+        expect(find.textContaining('Food & Dining'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'TripCreatePage toggling manual stop shows input fields',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final fakeRepo = FakeTripRepository();
+        final fakeApi = FakeAiApiClient();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tripRepositoryProvider.overrideWithValue(fakeRepo),
+              apiClientProvider.overrideWithValue(fakeApi),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripCreatePage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Initially manual input fields are not visible
+        expect(find.text('First stop title'), findsNothing);
+
+        // Tap checkbox to enable manual stop
+        final manualCheckbox = find.text('✍️ Add your first stop manually instead');
+        expect(manualCheckbox, findsOneWidget);
+        await tester.tap(manualCheckbox);
+        await tester.pumpAndSettle();
+
+        // Now first stop fields are revealed
+        expect(find.text('First stop title'), findsOneWidget);
+        expect(find.text('Category'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'TripCreatePage creates trip and navigates',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final fakeRepo = FakeTripRepository();
+        final fakeApi = FakeAiApiClient();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tripRepositoryProvider.overrideWithValue(fakeRepo),
+              apiClientProvider.overrideWithValue(fakeApi),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripCreatePage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Enter trip title
+        await tester.enterText(find.byType(TextFormField).first, 'Tokyo Trip');
+        await tester.pump();
+
+        // Submit form
+        await tester.tap(find.text('Create Trip'));
+        await tester.pump();
+
+        // Wait for async operations to complete
+        await tester.pumpAndSettle();
+
+        // Trip was created in repository
+        expect(fakeRepo.trips.length, 1);
+        expect(fakeRepo.trips.first.title, 'Tokyo Trip');
+      },
+    );
   });
 }

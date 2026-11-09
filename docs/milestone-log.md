@@ -178,6 +178,34 @@
   - Mobile Flutter Analyzer: 0 issues.
   - Feature Document: Created `docs/features/travel-journal-and-memories.md`.
 
+## 2026-11-09 — Automatic AI & Manual Itinerary Setup in Trip Creation Flow
+
+### Completed
+
+- **Automatic Itinerary Setup in Trip Creation**:
+  - Implemented the user-requested automatic itinerary generation upon creating a new trip/travel in `TripCreatePage` (`client/lib/features/trips/presentation/pages/trip_create_page.dart`).
+  - Added dedicated **"Itinerary Setup"** card with modern, intuitive options:
+    - **✨ Auto-generate starter itinerary with AI (Recommended/Default)**:
+      - Automatically generates curated stops, daily schedules, and neighborhood clusters tailored to the destination, trip duration, and party size upon trip creation.
+      - Includes customizable quick interest chips (`Sightseeing`, `Food & Dining`, `Culture & Arts`, `Nature & Parks`, `Shopping`, `Relaxation`).
+      - Calls `GenerateAiItineraryService` (`/trips/{trip}/ai-plan/generate`) and immediately persists stops via `ApplyAiItineraryService` (`/trips/{trip}/ai-plan/apply`).
+    - **✍️ Add first stop manually instead**:
+      - Allows travelers to manually input their initial stop (title, location/address with autocomplete, and category dropdown) directly on the creation form.
+      - Automatically persists the activity via `ItineraryRepository.createItem` before redirecting.
+    - **Blank / Clean Slate**:
+      - Travelers can opt to start with an empty itinerary if preferred.
+  - **Seamless Navigation & Transition**:
+    - Replaced the generic `context.pop()` with direct replacement navigation to `TripItineraryPage` (`/trips/:tripId/itinerary`).
+    - The traveler immediately lands on their newly populated itinerary timeline with all activities, places, and schedules ready to explore or edit.
+    - Loading button reflects real-time status (`Creating your trip...` -> `Crafting your AI starter itinerary...`).
+    - Offline and error-resilient: if the user is offline or the AI service fails, the trip is still created safely and the user transitions smoothly.
+- **Backend Currency Rate String Type Cast Fix**:
+  - `CurrencyExchangeRateService`: Fixed `TypeError` on `ExchangeRateData` constructor where cached rates retrieved from Redis/cache were returned as strings, causing strict type mismatch with `float $rate`. Added explicit float casting on cache retrieval and reciprocal computation.
+- **Automated Verification**:
+  - Backend PHPUnit: 139/139 tests passed (865 assertions) on PostgreSQL test database.
+  - Mobile Flutter Tests: 158/158 tests passed (`flutter test`).
+  - Mobile Analyzer: 0 issues found (`flutter analyze`).
+
 ## 2026-11-09 — Trip Weather Integration, AI Stop Creation & Trip Form Robustness
 
 ### Completed
