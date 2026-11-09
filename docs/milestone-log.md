@@ -10,6 +10,27 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-09 — Trip Destination Length & Client Error Feedback Hardening
+
+### Completed
+
+- **Database Migration & Schema**:
+  - Migration `2026_11_09_060117_widen_destination_country_on_trips_table`: Widened `destination_country` and `origin_country` on table `trips` from `varchar(2)` to `varchar(100)` nullable.
+  - Executed on dev (`tapittrip`) and test (`tapittrip_test`) PostgreSQL databases with `tapittrip_migrator` credentials.
+- **Backend Validation & Form Requests**:
+  - Updated `StoreTripRequest` and `UpdateTripRequest`: Changed `destination_country` and `origin_country` validation rules from `size:2` to `max:100` so travelers can enter city/district names (e.g. "Taguig", "BGC", "Tokyo, Japan") directly from autocomplete or input fields without 422 errors.
+  - Updated `CountryCurrencyResolver`: Added common Philippine destination keywords (`taguig`, `bgc`, `makati`, `davao`, `siargao`, `bohol`, `baguio`, `pasig`, `quezon city` -> `PHP`).
+  - OpenAPI Specification: Updated `docs/api/openapi.yaml` to document `destination_country` and `origin_country` as strings up to 100 characters.
+- **Mobile Client Enhancements**:
+  - `CountryCurrencyHelper`: Added corresponding city/district keywords (`taguig`, `bgc`, `makati`, `davao`, etc.) to map cleanly to `PHP`.
+  - `TripListNotifier`: Propagated API exceptions on `createTrip` and `updateTrip` via `rethrow`.
+  - `TripCreatePage` & `EditTripBottomSheet`: Updated form submission error handlers to inspect `ValidationException` (extracting field error details) and `ApiException` rather than masking server errors with generic connection errors.
+- **Automated Verification**:
+  - Backend PHPUnit: Added `test_user_can_create_and_update_trip_with_named_city_destination` in `TripTest.php`. Full test suite passes: 129/129 tests, 717 assertions.
+  - Backend Pint: 0 style issues.
+  - Mobile Flutter Tests: 140/140 tests pass.
+  - Mobile Flutter Analyzer: 0 issues.
+
 ## 2026-11-09 — Milestone M9 (Slice 1): Personal & Group Travel Journal Entries and Photo Reflections
 
 ### Completed

@@ -87,8 +87,17 @@ class CountryCurrencyHelper {
       return 'JPY';
     }
     if (lower.contains('manila') ||
+        lower.contains('taguig') ||
+        lower.contains('bgc') ||
+        lower.contains('makati') ||
         lower.contains('cebu') ||
-        lower.contains('boracay')) {
+        lower.contains('boracay') ||
+        lower.contains('palawan') ||
+        lower.contains('davao') ||
+        lower.contains('siargao') ||
+        lower.contains('bohol') ||
+        lower.contains('baguio') ||
+        lower.contains('pasig')) {
       return 'PHP';
     }
     if (lower.contains('paris') ||

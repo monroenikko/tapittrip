@@ -28,8 +28,8 @@ final class StoreTripRequest extends FormRequest
             'start_date' => ['nullable', 'date_format:Y-m-d'],
             'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
             'primary_timezone' => ['nullable', 'string', 'timezone:all'],
-            'origin_country' => ['nullable', 'string', 'size:2'],
-            'destination_country' => ['nullable', 'string', 'size:2'],
+            'origin_country' => ['nullable', 'string', 'max:100'],
+            'destination_country' => ['nullable', 'string', 'max:100'],
             'trip_type' => ['nullable', 'string', 'in:leisure,business,family,solo,group'],
             'planning_mode' => ['nullable', 'string', 'in:diy,existing,guided,simple'],
         ];

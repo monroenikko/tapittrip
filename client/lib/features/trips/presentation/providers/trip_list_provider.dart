@@ -45,7 +45,7 @@ class TripListNotifier extends AsyncNotifier<List<Trip>> {
       return trip;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return null;
+      rethrow;
     }
   }
 
@@ -82,7 +82,7 @@ class TripListNotifier extends AsyncNotifier<List<Trip>> {
       return updated;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
-      return null;
+      rethrow;
     }
   }
 

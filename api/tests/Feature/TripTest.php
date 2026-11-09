@@ -265,4 +265,36 @@ final class TripTest extends TestCase
         $response = $this->postJson('/api/v1/trips', ['title' => 'Test']);
         $response->assertUnauthorized();
     }
+
+    public function test_user_can_create_and_update_trip_with_named_city_destination(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $createResponse = $this->postJson('/api/v1/trips', [
+            'title' => 'BGC Taguig',
+            'destination_country' => 'Taguig',
+            'origin_country' => 'Manila',
+            'start_date' => '2026-11-09',
+            'end_date' => '2026-11-12',
+            'trip_type' => 'solo',
+            'planning_mode' => 'guided',
+        ]);
+
+        $createResponse->assertCreated()
+            ->assertJsonPath('data.title', 'BGC Taguig')
+            ->assertJsonPath('data.destination_country', 'Taguig')
+            ->assertJsonPath('data.origin_country', 'Manila')
+            ->assertJsonPath('data.destination_currency', 'PHP');
+
+        $tripId = $createResponse->json('data.id');
+
+        $updateResponse = $this->putJson("/api/v1/trips/{$tripId}", [
+            'destination_country' => 'Tokyo, Japan',
+        ]);
+
+        $updateResponse->assertOk()
+            ->assertJsonPath('data.destination_country', 'Tokyo, Japan')
+            ->assertJsonPath('data.destination_currency', 'JPY');
+    }
 }

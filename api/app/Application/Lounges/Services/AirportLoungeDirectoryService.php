@@ -1128,6 +1128,7 @@ final class AirportLoungeDirectoryService
         foreach ($all as $item) {
             if ($q === null || $q === '') {
                 $results[] = $item;
+
                 continue;
             }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:tapittrip/core/network/api_exceptions.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/place_autocomplete_field.dart';
 import 'package:tapittrip/features/trips/domain/models/planning_mode.dart';
 import 'package:tapittrip/features/trips/domain/models/trip.dart';
@@ -102,34 +103,54 @@ class _EditTripBottomSheetState extends ConsumerState<EditTripBottomSheet> {
 
     final dateFormat = DateFormat('yyyy-MM-dd');
 
-    final updated = await ref
-        .read(tripListProvider.notifier)
-        .updateTrip(
-          widget.trip.id,
-          title: _titleController.text.trim(),
-          destinationCountry: _destinationController.text.trim().isEmpty
-              ? null
-              : _destinationController.text.trim(),
-          startDate: _startDate != null ? dateFormat.format(_startDate!) : null,
-          endDate: _endDate != null ? dateFormat.format(_endDate!) : null,
-          primaryTimezone: _timezoneController.text.trim().isEmpty
-              ? 'UTC'
-              : _timezoneController.text.trim(),
-          tripType: _selectedTripType,
-          planningMode: _selectedMode,
-        );
+    try {
+      final updated = await ref
+          .read(tripListProvider.notifier)
+          .updateTrip(
+            widget.trip.id,
+            title: _titleController.text.trim(),
+            destinationCountry: _destinationController.text.trim().isEmpty
+                ? null
+                : _destinationController.text.trim(),
+            startDate: _startDate != null ? dateFormat.format(_startDate!) : null,
+            endDate: _endDate != null ? dateFormat.format(_endDate!) : null,
+            primaryTimezone: _timezoneController.text.trim().isEmpty
+                ? 'UTC'
+                : _timezoneController.text.trim(),
+            tripType: _selectedTripType,
+            planningMode: _selectedMode,
+          );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (updated != null) {
-      Navigator.of(context).pop(updated);
-    } else {
       setState(() {
-        _errorMessage = 'Failed to update trip. Please check your connection.';
+        _isLoading = false;
+      });
+
+      if (updated != null) {
+        Navigator.of(context).pop(updated);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        if (e is ValidationException) {
+          final fields = e.details['fields'];
+          if (fields is Map && fields.isNotEmpty) {
+            final firstError = fields.values.first;
+            if (firstError is List && firstError.isNotEmpty) {
+              _errorMessage = firstError.first.toString();
+            } else {
+              _errorMessage = firstError.toString();
+            }
+          } else {
+            _errorMessage = e.message;
+          }
+        } else if (e is ApiException) {
+          _errorMessage = e.message;
+        } else {
+          _errorMessage = 'Failed to update trip. Please check your connection.';
+        }
       });
     }
   }
