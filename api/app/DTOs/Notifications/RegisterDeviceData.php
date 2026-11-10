@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Notifications\Data;
+namespace App\DTOs\Notifications;
 
 final readonly class RegisterDeviceData
 {

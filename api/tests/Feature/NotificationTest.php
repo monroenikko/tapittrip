@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Notifications\Models\NotificationPreference;
-use App\Domain\Notifications\Models\Reminder;
-use App\Domain\Notifications\Models\UserDevice;
 use App\Models\Checklist;
 use App\Models\ItineraryItem;
+use App\Models\NotificationPreference;
+use App\Models\Reminder;
 use App\Models\Stay;
 use App\Models\Trip;
 use App\Models\TripDay;
 use App\Models\User;
+use App\Models\UserDevice;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;

@@ -2,26 +2,45 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Notifications\Services;
+namespace App\Services\Notifications;
 
-use App\Domain\Notifications\Models\NotificationPreference;
-use App\Domain\Notifications\Models\Reminder;
+use App\DTOs\Notifications\RegisterDeviceData;
+use App\DTOs\Notifications\UpdateNotificationPreferencesData;
+use App\Models\NotificationPreference;
+use App\Models\Reminder;
 use App\Models\Trip;
 use App\Models\User;
+use App\Models\UserDevice;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 
-final class ScheduleTripRemindersService
+final class NotificationService
 {
     /**
-     * Generate or recalculate scheduled reminders for a trip based on user preferences.
-     *
-     * @return Collection<int, Reminder>
+     * Register or update a user's mobile or web device.
      */
-    public function execute(Trip $trip, User $user): Collection
+    public function registerDevice(User $user, RegisterDeviceData $data): UserDevice
     {
-        $preferences = NotificationPreference::firstOrCreate(
+        return UserDevice::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'device_key' => $data->deviceKey,
+            ],
+            [
+                'platform' => $data->platform,
+                'push_token' => $data->pushToken,
+                'last_seen_at' => now(),
+            ]
+        );
+    }
+
+    /**
+     * Get or create notification preferences for the user.
+     */
+    public function getPreferences(User $user): NotificationPreference
+    {
+        return NotificationPreference::firstOrCreate(
             ['user_id' => $user->id],
             [
                 'morning_summary_enabled' => true,
@@ -37,6 +56,47 @@ final class ScheduleTripRemindersService
                 'timezone_behavior' => 'destination',
             ]
         );
+    }
+
+    /**
+     * Update notification preferences for the user.
+     */
+    public function updatePreferences(User $user, UpdateNotificationPreferencesData $data): NotificationPreference
+    {
+        $preferences = $this->getPreferences($user);
+
+        $updates = $data->toArray();
+        if (! empty($updates)) {
+            $preferences->update($updates);
+        }
+
+        return $preferences->refresh();
+    }
+
+    /**
+     * Retrieve reminders for a trip.
+     *
+     * @return Collection<int, Reminder>
+     */
+    public function getTripReminders(Trip $trip, ?string $status = null): Collection
+    {
+        $query = $trip->reminders()->with(['itineraryItem', 'checklist']);
+
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Generate or recalculate scheduled reminders for a trip based on user preferences.
+     *
+     * @return Collection<int, Reminder>
+     */
+    public function scheduleTripReminders(Trip $trip, User $user): Collection
+    {
+        $preferences = $this->getPreferences($user);
 
         $tripTz = $trip->primary_timezone ?: 'UTC';
         $activeDedupeKeys = [];

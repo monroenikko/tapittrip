@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Notifications\Models\UserDevice;
 use App\Models\User;
+use App\Models\UserDevice;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

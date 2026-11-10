@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Notifications\Models;
+namespace App\Models;
 
-use App\Models\Checklist;
-use App\Models\ItineraryItem;
-use App\Models\Trip;
 use Database\Factories\ReminderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
