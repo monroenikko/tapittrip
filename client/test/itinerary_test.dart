@@ -8,6 +8,7 @@ import 'package:tapittrip/features/itinerary/domain/models/trip_day.dart';
 import 'package:tapittrip/features/itinerary/presentation/pages/trip_itinerary_page.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/activity_timeline_card.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/itinerary_filter_tabs.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/place_autocomplete_field.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/route_summary_card.dart';
@@ -70,6 +71,8 @@ void main() {
         id: 'day-1',
         tripId: 'trip-1',
         localDate: '2026-05-10',
+        dayNumber: 1,
+        title: 'Day 1',
         notes: 'Kyoto Arrival',
       );
 
@@ -78,7 +81,53 @@ void main() {
 
       expect(fromJson.id, 'day-1');
       expect(fromJson.localDate, '2026-05-10');
+      expect(fromJson.dayNumber, 1);
+      expect(fromJson.displayTitle, 'Day 1');
+      expect(fromJson.displayHeader, contains('Day 1'));
       expect(fromJson.notes, 'Kyoto Arrival');
+    });
+
+    testWidgets('AddActivityBottomSheet renders Day dropdown selector', (
+      tester,
+    ) async {
+      const days = [
+        TripDay(
+          id: 'day-1',
+          tripId: 'trip-1',
+          localDate: '2026-05-10',
+          dayNumber: 1,
+          title: 'Day 1',
+        ),
+        TripDay(
+          id: 'day-2',
+          tripId: 'trip-1',
+          localDate: '2026-05-11',
+          dayNumber: 2,
+          title: 'Day 2',
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: AddActivityBottomSheet(
+              tripId: 'trip-1',
+              days: days,
+              onSubmit: ({
+                required title,
+                required kind,
+                tripDayId,
+                inlinePlace,
+                notes,
+              }) async {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Itinerary Day'), findsOneWidget);
+      expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
     });
 
     test('ItineraryItem serializes and deserializes properly with place', () {

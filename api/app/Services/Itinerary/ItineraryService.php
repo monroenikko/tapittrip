@@ -13,6 +13,7 @@ use App\Models\TripDay;
 use App\Models\User;
 use App\Models\VisitEvent;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -40,13 +41,69 @@ final class ItineraryService
     }
 
     /**
-     * List all days for a trip.
+     * List all days for a trip, auto-populating missing days from start_date to end_date.
      *
      * @return Collection<int, TripDay>
      */
     public function getTripDays(Trip $trip): Collection
     {
-        return $trip->days()->get();
+        if ($trip->start_date !== null && $trip->end_date !== null) {
+            return $this->ensureDaysForTrip($trip);
+        }
+
+        return $trip->days()->orderBy('local_date')->get();
+    }
+
+    /**
+     * Ensure all days between trip start_date and end_date are populated.
+     *
+     * @return Collection<int, TripDay>
+     */
+    public function ensureDaysForTrip(Trip $trip): Collection
+    {
+        if ($trip->start_date === null || $trip->end_date === null) {
+            return $trip->days()->orderBy('local_date')->get();
+        }
+
+        $start = CarbonImmutable::parse($trip->start_date);
+        $end = CarbonImmutable::parse($trip->end_date);
+
+        if ($end->lessThan($start)) {
+            $end = $start;
+        }
+
+        $current = $start;
+        $dayNumber = 1;
+
+        while ($current->lessThanOrEqualTo($end)) {
+            $dateString = $current->format('Y-m-d');
+
+            /** @var TripDay|null $existing */
+            $existing = TripDay::withTrashed()
+                ->where('trip_id', $trip->id)
+                ->where('local_date', $dateString)
+                ->first();
+
+            if ($existing !== null) {
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+                if ($existing->notes === null || trim($existing->notes) === '') {
+                    $existing->update(['notes' => "Day {$dayNumber}"]);
+                }
+            } else {
+                TripDay::create([
+                    'trip_id' => $trip->id,
+                    'local_date' => $dateString,
+                    'notes' => "Day {$dayNumber}",
+                ]);
+            }
+
+            $current = $current->addDay();
+            $dayNumber++;
+        }
+
+        return $trip->days()->orderBy('local_date')->get();
     }
 
     /**

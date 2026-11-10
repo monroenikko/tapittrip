@@ -212,6 +212,29 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    // Itinerary Day Selector
+                    if (widget.days.isNotEmpty) ...[
+                      DropdownButtonFormField<String>(
+                        initialValue:
+                            widget.days.any((d) => d.id == _chosenDayId)
+                            ? _chosenDayId
+                            : widget.days.first.id,
+                        decoration: const InputDecoration(
+                          labelText: 'Itinerary Day',
+                          prefixIcon: Icon(Icons.calendar_today_rounded),
+                        ),
+                        items: widget.days.map((day) {
+                          return DropdownMenuItem<String>(
+                            value: day.id,
+                            child: Text(day.displayHeader),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() => _chosenDayId = val);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     // Category / Kind Chips
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,

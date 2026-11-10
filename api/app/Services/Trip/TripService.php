@@ -12,6 +12,7 @@ use App\Models\Stay;
 use App\Models\Trip;
 use App\Models\User;
 use App\Services\Expenses\CountryCurrencyResolver;
+use App\Services\Itinerary\ItineraryService;
 use App\Services\Weather\WeatherService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -21,6 +22,7 @@ final class TripService
 {
     public function __construct(
         private readonly WeatherService $weatherService,
+        private readonly ItineraryService $itineraryService,
     ) {}
 
     /**
@@ -63,6 +65,10 @@ final class TripService
                 'invitation_status' => 'accepted',
             ]);
 
+            if ($trip->start_date !== null && $trip->end_date !== null) {
+                $this->itineraryService->ensureDaysForTrip($trip);
+            }
+
             return $trip;
         });
     }
@@ -80,7 +86,13 @@ final class TripService
 
             $trip->update($updates);
 
-            return $trip->fresh();
+            $refreshed = $trip->fresh();
+
+            if ($refreshed->start_date !== null && $refreshed->end_date !== null) {
+                $this->itineraryService->ensureDaysForTrip($refreshed);
+            }
+
+            return $refreshed;
         });
     }
 
