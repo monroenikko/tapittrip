@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Checklists\Data;
+namespace App\DTOs\Checklists;
 
 final readonly class CreateChecklistItemData
 {

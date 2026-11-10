@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Application\Media\Services;
 
 use App\Application\Media\Data\UploadMediaData;
-use App\Domain\Checklists\Models\ChecklistItem;
 use App\Domain\Media\Models\MediaAttachment;
+use App\Models\ChecklistItem;
 use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;

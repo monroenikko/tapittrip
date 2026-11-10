@@ -4,21 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Checklists\Data\CreateChecklistItemData;
-use App\Application\Checklists\Data\UpdateChecklistItemData;
-use App\Application\Checklists\Services\CreateChecklistItemService;
-use App\Application\Checklists\Services\DeleteChecklistItemService;
-use App\Application\Checklists\Services\ToggleChecklistItemService;
-use App\Application\Checklists\Services\UpdateChecklistItemService;
 use App\Application\Media\Data\UploadMediaData;
 use App\Application\Media\Services\UploadMediaService;
-use App\Domain\Checklists\Models\Checklist;
-use App\Domain\Checklists\Models\ChecklistItem;
+use App\DTOs\Checklists\CreateChecklistItemData;
+use App\DTOs\Checklists\UpdateChecklistItemData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Checklists\StoreChecklistItemRequest;
 use App\Http\Requests\Api\V1\Checklists\UpdateChecklistItemRequest;
 use App\Http\Requests\Api\V1\Media\UploadMediaRequest;
 use App\Http\Resources\Api\V1\ChecklistItemResource;
+use App\Models\Checklist;
+use App\Models\ChecklistItem;
+use App\Services\Checklists\ChecklistService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -27,17 +24,20 @@ use Illuminate\Support\Facades\Gate;
 
 final class ChecklistItemController extends Controller
 {
+    public function __construct(
+        private readonly ChecklistService $checklistService,
+    ) {}
+
     /**
      * Store a newly created item inside a checklist.
      */
     public function store(
         StoreChecklistItemRequest $request,
         Checklist $checklist,
-        CreateChecklistItemService $service,
     ): JsonResponse {
         Gate::authorize('update', $checklist->trip);
 
-        $item = $service->handle(
+        $item = $this->checklistService->createItem(
             $checklist,
             CreateChecklistItemData::from($request->validated()),
         );
@@ -53,11 +53,10 @@ final class ChecklistItemController extends Controller
     public function update(
         UpdateChecklistItemRequest $request,
         ChecklistItem $item,
-        UpdateChecklistItemService $service,
     ): JsonResponse {
         Gate::authorize('update', $item->trip);
 
-        $updated = $service->handle(
+        $updated = $this->checklistService->updateItem(
             $item,
             UpdateChecklistItemData::from($request->validated()),
         );
@@ -72,11 +71,10 @@ final class ChecklistItemController extends Controller
     public function toggle(
         Request $request,
         ChecklistItem $item,
-        ToggleChecklistItemService $service,
     ): JsonResponse {
         Gate::authorize('update', $item->trip);
 
-        $toggled = $service->handle($item);
+        $toggled = $this->checklistService->toggleItem($item);
 
         return (new ChecklistItemResource($toggled))
             ->response();
@@ -88,11 +86,10 @@ final class ChecklistItemController extends Controller
     public function destroy(
         Request $request,
         ChecklistItem $item,
-        DeleteChecklistItemService $service,
     ): Response {
         Gate::authorize('update', $item->trip);
 
-        $service->handle($item);
+        $this->checklistService->deleteItem($item);
 
         return response()->noContent();
     }

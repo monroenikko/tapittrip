@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Checklists\Models\Checklist;
+use App\Models\Checklist;
 use App\Models\Trip;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

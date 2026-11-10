@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Notifications\Models;
 
-use App\Domain\Checklists\Models\Checklist;
+use App\Models\Checklist;
 use App\Models\ItineraryItem;
 use App\Models\Trip;
 use Database\Factories\ReminderFactory;

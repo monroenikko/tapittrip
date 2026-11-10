@@ -2,15 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Checklists\Services;
+namespace App\Services\Checklists;
 
-use App\Domain\Checklists\Models\Checklist;
-use App\Domain\Checklists\Models\ChecklistItem;
+use App\DTOs\Checklists\CreateChecklistData;
+use App\DTOs\Checklists\CreateChecklistItemData;
+use App\DTOs\Checklists\UpdateChecklistItemData;
+use App\Models\Checklist;
+use App\Models\ChecklistItem;
 use App\Models\Trip;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
-final class ApplyChecklistTemplateService
+final class ChecklistService
 {
     /**
      * @var array<string, array{title: string, type: string, description: string, items: array<int, array{title: string, category: string, quantity: int}>}>
@@ -110,9 +114,38 @@ final class ApplyChecklistTemplateService
     ];
 
     /**
+     * Get all checklists for a trip with their items loaded.
+     *
+     * @return Collection<int, Checklist>
+     */
+    public function getTripChecklists(Trip $trip): Collection
+    {
+        return $trip->checklists()
+            ->with(['items'])
+            ->get();
+    }
+
+    /**
+     * Create a new checklist for a trip.
+     */
+    public function createChecklist(Trip $trip, CreateChecklistData $data): Checklist
+    {
+        /** @var Checklist $checklist */
+        $checklist = Checklist::query()->create([
+            'trip_id' => $trip->id,
+            'title' => $data->title,
+            'type' => $data->type,
+            'description' => $data->description,
+            'sort_order' => $data->sortOrder,
+        ]);
+
+        return $checklist->load('items');
+    }
+
+    /**
      * Apply a starter template to a trip.
      */
-    public function handle(Trip $trip, string $templateKey): Checklist
+    public function applyTemplate(Trip $trip, string $templateKey): Checklist
     {
         if (! array_key_exists($templateKey, self::TEMPLATES)) {
             throw new InvalidArgumentException("Unknown checklist template [{$templateKey}].");
@@ -161,6 +194,104 @@ final class ApplyChecklistTemplateService
 
             return $checklist->load('items');
         });
+    }
+
+    /**
+     * Delete a checklist.
+     */
+    public function deleteChecklist(Checklist $checklist): void
+    {
+        $checklist->delete();
+    }
+
+    /**
+     * Create a new item inside a checklist.
+     */
+    public function createItem(Checklist $checklist, CreateChecklistItemData $data): ChecklistItem
+    {
+        /** @var ChecklistItem $item */
+        $item = ChecklistItem::query()->create([
+            'checklist_id' => $checklist->id,
+            'trip_id' => $checklist->trip_id,
+            'title' => $data->title,
+            'category' => $data->category,
+            'is_packed' => false,
+            'quantity' => $data->quantity,
+            'notes' => $data->notes,
+            'photo_url' => $data->photoUrl,
+            'sort_order' => $data->sortOrder,
+            'packed_at' => null,
+            'version' => 1,
+        ]);
+
+        return $item;
+    }
+
+    /**
+     * Update an existing checklist item.
+     */
+    public function updateItem(ChecklistItem $item, UpdateChecklistItemData $data): ChecklistItem
+    {
+        $attributes = [];
+
+        if ($data->title !== null) {
+            $attributes['title'] = $data->title;
+        }
+
+        if ($data->category !== null) {
+            $attributes['category'] = $data->category;
+        }
+
+        if ($data->quantity !== null) {
+            $attributes['quantity'] = $data->quantity;
+        }
+
+        if ($data->notes !== null || $data->notes === '') {
+            $attributes['notes'] = $data->notes ?: null;
+        }
+
+        if ($data->photoUrl !== null || $data->photoUrl === '') {
+            $attributes['photo_url'] = $data->photoUrl ?: null;
+        }
+
+        if ($data->sortOrder !== null) {
+            $attributes['sort_order'] = $data->sortOrder;
+        }
+
+        if ($data->isPacked !== null) {
+            $attributes['is_packed'] = $data->isPacked;
+            $attributes['packed_at'] = $data->isPacked ? ($item->packed_at ?? now()) : null;
+        }
+
+        $attributes['version'] = $item->version + 1;
+
+        $item->update($attributes);
+
+        return $item->fresh(['checklist', 'trip']);
+    }
+
+    /**
+     * Toggle the packed status of a checklist item.
+     */
+    public function toggleItem(ChecklistItem $item): ChecklistItem
+    {
+        $newPackedStatus = ! $item->is_packed;
+
+        $item->update([
+            'is_packed' => $newPackedStatus,
+            'packed_at' => $newPackedStatus ? now() : null,
+            'version' => $item->version + 1,
+        ]);
+
+        return $item->fresh(['checklist', 'trip']);
+    }
+
+    /**
+     * Delete a checklist item.
+     */
+    public function deleteItem(ChecklistItem $item): void
+    {
+        $item->delete();
     }
 
     /**

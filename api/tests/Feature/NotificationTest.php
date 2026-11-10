@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Checklists\Models\Checklist;
 use App\Domain\Notifications\Models\NotificationPreference;
 use App\Domain\Notifications\Models\Reminder;
 use App\Domain\Notifications\Models\UserDevice;
+use App\Models\Checklist;
 use App\Models\ItineraryItem;
 use App\Models\Stay;
 use App\Models\Trip;

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Checklists\Models\Checklist;
-use App\Domain\Checklists\Models\ChecklistItem;
 use App\Domain\Media\Models\MediaAttachment;
+use App\Models\Checklist;
+use App\Models\ChecklistItem;
 use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;

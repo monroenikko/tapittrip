@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Checklists\Models;
+namespace App\Models;
 
 use App\Domain\Media\Models\MediaAttachment;
-use App\Models\Trip;
 use Database\Factories\ChecklistItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'checklist_id',

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Media\Services;
 
-use App\Domain\Checklists\Models\ChecklistItem;
 use App\Domain\Media\Models\MediaAttachment;
+use App\Models\ChecklistItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
