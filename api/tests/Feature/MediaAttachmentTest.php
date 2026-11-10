@@ -175,4 +175,53 @@ final class MediaAttachmentTest extends TestCase
             ->assertJsonPath('data.type', 'return')
             ->assertJsonPath('data.total_items_count', 6);
     }
+
+    public function test_upload_rejects_unsupported_file_types(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+
+        $invalidFile = UploadedFile::fake()->create('script.sh', 10, 'application/x-sh');
+
+        $response = $this->postJson("/api/v1/trips/{$trip->id}/media", [
+            'file' => $invalidFile,
+            'title' => 'Shell Script',
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed');
+        $this->assertNotNull($response->json('error.details.fields.file'));
+    }
+
+    public function test_accessing_media_from_different_trip_returns_404(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip1 */
+        $trip1 = Trip::factory()->create(['owner_id' => $user->id]);
+        /** @var Trip $trip2 */
+        $trip2 = Trip::factory()->create(['owner_id' => $user->id]);
+
+        $file = UploadedFile::fake()->image('boarding_pass.jpg', 600, 400);
+
+        $upload = $this->postJson("/api/v1/trips/{$trip1->id}/media", [
+            'file' => $file,
+            'title' => 'Pass',
+        ]);
+        $upload->assertCreated();
+        $mediaId = $upload->json('data.id');
+
+        // Accessing mediaId via trip2 should abort 404
+        $this->get("/api/v1/trips/{$trip2->id}/media/{$mediaId}")
+            ->assertNotFound();
+
+        // Deleting mediaId via trip2 should abort 404
+        $this->deleteJson("/api/v1/trips/{$trip2->id}/media/{$mediaId}")
+            ->assertNotFound();
+    }
 }

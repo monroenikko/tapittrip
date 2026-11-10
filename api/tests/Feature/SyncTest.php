@@ -282,4 +282,88 @@ final class SyncTest extends TestCase
         $emptyPull->assertStatus(200)
             ->assertJsonPath('data.operations', []);
     }
+
+    public function test_push_rejects_unsupported_entity_type(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+        $opId = (string) Str::uuid();
+
+        $response = $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'device-test-1',
+            'operations' => [
+                [
+                    'operation_id' => $opId,
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'unknown_satellite',
+                    'entity_id' => (string) Str::uuid(),
+                    'operation_type' => 'create',
+                    'base_version' => 1,
+                    'payload' => ['title' => 'Invalid'],
+                ],
+            ],
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonPath('error.code', 'validation_failed');
+        $this->assertArrayHasKey('operations.0.entity_type', $response->json('error.details.fields') ?? []);
+    }
+
+    public function test_push_rejects_nonexistent_item_update(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+        $opId = (string) Str::uuid();
+        $nonExistentId = (string) Str::uuid();
+
+        $response = $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'device-test-1',
+            'operations' => [
+                [
+                    'operation_id' => $opId,
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'checklist_item',
+                    'entity_id' => $nonExistentId,
+                    'operation_type' => 'update',
+                    'base_version' => 1,
+                    'payload' => ['title' => 'Ghost Item'],
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.results.0.operation_id', $opId)
+            ->assertJsonPath('data.results.0.status', 'rejected')
+            ->assertJsonPath('data.results.0.conflict_details.reason', 'Checklist item not found');
+    }
+
+    public function test_pull_fails_when_trip_does_not_exist(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $randomTripId = (string) Str::uuid();
+
+        $response = $this->getJson("/api/v1/sync/pull?device_key=device-test&cursor=0&trip_id={$randomTripId}");
+
+        $response->assertStatus(404);
+    }
+
+    public function test_pull_fails_when_user_is_not_a_member_of_the_trip(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+
+        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+
+        Sanctum::actingAs($stranger);
+
+        $response = $this->getJson("/api/v1/sync/pull?device_key=device-test&cursor=0&trip_id={$trip->id}");
+
+        $response->assertStatus(403);
+    }
 }

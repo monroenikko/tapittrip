@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Services\Expenses\CountryCurrencyResolver;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -48,5 +49,22 @@ final class CountryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.code', 'PH')
             ->assertJsonPath('data.0.currency_code', 'PHP');
+    }
+
+    public function test_search_with_no_matches_returns_empty_collection(): void
+    {
+        $response = $this->getJson('/api/v1/countries?search=nonexistent_atlantis_9999');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data', []);
+    }
+
+    public function test_country_currency_resolver_falls_back_to_usd_for_unknown_or_null_locations(): void
+    {
+        $this->assertSame('USD', CountryCurrencyResolver::resolve('atlantis_nowhere'));
+        $this->assertSame('USD', CountryCurrencyResolver::resolve(''));
+        $this->assertSame('USD', CountryCurrencyResolver::resolve(null));
+        $this->assertSame('EUR', CountryCurrencyResolver::resolve('atlantis_nowhere', 'EUR'));
     }
 }

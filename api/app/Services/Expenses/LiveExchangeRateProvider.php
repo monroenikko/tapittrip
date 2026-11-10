@@ -7,6 +7,7 @@ namespace App\Services\Expenses;
 use App\Contracts\ExchangeRateProviderInterface;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 final class LiveExchangeRateProvider implements ExchangeRateProviderInterface
 {
@@ -37,7 +38,7 @@ final class LiveExchangeRateProvider implements ExchangeRateProviderInterface
                     return (float) $data['rates'][$to];
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("LiveExchangeRateProvider failed to fetch live rate for {$from}->{$to}: ".$e->getMessage());
         }
 
@@ -66,7 +67,7 @@ final class LiveExchangeRateProvider implements ExchangeRateProviderInterface
                     return $rates;
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("LiveExchangeRateProvider failed to fetch rates for {$base}: ".$e->getMessage());
         }
 
