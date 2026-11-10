@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'invite_base_url' => env('INVITE_LINK_BASE_URL', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

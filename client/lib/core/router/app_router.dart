@@ -7,6 +7,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/profile_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/circles/presentation/pages/trip_circle_page.dart';
 import '../../features/expenses/presentation/pages/trip_expenses_page.dart';
 import '../../features/itinerary/presentation/pages/trip_itinerary_page.dart';
 import '../../features/journal/presentation/pages/trip_journal_page.dart';
@@ -108,6 +109,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final tripId = state.pathParameters['tripId']!;
               return TripRecapPage(tripId: tripId);
+            },
+          ),
+          GoRoute(
+            path: ':tripId/circle',
+            builder: (context, state) {
+              final tripId = state.pathParameters['tripId']!;
+              return TripCirclePage(tripId: tripId);
             },
           ),
         ],

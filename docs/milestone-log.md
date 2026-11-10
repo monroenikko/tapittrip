@@ -2,14 +2,31 @@
 
 ## Current milestone
 
-- Milestone: **M9 — Travel Memories, Photos & Group Journal**
-- Status: **Completed (All 3 Slices)**
-- Basis: Approved Milestone M9 plan (`m9-travel-journal-and-memories-plan.md`). Personal and group travel reflections, mood chips, weather, and photo attachments; private by default on creation (`is_shared = false`), with companion sharing (TC-8.1); chronological shared circle activity feed with privacy redaction and idempotent moments stream (TC-8.2); automated trip recap, highlights summary, mood journey, and photo story album (Slice 3).
+- Milestone: **Trip Circles Collaboration (Track 1 / M10 Slice 1)**
+- Status: **Completed (Step 0–3: Shareable Invite Links, Member Role Management & Shared Activity Feed UI)**
+- Basis: User-approved Track 1 (`MASTER_PLAN.md` Section 14C Steps 0–3 / ADR `0004-trip-circles-invitations-and-membership.md`). Private SHA-256 hashed shareable invite links with bounded uses and safe preview redaction, atomic redemption with soft-delete rejoin restore, accepted-membership isolation across Trip/User/Sync, member role management (`organizer`/`editor`/`viewer`) with sole-organizer leave guard, and Flutter `TripCirclePage` + `JoinTripSheet` UI wired to the Activity Feed and Members & Invites tabs.
 - Boundary:
-  - Slice 1: Personal & Group Travel Journal Entries & Photo Reflections — **Completed**.
-  - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Completed**.
-  - Slice 3: Automated Trip Recap & Story Album — **Completed**.
-- Next Boundary: Milestone M9 is complete; awaiting explicit approval before starting Milestone M10 (Voice & Camera Translation, Offline Language Packs, & Safety Intelligence).
+  - ADR 0004 (`docs/decisions/0004-trip-circles-invitations-and-membership.md`) & `trip_invitations` migration — **Completed**.
+  - Backend Trip Circle & Invitation Redemption endpoints, strict `invitation_status = 'accepted'` & non-deleted membership hardening, and OpenAPI contract — **Completed**.
+  - Flutter `TripCirclePage`, `JoinTripSheet`, `TripCard` shared role pills, offline circle caching with 403 purge, and widget/unit tests — **Completed**.
+- Next Boundary: Slice 1 complete; awaiting explicit approval before proceeding to targeted friend-code invites (`TC-2`), ownership transfer (`TC-3`), or other next-track features.
+
+## 2026-11-10 — Trip Circles: Shareable Invite Links, Member Role Management & Shared Activity Feed UI
+
+### Completed
+- **Architecture Decision & Schema (`docs/decisions/0004-trip-circles-invitations-and-membership.md`)**:
+  - Accepted ADR 0004 specifying CSPRNG 24-byte URL-safe invite tokens with SHA-256 hashing at rest, bounded `max_uses` concurrency, safe redacted preview before acceptance, soft-delete rejoin restore, and sole-organizer leave/removal protection (`TC-0.2`).
+  - Added `2026_11_10_030000_create_trip_invitations_table.php` (applied to both `tapittrip` and `tapittrip_test`) plus `invite_base_url` config (`INVITE_LINK_BASE_URL` in `.env.example`).
+- **Backend API & Membership Hardening (`api/`)**:
+  - Implemented `TripInvitation` model/factory, DTOs under `app/DTOs/Circles/`, `TripCircleService`, Form Requests, `TripCircleMemberResource` / `TripInvitationResource`, `TripCircleController`, and `InvitationRedemptionController` covering `GET/PATCH/DELETE /trips/{trip}/members`, `GET/POST/DELETE /trips/{trip}/invitations`, `GET /invitations/{token}`, and `POST /invitations/{token}/accept`.
+  - Hardened `Trip::hasMember()`, `Trip::memberRole()`, `Trip::users()`, `User::trips()`, and `SyncService` to strictly require `invitation_status = 'accepted'` and non-deleted (`deleted_at IS NULL`) membership rows.
+  - Updated `docs/api/openapi.yaml` (including `components.responses.ValidationError`) and added `docs/features/trip-circles.md`.
+- **Flutter UI & Offline Handling (`client/`)**:
+  - Added `client/lib/features/circles/` models, `trip_circle_repository.dart` (with offline cache and `403` access-revocation cache purging via `purgeTripCircleCaches`), Riverpod providers, `TripCirclePage` (Activity Feed tab + Members & Invites tab), and `JoinTripSheet`.
+  - Wired `/trips/:tripId/circle` route, `Trip Circle & Feed` menu item in `trip_itinerary_page.dart`, `Join Invite` / `Join via Invite Code` entry points in `trip_list_page.dart`, and overflow-safe shared role badge pills (`SHARED • EDITOR` / `SHARED • VIEWER`) on `TripCard`.
+- **Verification**:
+  - Backend Sail Pint (`./vendor/bin/sail pint --test`), OpenAPI `contracts`, and PHPUnit/Pest suite (`167` tests, `2,103` assertions) passed.
+  - Mobile `dart format`, `flutter analyze` (`0` issues), and `flutter test` (`188/188` passed, including `client/test/trip_circle_test.dart`).
 
 ## 2026-11-10 — Interactive Card Drag & Drop and Ordinal Number Reordering in Your Itinerary
 

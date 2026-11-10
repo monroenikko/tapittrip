@@ -6,6 +6,7 @@ import 'package:tapittrip/core/network/api_exceptions.dart';
 import 'package:tapittrip/core/widgets/app_logo.dart';
 import 'package:tapittrip/features/auth/domain/models/auth_state.dart';
 import 'package:tapittrip/features/auth/presentation/providers/auth_provider.dart';
+import 'package:tapittrip/features/circles/presentation/widgets/join_trip_sheet.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/edit_trip_bottom_sheet.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/quick_actions_row.dart';
@@ -243,9 +244,22 @@ class _TripListPageState extends ConsumerState<TripListPage> {
                           color: colorScheme.onSurface,
                         ),
                       ),
-                      TextButton(
-                        onPressed: () => context.push('/trips/new'),
-                        child: const Text('Add Trip'),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => JoinTripSheet.show(context),
+                            icon: const Icon(
+                              Icons.group_add_outlined,
+                              size: 18,
+                            ),
+                            label: const Text('Join Invite'),
+                          ),
+                          TextButton(
+                            onPressed: () => context.push('/trips/new'),
+                            child: const Text('Add Trip'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -331,6 +345,12 @@ class _TripListPageState extends ConsumerState<TripListPage> {
                             icon: const Icon(Icons.add),
                             label: const Text('Create your first trip'),
                           ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: () => JoinTripSheet.show(context),
+                            icon: const Icon(Icons.group_add_outlined),
+                            label: const Text('Join via Invite Code'),
+                          ),
                         ],
                       ),
                     ),
@@ -339,40 +359,48 @@ class _TripListPageState extends ConsumerState<TripListPage> {
 
                 return Column(
                   children: trips.map((trip) {
+                    final canEdit = trip.role != 'viewer';
+                    final canDelete = trip.role == null || trip.role == 'owner';
+
                     return LiveWeatherTripCard(
                       trip: trip,
                       onTap: () => context.push(
                         '/trips/${trip.id}/itinerary',
                         extra: trip,
                       ),
-                      onEdit: () => EditTripBottomSheet.show(context, trip),
-                      onDelete: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('Delete Trip'),
-                            content: Text('Delete "${trip.title}"?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Cancel'),
-                              ),
-                              FilledButton(
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: colorScheme.error,
+                      onEdit: canEdit
+                          ? () => EditTripBottomSheet.show(context, trip)
+                          : null,
+                      onDelete: canDelete
+                          ? () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Delete Trip'),
+                                  content: Text('Delete "${trip.title}"?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: colorScheme.error,
+                                      ),
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text('Delete'),
+                                    ),
+                                  ],
                                 ),
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text('Delete'),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirm == true) {
-                          await ref
-                              .read(tripListProvider.notifier)
-                              .deleteTrip(trip.id);
-                        }
-                      },
+                              );
+                              if (confirm == true) {
+                                await ref
+                                    .read(tripListProvider.notifier)
+                                    .deleteTrip(trip.id);
+                              }
+                            }
+                          : null,
                     );
                   }).toList(),
                 );

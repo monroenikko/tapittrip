@@ -52,6 +52,8 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Trip::class, 'trip_members')
             ->withPivot(['role', 'invitation_status'])
+            ->wherePivot('invitation_status', 'accepted')
+            ->wherePivotNull('deleted_at')
             ->withTimestamps();
     }
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\CurrencyController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\GroupSettlementController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InvitationRedemptionController;
 use App\Http\Controllers\Api\V1\ItineraryItemController;
 use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\V1\StayController;
 use App\Http\Controllers\Api\V1\StayTransportController;
 use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TripBudgetController;
+use App\Http\Controllers\Api\V1\TripCircleController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
 use App\Http\Controllers\Api\V1\TripExpenseController;
@@ -38,6 +40,7 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/auth/register', [AuthController::class, 'register'])->name('auth.register');
     Route::post('/auth/login', [AuthController::class, 'login'])->name('auth.login');
     Route::post('/auth/token', [AuthController::class, 'login'])->name('auth.token');
+    Route::get('/invitations/{token}', [InvitationRedemptionController::class, 'preview'])->middleware('throttle:30,1')->name('invitations.preview');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
@@ -99,6 +102,14 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/trips/{trip}/feed', [ActivityFeedController::class, 'index'])->name('trips.feed.index');
         Route::get('/trips/{trip}/recap', [TripRecapController::class, 'show'])->name('trips.recap.show');
+
+        Route::get('/trips/{trip}/members', [TripCircleController::class, 'members'])->name('trips.members.index');
+        Route::patch('/trips/{trip}/members/{member}', [TripCircleController::class, 'updateMemberRole'])->name('trips.members.update');
+        Route::delete('/trips/{trip}/members/{member}', [TripCircleController::class, 'removeMember'])->name('trips.members.destroy');
+        Route::get('/trips/{trip}/invitations', [TripCircleController::class, 'invitations'])->name('trips.invitations.index');
+        Route::post('/trips/{trip}/invitations', [TripCircleController::class, 'storeInvitation'])->middleware('throttle:20,1')->name('trips.invitations.store');
+        Route::delete('/trips/{trip}/invitations/{invitation}', [TripCircleController::class, 'revokeInvitation'])->name('trips.invitations.revoke');
+        Route::post('/invitations/{token}/accept', [InvitationRedemptionController::class, 'accept'])->middleware('throttle:20,1')->name('invitations.accept');
 
         Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');
         Route::post('/trips/{trip}/checklists', [ChecklistController::class, 'store'])->name('trips.checklists.store');

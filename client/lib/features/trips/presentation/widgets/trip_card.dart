@@ -155,7 +155,10 @@ class TripCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -174,7 +177,6 @@ class TripCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -194,36 +196,57 @@ class TripCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (weather != null || trip.destinationCountry != null)
-                      const Spacer(),
-                    if (weather != null) ...[
-                      _buildWeatherBadge(context, weather!.current),
-                      if (trip.destinationCountry != null)
-                        const SizedBox(width: 8),
-                    ],
-                    if (trip.destinationCountry != null) ...[
-                      if (flag != null) ...[
-                        Text(flag, style: const TextStyle(fontSize: 13)),
-                        const SizedBox(width: 4),
-                      ] else ...[
-                        Icon(
-                          Icons.place_outlined,
-                          size: 16,
-                          color: colorScheme.secondary,
+                    if (trip.role == 'editor' || trip.role == 'viewer')
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
                         ),
-                        const SizedBox(width: 4),
-                      ],
-                      Flexible(
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Text(
-                          trip.destinationCountry!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                          trip.role == 'editor'
+                              ? 'SHARED • EDITOR'
+                              : 'SHARED • VIEWER',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.teal.shade800,
                             fontWeight: FontWeight.bold,
+                            fontSize: 10,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ],
+                    if (weather != null)
+                      _buildWeatherBadge(context, weather!.current),
+                    if (trip.destinationCountry != null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (flag != null) ...[
+                            Text(flag, style: const TextStyle(fontSize: 13)),
+                            const SizedBox(width: 4),
+                          ] else ...[
+                            Icon(
+                              Icons.place_outlined,
+                              size: 16,
+                              color: colorScheme.secondary,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 160),
+                            child: Text(
+                              trip.destinationCountry!,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ],

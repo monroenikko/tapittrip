@@ -76,7 +76,7 @@ final class Trip extends Model
     }
 
     /**
-     * Users that are members of this trip.
+     * Users that are accepted members of this trip.
      *
      * @return BelongsToMany<User, $this>
      */
@@ -84,17 +84,33 @@ final class Trip extends Model
     {
         return $this->belongsToMany(User::class, 'trip_members')
             ->withPivot(['role', 'invitation_status'])
+            ->wherePivot('invitation_status', 'accepted')
+            ->wherePivotNull('deleted_at')
             ->withTimestamps();
     }
 
     /**
-     * Check if a given user is a member of this trip.
+     * All invitations generated for this trip.
+     *
+     * @return HasMany<TripInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(TripInvitation::class)
+            ->orderByDesc('created_at');
+    }
+
+    /**
+     * Check if a given user is an accepted member of this trip.
      */
     public function hasMember(User|string $user): bool
     {
         $userId = $user instanceof User ? $user->id : $user;
 
-        return $this->members()->where('user_id', $userId)->exists();
+        return $this->members()
+            ->where('user_id', $userId)
+            ->where('invitation_status', 'accepted')
+            ->exists();
     }
 
     /**
@@ -105,7 +121,10 @@ final class Trip extends Model
         $userId = $user instanceof User ? $user->id : $user;
 
         /** @var TripMember|null $member */
-        $member = $this->members()->where('user_id', $userId)->first();
+        $member = $this->members()
+            ->where('user_id', $userId)
+            ->where('invitation_status', 'accepted')
+            ->first();
 
         return $member?->role;
     }

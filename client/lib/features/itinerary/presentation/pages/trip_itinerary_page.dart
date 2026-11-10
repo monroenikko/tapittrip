@@ -201,6 +201,8 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 context.push('/trips/${widget.tripId}/expenses');
               } else if (value == 'journal') {
                 context.push('/trips/${widget.tripId}/journal');
+              } else if (value == 'circle') {
+                context.push('/trips/${widget.tripId}/circle');
               } else if (value == 'recap') {
                 context.push('/trips/${widget.tripId}/recap');
               } else if (value == 'favorite') {
@@ -214,6 +216,16 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'circle',
+                child: Row(
+                  children: [
+                    Icon(Icons.group_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Trip Circle & Feed'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'notifications',
                 child: Row(

@@ -2865,6 +2865,308 @@ paths:
         "403":
           description: Forbidden (Not a member of this trip).
 
+  /trips/{trip}/members:
+    get:
+      operationId: listTripCircleMembers
+      summary: List accepted members in a trip circle
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Accepted circle members.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TripCircleMember"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /trips/{trip}/members/{member}:
+    patch:
+      operationId: updateTripCircleMemberRole
+      summary: Update a companion member's role (organizer only)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: member
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [viewer, editor]
+      responses:
+        "200":
+          description: Updated member role.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripCircleMember"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation failed.
+    delete:
+      operationId: removeOrLeaveTripCircleMember
+      summary: Remove a member (organizer) or leave the trip circle (self)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: member
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Member removed from circle.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Sole organizer cannot leave without deleting trip.
+
+  /trips/{trip}/invitations:
+    get:
+      operationId: listTripInvitations
+      summary: List shareable invitations issued for a trip (organizer only)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Trip invitations (tokens omitted).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TripInvitation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: createTripInvitation
+      summary: Generate a shareable private invite link/token for a trip (organizer only)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                proposed_role:
+                  type: string
+                  enum: [viewer, editor]
+                  default: viewer
+                max_uses:
+                  type: integer
+                  minimum: 1
+                  maximum: 25
+                  default: 1
+                expires_in_days:
+                  type: integer
+                  minimum: 1
+                  maximum: 30
+                  default: 7
+      responses:
+        "201":
+          description: Invitation created with one-time raw invite token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CreatedTripInvitation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation failed.
+
+  /trips/{trip}/invitations/{invitation}:
+    delete:
+      operationId: revokeTripInvitation
+      summary: Revoke an active trip invitation (organizer only)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: invitation
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Invitation revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripInvitation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
+  /invitations/{token}:
+    get:
+      operationId: previewTripInvitation
+      summary: Retrieve minimal safe trip summary for an invitation token without granting membership
+      tags:
+        - Circles & Activity Feed
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Minimal safe preview summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/InvitationPreview"
+        "404":
+          description: Invitation not found.
+
+  /invitations/{token}/accept:
+    post:
+      operationId: acceptTripInvitation
+      summary: Redeem an invitation token and join the trip circle
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Accepted or idempotently confirmed circle membership.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [trip, member, already_member]
+                    properties:
+                      trip:
+                        $ref: "#/components/schemas/Trip"
+                      member:
+                        $ref: "#/components/schemas/TripCircleMember"
+                      already_member:
+                        type: boolean
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          description: Invitation not found.
+        "422":
+          description: Invitation expired, revoked, or exhausted.
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2882,6 +3184,16 @@ components:
             error:
               code: unauthenticated
               message: Authentication is required.
+    ValidationError:
+      description: Validation error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: validation_failed
+              message: The given data was invalid.
   schemas:
     ErrorResponse:
       type: object
@@ -5678,6 +5990,126 @@ components:
           nullable: true
         is_shared:
           type: boolean
+
+    TripCircleMember:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - user_id
+        - display_name
+        - role
+        - invitation_status
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+        invitation_status:
+          type: string
+          enum: [accepted]
+        joined_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    TripInvitation:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - proposed_role
+        - status
+        - max_uses
+        - use_count
+        - expires_at
+        - inviter_name
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        proposed_role:
+          type: string
+          enum: [viewer, editor]
+        status:
+          type: string
+          enum: [active, revoked, exhausted, expired]
+        max_uses:
+          type: integer
+        use_count:
+          type: integer
+        expires_at:
+          type: string
+          format: date-time
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        inviter_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreatedTripInvitation:
+      allOf:
+        - $ref: "#/components/schemas/TripInvitation"
+        - type: object
+          required:
+            - invite_token
+            - share_url
+          properties:
+            invite_token:
+              type: string
+            share_url:
+              type: string
+
+    InvitationPreview:
+      type: object
+      additionalProperties: false
+      required:
+        - trip_title
+        - proposed_role
+        - inviter_name
+        - expires_at
+        - status
+      properties:
+        trip_title:
+          type: string
+        destination_country:
+          type: string
+          nullable: true
+        proposed_role:
+          type: string
+          enum: [viewer, editor]
+        inviter_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, revoked, exhausted, expired]
 
 
 

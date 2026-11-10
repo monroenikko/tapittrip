@@ -18,6 +18,7 @@ Feature documents explain how TapItTrip behavior works across the traveler exper
 
 ## Per-feature documents
 
+- [`trip-circles.md`](trip-circles.md) — implemented Trip Circles private shareable invite links, member role management, and shared activity feed UI.
 - [`api-health.md`](api-health.md) — implemented M0 Laravel liveness contract and security boundary.
 - [`identity-and-auth.md`](identity-and-auth.md) — implemented M1 Laravel identity, Sanctum auth, and profile lifecycle.
 - [`trip-management.md`](trip-management.md) — implemented M1 Laravel trips, planning modes, and membership policies.

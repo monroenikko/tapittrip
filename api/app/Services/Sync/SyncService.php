@@ -140,7 +140,11 @@ final class SyncService
 
             $query->where('trip_id', $data->tripId);
         } else {
-            $userTripIds = TripMember::where('user_id', $user->id)->pluck('trip_id')->all();
+            $userTripIds = TripMember::query()
+                ->where('user_id', $user->id)
+                ->where('invitation_status', 'accepted')
+                ->pluck('trip_id')
+                ->all();
 
             $query->where(function ($q) use ($user, $userTripIds): void {
                 $q->where('user_id', $user->id);
