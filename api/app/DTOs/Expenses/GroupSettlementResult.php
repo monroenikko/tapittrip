@@ -10,6 +10,8 @@ final readonly class GroupSettlementResult
      * @param  array<int, array<string, mixed>>  $balances
      * @param  array<int, array<string, mixed>>  $suggestedSettlements
      * @param  array<int, array<string, mixed>>  $settlementHistory
+     * @param  array<string, array<int, array<string, mixed>>>  $perCurrencyBalances
+     * @param  array<int, array<string, mixed>>  $unconvertedExpenses
      */
     public function __construct(
         public string $tripId,
@@ -17,6 +19,9 @@ final readonly class GroupSettlementResult
         public array $balances,
         public array $suggestedSettlements,
         public array $settlementHistory,
+        public array $perCurrencyBalances = [],
+        public array $unconvertedExpenses = [],
+        public string $accountingNotice = 'Balances and settlements are trip ledger records only; TapItTrip does not transfer funds or verify external payments.',
     ) {}
 
     /**
@@ -30,6 +35,9 @@ final readonly class GroupSettlementResult
             'balances' => $this->balances,
             'suggested_settlements' => $this->suggestedSettlements,
             'settlement_history' => $this->settlementHistory,
+            'per_currency_balances' => $this->perCurrencyBalances,
+            'unconverted_expenses' => $this->unconvertedExpenses,
+            'accounting_notice' => $this->accountingNotice,
         ];
     }
 }

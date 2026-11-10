@@ -23,8 +23,12 @@ final class RecordSettlementRequest extends FormRequest
             'payee_id' => ['required', 'uuid', 'exists:users,id', 'different:payer_id'],
             'amount_minor' => ['required', 'integer', 'min:1'],
             'currency' => ['required', 'string', 'size:3'],
+            'exchange_rate' => ['nullable', 'numeric', 'min:0.000001'],
+            'rate_source' => ['nullable', 'string', 'in:identity,open_exchange_rates,cached_snapshot,user_manual,fake'],
+            'rate_captured_at' => ['nullable', 'date'],
             'settled_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'client_operation_id' => ['nullable', 'uuid'],
         ];
     }
 }

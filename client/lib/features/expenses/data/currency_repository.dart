@@ -4,6 +4,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exceptions.dart';
+
+class CurrencyRateUnavailableException extends ApiException {
+  const CurrencyRateUnavailableException({required this.from, required this.to})
+    : super(
+        code: 'exchange_rate_unavailable',
+        message: 'Exchange rate unavailable for $from to $to.',
+        statusCode: 503,
+      );
+
+  final String from;
+  final String to;
+}
 
 class CurrencyRateDetails {
   const CurrencyRateDetails({
@@ -14,6 +27,7 @@ class CurrencyRateDetails {
     required this.asOf,
     required this.provider,
     this.isOffline = false,
+    this.isUnavailable = false,
   });
 
   final String from;
@@ -23,19 +37,45 @@ class CurrencyRateDetails {
   final String asOf;
   final String provider;
   final bool isOffline;
+  final bool isUnavailable;
+
+  bool get isAvailable => !isUnavailable && rate > 0;
+
+  factory CurrencyRateDetails.unavailable({
+    required String from,
+    required String to,
+  }) {
+    return CurrencyRateDetails(
+      from: from,
+      to: to,
+      rate: 0.0,
+      reciprocalRate: 0.0,
+      asOf: '',
+      provider: 'unavailable',
+      isOffline: true,
+      isUnavailable: true,
+    );
+  }
 
   factory CurrencyRateDetails.fromJson(
     Map<String, dynamic> json, {
     bool isOffline = false,
   }) {
+    final parsedRate = (json['rate'] as num?)?.toDouble();
+    final availableFlag = json['available'] as bool? ?? true;
+    final unavailable = !availableFlag || parsedRate == null || parsedRate <= 0;
+
     return CurrencyRateDetails(
       from: json['from'] as String? ?? 'USD',
       to: json['to'] as String? ?? 'PHP',
-      rate: (json['rate'] as num?)?.toDouble() ?? 1.0,
-      reciprocalRate: (json['reciprocal_rate'] as num?)?.toDouble() ?? 1.0,
+      rate: parsedRate ?? 0.0,
+      reciprocalRate: (json['reciprocal_rate'] as num?)?.toDouble() ?? 0.0,
       asOf: json['as_of'] as String? ?? DateTime.now().toIso8601String(),
-      provider: json['provider'] as String? ?? 'cache',
+      provider:
+          json['provider'] as String? ??
+          (unavailable ? 'unavailable' : 'cache'),
       isOffline: isOffline,
+      isUnavailable: unavailable,
     );
   }
 
@@ -46,6 +86,7 @@ class CurrencyRateDetails {
     'reciprocal_rate': reciprocalRate,
     'as_of': asOf,
     'provider': provider,
+    'available': !isUnavailable,
   };
 }
 
@@ -58,26 +99,8 @@ class CurrencyRepository {
   final ApiClient apiClient;
   final FlutterSecureStorage _secureStorage;
 
-  // Fallback exchange rate matrix against USD for offline resilience
-  static const Map<String, double> _fallbackToUsd = {
-    'USD': 1.0,
-    'PHP': 58.50,
-    'JPY': 154.00,
-    'EUR': 0.92,
-    'GBP': 0.78,
-    'SGD': 1.33,
-    'AUD': 1.52,
-    'THB': 34.20,
-    'KRW': 1380.0,
-    'CAD': 1.39,
-    'HKD': 7.78,
-    'TWD': 32.10,
-    'IDR': 15700.0,
-    'MYR': 4.40,
-    'AED': 3.67,
-    'CHF': 0.88,
-  };
-
+  /// Fetch an attributed exchange-rate snapshot from the API or encrypted cache.
+  /// Never invents offline rates when neither network nor a prior snapshot exists.
   Future<CurrencyRateDetails> getRateDetails(
     String fromCurrency,
     String toCurrency,
@@ -91,7 +114,7 @@ class CurrencyRepository {
         to: to,
         rate: 1.0,
         reciprocalRate: 1.0,
-        asOf: DateTime.now().toIso8601String(),
+        asOf: DateTime.now().toUtc().toIso8601String(),
         provider: 'identity',
       );
     }
@@ -104,10 +127,14 @@ class CurrencyRepository {
         queryParameters: {'from': from, 'to': to},
       );
 
-      final data = response as Map<String, dynamic>;
-      final details = CurrencyRateDetails.fromJson(data);
+      final rawMap = response is Map && response['data'] is Map
+          ? Map<String, dynamic>.from(response['data'] as Map)
+          : Map<String, dynamic>.from(response as Map);
+      final details = CurrencyRateDetails.fromJson(rawMap);
+      if (details.isUnavailable) {
+        throw CurrencyRateUnavailableException(from: from, to: to);
+      }
 
-      // Save to encrypted storage for offline access
       await _secureStorage.write(
         key: cacheKey,
         value: jsonEncode(details.toJson()),
@@ -115,29 +142,35 @@ class CurrencyRepository {
 
       return details;
     } catch (_) {
-      // Try to read from local encrypted cache
       try {
         final cachedJson = await _secureStorage.read(key: cacheKey);
-        if (cachedJson != null) {
+        if (cachedJson != null && cachedJson.isNotEmpty) {
           final data = jsonDecode(cachedJson) as Map<String, dynamic>;
-          return CurrencyRateDetails.fromJson(data, isOffline: true);
+          final cachedDetails = CurrencyRateDetails.fromJson(
+            data,
+            isOffline: true,
+          );
+          if (cachedDetails.isAvailable) {
+            return cachedDetails;
+          }
         }
       } catch (_) {}
 
-      // Fallback to built-in snapshot rates
-      final fromRate = _fallbackToUsd[from] ?? 1.0;
-      final toRate = _fallbackToUsd[to] ?? 1.0;
-      final rate = from == 'JPY' && to == 'PHP' ? 0.3800 : (toRate / fromRate);
-      final reciprocal = rate > 0 ? (1.0 / rate) : 1.0;
+      throw CurrencyRateUnavailableException(from: from, to: to);
+    }
+  }
 
-      return CurrencyRateDetails(
-        from: from,
-        to: to,
-        rate: rate,
-        reciprocalRate: reciprocal,
-        asOf: DateTime.now().toIso8601String(),
-        provider: 'offline_snapshot',
-        isOffline: true,
+  /// Non-throwing variant returning an explicit unavailable snapshot for expense entry UI.
+  Future<CurrencyRateDetails> tryGetRateDetails(
+    String fromCurrency,
+    String toCurrency,
+  ) async {
+    try {
+      return await getRateDetails(fromCurrency, toCurrency);
+    } catch (_) {
+      return CurrencyRateDetails.unavailable(
+        from: fromCurrency.toUpperCase().trim(),
+        to: toCurrency.toUpperCase().trim(),
       );
     }
   }

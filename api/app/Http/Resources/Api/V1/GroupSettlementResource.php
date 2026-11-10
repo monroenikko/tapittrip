@@ -18,12 +18,6 @@ final class GroupSettlementResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return [
-            'trip_id' => $this->tripId,
-            'base_currency' => $this->baseCurrency,
-            'balances' => $this->balances,
-            'suggested_settlements' => $this->suggestedSettlements,
-            'settlement_history' => $this->settlementHistory,
-        ];
+        return $this->resource->toArray();
     }
 }

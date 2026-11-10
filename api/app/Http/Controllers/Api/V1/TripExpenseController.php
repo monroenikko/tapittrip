@@ -40,6 +40,7 @@ final class TripExpenseController extends Controller
 
         $expenses = $this->expenseService->getTripExpenses(
             $trip,
+            $request->user(),
             is_string($category) && $category !== '' ? $category : null,
             is_string($expenseDate) && $expenseDate !== '' ? $expenseDate : null,
         );
@@ -56,9 +57,11 @@ final class TripExpenseController extends Controller
     ): JsonResponse {
         Gate::authorize('update', $trip);
 
+        $userId = (string) $request->user()->id;
         $data = CreateExpenseData::fromArray(
             $request->validated(),
-            defaultPayerId: (string) $request->user()->id,
+            defaultPayerId: $userId,
+            actorId: $userId,
         );
 
         $expense = $this->expenseService->createExpense($trip, $data);
@@ -75,7 +78,9 @@ final class TripExpenseController extends Controller
     {
         Gate::authorize('view', $expense->trip);
 
-        return (new ExpenseResource($expense->load(['payer', 'itineraryItem', 'stay'])))
+        $this->expenseService->ensureVisibleTo($expense, $request->user());
+
+        return (new ExpenseResource($expense->load(['payer', 'creator', 'itineraryItem', 'stay', 'splits.user'])))
             ->response();
     }
 
@@ -89,7 +94,7 @@ final class TripExpenseController extends Controller
         Gate::authorize('update', $expense->trip);
 
         $data = UpdateExpenseData::fromArray($request->validated());
-        $updated = $this->expenseService->updateExpense($expense, $data);
+        $updated = $this->expenseService->updateExpense($expense, $data, $request->user());
 
         return (new ExpenseResource($updated))
             ->response();
@@ -104,7 +109,10 @@ final class TripExpenseController extends Controller
     ): Response {
         Gate::authorize('update', $expense->trip);
 
-        $this->expenseService->deleteExpense($expense);
+        $rawBaseVersion = $request->input('base_version', $request->query('base_version'));
+        $baseVersion = is_numeric($rawBaseVersion) ? (int) $rawBaseVersion : null;
+
+        $this->expenseService->deleteExpense($expense, $request->user(), $baseVersion);
 
         return response()->noContent();
     }
@@ -132,6 +140,7 @@ final class TripExpenseController extends Controller
         Expense $expense,
     ): JsonResponse {
         Gate::authorize('update', $expense->trip);
+        $this->expenseService->ensureVisibleTo($expense, $request->user());
 
         /** @var UploadedFile $file */
         $file = $request->file('file');

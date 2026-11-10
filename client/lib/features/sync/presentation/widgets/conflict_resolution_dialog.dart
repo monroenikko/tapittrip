@@ -125,6 +125,11 @@ class ConflictResolutionDialog extends ConsumerWidget {
     const keys = [
       'title',
       'name',
+      'amount_minor',
+      'currency',
+      'split_type',
+      'visibility',
+      'conversion_status',
       'status',
       'sort_order',
       'trip_day_id',

@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/countries.dart';
+import '../../../../core/network/api_exceptions.dart';
 import '../../../auth/domain/models/auth_state.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../circles/domain/models/circle_member.dart';
+import '../../../circles/presentation/providers/trip_circle_provider.dart';
 import '../../../trips/presentation/providers/trip_list_provider.dart';
 import '../../data/currency_repository.dart';
 import '../../domain/models/expense.dart';
+import '../../domain/models/group_balances.dart';
 import '../providers/expense_provider.dart';
 import '../widgets/add_expense_bottom_sheet.dart';
 import '../widgets/set_budget_dialog.dart';
@@ -34,6 +38,22 @@ class TripExpensesPage extends ConsumerWidget {
     final homeCurrency = authUser?.homeCurrency ?? 'USD';
     final homeCountry = authUser?.homeCountry;
 
+    final members = authUser != null
+        ? ref.watch(circleMembersProvider(tripId)).asData?.value ??
+              const <CircleMember>[]
+        : const <CircleMember>[];
+    CircleMember? selfMember;
+    if (authUser != null) {
+      for (final m in members) {
+        if (m.userId == authUser.id) {
+          selfMember = m;
+          break;
+        }
+      }
+    }
+    final isViewerOnly = selfMember != null && selfMember.isViewer;
+    final canManageExpenses = !isViewerOnly;
+
     final trips = ref.watch(tripListProvider).asData?.value;
     final trip = trips?.where((t) => t.id == tripId).firstOrNull;
     final budget = budgetAsync.asData?.value;
@@ -48,6 +68,10 @@ class TripExpensesPage extends ConsumerWidget {
       expenseCurrencies: expenseCurrencies,
       defaultCurrency: 'USD',
     );
+    final baseLedgerCurrency =
+        summaryAsync.asData?.value.baseCurrency ??
+        budget?.currency ??
+        destinationCurrency;
 
     final categories = const [
       'all',
@@ -64,6 +88,23 @@ class TripExpensesPage extends ConsumerWidget {
       ref.invalidate(tripExpensesProvider(tripId));
       ref.invalidate(expenseSummaryProvider(tripId));
       ref.invalidate(groupBalancesProvider(tripId));
+      if (authUser != null) {
+        ref.invalidate(circleMembersProvider(tripId));
+      }
+    }
+
+    Future<void> handleDeleteExpense(Expense expense) async {
+      try {
+        await ref
+            .read(tripExpensesProvider(tripId).notifier)
+            .deleteExpense(expense.id);
+      } catch (e) {
+        if (!context.mounted) return;
+        final msg = e is ApiException ? e.message : 'Unable to delete expense.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: colorScheme.error),
+        );
+      }
     }
 
     return DefaultTabController(
@@ -72,20 +113,22 @@ class TripExpensesPage extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('Expenses & Budget'),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.account_balance_wallet_outlined),
-              tooltip: 'Trip Budget',
-              onPressed: () {
-                final budget = budgetAsync.asData?.value;
-                SetBudgetDialog.show(
-                  context,
-                  tripId: tripId,
-                  initialCurrency: budget?.currency ?? destinationCurrency,
-                  initialTotalBudgetMinor: budget?.totalBudgetMinor,
-                  initialDailyBudgetMinor: budget?.dailyBudgetMinor,
-                );
-              },
-            ),
+            if (canManageExpenses)
+              IconButton(
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                tooltip: 'Trip Budget',
+                onPressed: () {
+                  final currentBudget = budgetAsync.asData?.value;
+                  SetBudgetDialog.show(
+                    context,
+                    tripId: tripId,
+                    initialCurrency:
+                        currentBudget?.currency ?? destinationCurrency,
+                    initialTotalBudgetMinor: currentBudget?.totalBudgetMinor,
+                    initialDailyBudgetMinor: currentBudget?.dailyBudgetMinor,
+                  );
+                },
+              ),
             IconButton(
               icon: const Icon(Icons.refresh_rounded),
               tooltip: 'Refresh',
@@ -110,7 +153,37 @@ class TripExpensesPage extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Permanent Address & Home Currency Prompt Banner if not set
+                  if (isViewerOnly)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.lock_outline_rounded,
+                            size: 18,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'View-only access: you can review shared trip expenses and group balances.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   if (homeCountry == null || authUser?.permanentAddress == null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -167,7 +240,7 @@ class TripExpensesPage extends ConsumerWidget {
                       ),
                     ),
 
-                  // Live Market Exchange Rate Pill
+                  // Market Exchange Rate Snapshot Pill
                   if (destinationCurrency.toUpperCase() !=
                       homeCurrency.toUpperCase())
                     Consumer(
@@ -206,7 +279,7 @@ class TripExpensesPage extends ConsumerWidget {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Market rate: 1 $destinationCurrency ≈ ${rate.rate.toStringAsFixed(4)} $homeCurrency',
+                                      'Market rate (${rate.provider}): 1 $destinationCurrency ≈ ${rate.rate.toStringAsFixed(4)} $homeCurrency',
                                       style: theme.textTheme.labelMedium
                                           ?.copyWith(
                                             fontWeight: FontWeight.w600,
@@ -218,7 +291,39 @@ class TripExpensesPage extends ConsumerWidget {
                             ),
                           ),
                           loading: () => const SizedBox.shrink(),
-                          error: (_, _) => const SizedBox.shrink(),
+                          error: (_, _) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.4),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.cloud_off_rounded,
+                                    size: 16,
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Exchange rate unavailable offline ($destinationCurrency → $homeCurrency).',
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -283,7 +388,7 @@ class TripExpensesPage extends ConsumerWidget {
                                           ),
                                     ),
                                   ),
-                                  if (hasBudget) ...[
+                                  if (hasBudget && canManageExpenses) ...[
                                     const SizedBox(width: 4),
                                     IconButton(
                                       icon: const Icon(
@@ -321,6 +426,36 @@ class TripExpensesPage extends ConsumerWidget {
                                   color: colorScheme.onSurface,
                                 ),
                               ),
+                              if (summary.personalSpentBaseMinor > 0 &&
+                                  summary.sharedSpentBaseMinor > 0) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Shared: ${summary.formatBaseAmount(summary.sharedSpentBaseMinor)} • Personal: ${summary.formatBaseAmount(summary.personalSpentBaseMinor)}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                              if (summary.unconvertedExpensesCount > 0) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.secondaryContainer
+                                        .withValues(alpha: 0.45),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '${summary.unconvertedExpensesCount} expense(s) missing an FX rate snapshot (${summary.unconvertedTotals.map((t) => t.formatAmount()).join(', ')}).',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: colorScheme.onSecondaryContainer,
+                                    ),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 12),
 
                               if (hasBudget) ...[
@@ -333,7 +468,7 @@ class TripExpensesPage extends ConsumerWidget {
                                         colorScheme.surfaceContainerHighest,
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       isOver
-                                          ? Colors.redAccent
+                                          ? colorScheme.error
                                           : colorScheme.primary,
                                     ),
                                   ),
@@ -357,14 +492,14 @@ class TripExpensesPage extends ConsumerWidget {
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
                                             color: isOver
-                                                ? Colors.redAccent
-                                                : Colors.green,
+                                                ? colorScheme.error
+                                                : colorScheme.primary,
                                             fontWeight: FontWeight.bold,
                                           ),
                                     ),
                                   ],
                                 ),
-                              ] else ...[
+                              ] else if (canManageExpenses) ...[
                                 OutlinedButton.icon(
                                   onPressed: () {
                                     SetBudgetDialog.show(
@@ -430,7 +565,17 @@ class TripExpensesPage extends ConsumerWidget {
                     error: (err, _) => Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Text('Error loading expenses: $err'),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Error loading expenses: $err'),
+                            const SizedBox(height: 8),
+                            FilledButton.tonal(
+                              onPressed: refreshAll,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     data: (expenses) {
@@ -453,7 +598,9 @@ class TripExpensesPage extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Tap "Log Expense" below to record spending.',
+                                  canManageExpenses
+                                      ? 'Tap "Log Expense" below to record spending.'
+                                      : 'Shared trip expenses will appear here once logged.',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
@@ -467,8 +614,17 @@ class TripExpensesPage extends ConsumerWidget {
                       return Column(
                         children: expenses.map((expense) {
                           final isForeign =
-                              expense.currency !=
-                              (budgetAsync.asData?.value?.currency ?? 'USD');
+                              expense.currency.toUpperCase() !=
+                              baseLedgerCurrency.toUpperCase();
+                          final splitLabel = switch (expense.splitType) {
+                            'equal' => 'Split equally',
+                            'selected' =>
+                              expense.splits.isNotEmpty
+                                  ? 'Split (${expense.splits.length})'
+                                  : 'Selected split',
+                            'custom' => 'Custom split',
+                            _ => expense.isPrivate ? 'Personal' : 'Shared',
+                          };
 
                           return Card(
                             elevation: 0,
@@ -506,11 +662,67 @@ class TripExpensesPage extends ConsumerWidget {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              subtitle: Text(
-                                '${expense.expenseDate}${expense.notes != null ? ' • ${expense.notes}' : ''}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${expense.expenseDate}${expense.payerName != null ? ' • Paid by ${expense.payerName}' : ''}${expense.notes != null ? ' • ${expense.notes}' : ''}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: expense.isPrivate
+                                              ? colorScheme
+                                                    .surfaceContainerHighest
+                                              : colorScheme.secondaryContainer
+                                                    .withValues(alpha: 0.6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          expense.isPrivate
+                                              ? 'Private • $splitLabel'
+                                              : splitLabel,
+                                          style: theme.textTheme.labelSmall,
+                                        ),
+                                      ),
+                                      if (expense.isConversionUnavailable)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.errorContainer
+                                                .withValues(alpha: 0.6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'FX rate unavailable',
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: colorScheme
+                                                      .onErrorContainer,
+                                                ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -526,70 +738,78 @@ class TripExpensesPage extends ConsumerWidget {
                                               fontWeight: FontWeight.bold,
                                             ),
                                       ),
-                                      if (isForeign) ...[
+                                      if (isForeign)
                                         Text(
-                                          '≈ ${expense.formatAmount(useBaseCurrency: true, baseCurrency: summaryAsync.asData?.value.baseCurrency ?? (authUser?.homeCurrency ?? destinationCurrency))}',
+                                          expense.isConversionUnavailable
+                                              ? 'Unconverted'
+                                              : '≈ ${expense.formatAmount(useBaseCurrency: true, baseCurrency: baseLedgerCurrency)}',
                                           style: theme.textTheme.labelSmall
                                               ?.copyWith(
-                                                color: colorScheme
-                                                    .onSurfaceVariant,
+                                                color:
+                                                    expense
+                                                        .isConversionUnavailable
+                                                    ? colorScheme.error
+                                                    : colorScheme
+                                                          .onSurfaceVariant,
                                               ),
+                                        ),
+                                    ],
+                                  ),
+                                  if (canManageExpenses)
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(
+                                        Icons.more_vert,
+                                        size: 18,
+                                      ),
+                                      onSelected: (val) {
+                                        if (val == 'edit') {
+                                          AddExpenseBottomSheet.show(
+                                            context,
+                                            tripId: tripId,
+                                            initialExpense: expense,
+                                            defaultCurrency:
+                                                destinationCurrency,
+                                            homeCurrency: baseLedgerCurrency,
+                                          );
+                                        } else if (val == 'delete') {
+                                          handleDeleteExpense(expense);
+                                        }
+                                      },
+                                      itemBuilder: (ctx) => [
+                                        const PopupMenuItem(
+                                          value: 'edit',
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.edit_outlined,
+                                                size: 18,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text('Edit'),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.delete_outline,
+                                                size: 18,
+                                                color: colorScheme.error,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Delete',
+                                                style: TextStyle(
+                                                  color: colorScheme.error,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ],
-                                    ],
-                                  ),
-                                  PopupMenuButton<String>(
-                                    icon: const Icon(Icons.more_vert, size: 18),
-                                    onSelected: (val) {
-                                      if (val == 'edit') {
-                                        AddExpenseBottomSheet.show(
-                                          context,
-                                          tripId: tripId,
-                                          initialExpense: expense,
-                                          defaultCurrency: destinationCurrency,
-                                          homeCurrency: homeCurrency,
-                                        );
-                                      } else if (val == 'delete') {
-                                        ref
-                                            .read(
-                                              tripExpensesProvider(tripId)
-                                                  .notifier,
-                                            )
-                                            .deleteExpense(expense.id);
-                                      }
-                                    },
-                                    itemBuilder: (ctx) => [
-                                      const PopupMenuItem(
-                                        value: 'edit',
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.edit_outlined, size: 18),
-                                            SizedBox(width: 8),
-                                            Text('Edit'),
-                                          ],
-                                        ),
-                                      ),
-                                      const PopupMenuItem(
-                                        value: 'delete',
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.delete_outline,
-                                              size: 18,
-                                              color: Colors.redAccent,
-                                            ),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              'Delete',
-                                              style: TextStyle(
-                                                color: Colors.redAccent,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -615,314 +835,452 @@ class TripExpensesPage extends ConsumerWidget {
                 error: (err, _) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
-                    child: Text('Error loading balances: $err'),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Error loading balances: $err'),
+                        const SizedBox(height: 8),
+                        FilledButton.tonal(
+                          onPressed: refreshAll,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 data: (groupBalances) {
-                  return ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      // Section 1: Member Balances
-                      Text(
-                        'Trip Companion Balances',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Net spending balance in ${groupBalances.baseCurrency}. Positive balances will receive funds; negative balances owe companions.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      ...groupBalances.balances.map((member) {
-                        Color badgeColor;
-                        Color textColor;
-                        String badgeText;
-
-                        if (member.isOwed) {
-                          badgeColor = Colors.green.withValues(alpha: 0.15);
-                          textColor = Colors.green.shade800;
-                          badgeText =
-                              'gets back ${member.formatBalance(groupBalances.baseCurrency)}';
-                        } else if (member.owes) {
-                          badgeColor = Colors.red.withValues(alpha: 0.15);
-                          textColor = Colors.red.shade800;
-                          badgeText =
-                              'owes ${member.formatBalance(groupBalances.baseCurrency)}';
-                        } else {
-                          badgeColor = colorScheme.surfaceContainerHighest;
-                          textColor = colorScheme.onSurfaceVariant;
-                          badgeText = 'settled up';
-                        }
-
-                        return Card(
-                          elevation: 0,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: colorScheme.outlineVariant.withValues(
-                                alpha: 0.5,
-                              ),
-                            ),
-                          ),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: colorScheme.primaryContainer,
-                              child: Text(
-                                member.name.isNotEmpty
-                                    ? member.name[0].toUpperCase()
-                                    : '?',
-                                style: TextStyle(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              member.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: member.email.isNotEmpty
-                                ? Text(
-                                    member.email,
-                                    style: theme.textTheme.bodySmall,
-                                  )
-                                : null,
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: badgeColor,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                badgeText,
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: textColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-
-                      const SizedBox(height: 24),
-
-                      // Section 2: Suggested Settlement Transfers
-                      Text(
-                        'Suggested Settlements (Simplified)',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Calculated with minimal cash flow transfers so companions settle debts with the fewest payments.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (groupBalances.isAllSettled) ...[
-                        Card(
-                          elevation: 0,
-                          color: Colors.green.withValues(alpha: 0.08),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
-                              color: Colors.green.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_outline_rounded,
-                                  color: Colors.green,
-                                  size: 32,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'All Settled Up!',
-                                        style: theme.textTheme.titleSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.green.shade800,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'No outstanding debts among companions.',
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color:
-                                                  colorScheme.onSurfaceVariant,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ] else ...[
-                        ...groupBalances.suggestedSettlements.map((s) {
-                          return Card(
-                            elevation: 0,
-                            margin: const EdgeInsets.only(bottom: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(
-                                color: colorScheme.outlineVariant.withValues(
-                                  alpha: 0.6,
-                                ),
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor:
-                                        colorScheme.secondaryContainer,
-                                    child: Icon(
-                                      Icons.payments_outlined,
-                                      color: colorScheme.onSecondaryContainer,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '${s.payerName} → ${s.payeeName}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Owes ${s.formatAmount()}',
-                                          style: theme.textTheme.bodyMedium
-                                              ?.copyWith(
-                                                color: colorScheme.primary,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  FilledButton.tonal(
-                                    onPressed: () {
-                                      SettleUpDialog.show(
-                                        context,
-                                        tripId: tripId,
-                                        payerId: s.payerId,
-                                        payerName: s.payerName,
-                                        payeeId: s.payeeId,
-                                        payeeName: s.payeeName,
-                                        initialAmountMinor: s.amountMinor,
-                                        currency: s.currency,
-                                      );
-                                    },
-                                    child: const Text('Settle Up'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
-
-                      const SizedBox(height: 24),
-
-                      // Section 3: Past Settlements History
-                      if (groupBalances.settlementHistory.isNotEmpty) ...[
-                        Text(
-                          'Settlement History',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...groupBalances.settlementHistory.map((record) {
-                          return Card(
-                            elevation: 0,
-                            margin: const EdgeInsets.only(bottom: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: colorScheme.outlineVariant.withValues(
-                                  alpha: 0.4,
-                                ),
-                              ),
-                            ),
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.check_circle_rounded,
-                                color: Colors.green,
-                              ),
-                              title: Text(
-                                '${record.payerName} paid ${record.payeeName}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: record.notes != null
-                                  ? Text(record.notes!)
-                                  : null,
-                              trailing: Text(
-                                record.formatAmount(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                      ],
-                    ],
+                  return _buildBalancesTab(
+                    context,
+                    theme,
+                    colorScheme,
+                    groupBalances,
+                    canManageExpenses,
                   );
                 },
               ),
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Log Expense'),
-          onPressed: () {
-            AddExpenseBottomSheet.show(
-              context,
-              tripId: tripId,
-              defaultCurrency: destinationCurrency,
-              homeCurrency: homeCurrency,
-            );
-          },
-        ),
+        floatingActionButton: canManageExpenses
+            ? FloatingActionButton.extended(
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Log Expense'),
+                onPressed: () {
+                  AddExpenseBottomSheet.show(
+                    context,
+                    tripId: tripId,
+                    defaultCurrency: destinationCurrency,
+                    homeCurrency: baseLedgerCurrency,
+                  );
+                },
+              )
+            : null,
       ),
+    );
+  }
+
+  Widget _buildBalancesTab(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colorScheme,
+    GroupBalances groupBalances,
+    bool canRecordSettlements,
+  ) {
+    final hasMultiCurrency =
+        groupBalances.perCurrencyBalances.length > 1 ||
+        groupBalances.perCurrencyBalances.keys.any(
+          (c) => c != groupBalances.baseCurrency,
+        );
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          'Trip Companion Balances',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Net balance in ${groupBalances.baseCurrency}. Positive balances are owed; negative balances owe companions.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        ...groupBalances.balances.map((member) {
+          Color badgeColor;
+          Color textColor;
+          String badgeText;
+
+          if (member.isOwed) {
+            badgeColor = colorScheme.primaryContainer;
+            textColor = colorScheme.onPrimaryContainer;
+            badgeText =
+                'gets back ${member.formatBalance(groupBalances.baseCurrency)}';
+          } else if (member.owes) {
+            badgeColor = colorScheme.errorContainer;
+            textColor = colorScheme.onErrorContainer;
+            badgeText =
+                'owes ${member.formatBalance(groupBalances.baseCurrency)}';
+          } else {
+            badgeColor = colorScheme.surfaceContainerHighest;
+            textColor = colorScheme.onSurfaceVariant;
+            badgeText = 'settled up';
+          }
+
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+              ),
+            ),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: colorScheme.primaryContainer,
+                child: Text(
+                  member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                  style: TextStyle(
+                    color: colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              title: Text(
+                member.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: member.isDeparted
+                  ? Text(
+                      'Former companion (auditable history retained)',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  : null,
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  badgeText,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+
+        const SizedBox(height: 24),
+
+        Text(
+          'Suggested Settlements (Simplified)',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Calculated with minimal ledger transfers so companions can log repayments cleanly.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        if (groupBalances.isAllSettled) ...[
+          Card(
+            elevation: 0,
+            color: colorScheme.primaryContainer.withValues(alpha: 0.35),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: colorScheme.primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: colorScheme.primary,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'All Settled Up!',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'No outstanding balances in ${groupBalances.baseCurrency}.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ] else ...[
+          ...groupBalances.suggestedSettlements.map((s) {
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: colorScheme.secondaryContainer,
+                      child: Icon(
+                        Icons.payments_outlined,
+                        color: colorScheme.onSecondaryContainer,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${s.payerName} → ${s.payeeName}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Owes ${s.formatAmount()}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (canRecordSettlements)
+                      FilledButton.tonal(
+                        onPressed: () {
+                          SettleUpDialog.show(
+                            context,
+                            tripId: tripId,
+                            payerId: s.payerId,
+                            payerName: s.payerName,
+                            payeeId: s.payeeId,
+                            payeeName: s.payeeName,
+                            initialAmountMinor: s.amountMinor,
+                            currency: s.currency,
+                          );
+                        },
+                        child: const Text('Settle Up'),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+
+        if (groupBalances.unconvertedExpenses.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.secondaryContainer.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: colorScheme.secondary.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Unconverted Foreign Expenses (${groupBalances.unconvertedExpenses.length})',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Excluded from ${groupBalances.baseCurrency} net balances until an attributed rate snapshot is available:',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...groupBalances.unconvertedExpenses.map(
+                  (u) => Text(
+                    '• ${u.title}: ${u.formatAmount()} (${u.payerName})',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSecondaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        if (hasMultiCurrency) ...[
+          const SizedBox(height: 16),
+          Text(
+            'By Currency Breakdown',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...groupBalances.perCurrencyBalances.entries.map(
+            (entry) => Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.key,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ...entry.value.map(
+                      (b) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(b.name, style: theme.textTheme.bodySmall),
+                            Text(
+                              b.formatBalance(entry.key),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                size: 18,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  groupBalances.accountingNotice,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        if (groupBalances.settlementHistory.isNotEmpty) ...[
+          Text(
+            'Settlement History',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...groupBalances.settlementHistory.map((record) {
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.only(bottom: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              ),
+              child: ListTile(
+                leading: Icon(
+                  Icons.check_circle_rounded,
+                  color: colorScheme.primary,
+                ),
+                title: Text(
+                  '${record.payerName} paid ${record.payeeName}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: record.notes != null ? Text(record.notes!) : null,
+                trailing: Text(
+                  record.formatAmount(),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
+      ],
     );
   }
 

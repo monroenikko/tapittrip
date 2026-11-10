@@ -20,14 +20,23 @@ class ExpenseSettlement extends Model
         'trip_id',
         'payer_id',
         'payee_id',
+        'created_by_user_id',
         'amount_minor',
         'currency',
+        'exchange_rate',
+        'base_amount_minor',
+        'rate_source',
+        'rate_captured_at',
         'settled_at',
         'notes',
+        'client_operation_id',
     ];
 
     protected $casts = [
         'amount_minor' => 'integer',
+        'exchange_rate' => 'decimal:6',
+        'base_amount_minor' => 'integer',
+        'rate_captured_at' => 'datetime',
         'settled_at' => 'datetime',
     ];
 

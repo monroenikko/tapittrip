@@ -29,19 +29,32 @@ final class ExpenseFactory extends Factory
         return [
             'trip_id' => Trip::factory(),
             'payer_id' => User::factory(),
+            'created_by_user_id' => fn (array $attributes) => $attributes['payer_id'],
             'category' => fake()->randomElement(['dining', 'transport', 'accommodation', 'activities', 'shopping', 'other']),
             'title' => fake()->words(3, true),
             'amount_minor' => $amount,
             'currency' => $currency,
             'exchange_rate' => 1.0,
+            'rate_source' => 'identity',
+            'rate_captured_at' => now(),
+            'conversion_status' => 'converted',
             'base_amount_minor' => $amount,
             'expense_date' => now()->toDateString(),
             'itinerary_item_id' => null,
             'stay_id' => null,
             'split_type' => 'single',
+            'visibility' => 'shared',
             'notes' => fake()->optional()->sentence(),
             'receipt_url' => null,
             'version' => 1,
         ];
+    }
+
+    public function privatePersonal(): static
+    {
+        return $this->state(fn (): array => [
+            'split_type' => 'single',
+            'visibility' => 'private',
+        ]);
     }
 }

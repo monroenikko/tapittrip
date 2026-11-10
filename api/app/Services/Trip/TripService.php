@@ -109,7 +109,7 @@ final class TripService
     /**
      * Compute today's dashboard summary for the given trip.
      */
-    public function getTodaySummary(Trip $trip, ?CarbonImmutable $overrideNow = null): TodaySummaryResult
+    public function getTodaySummary(Trip $trip, ?CarbonImmutable $overrideNow = null, ?User $viewer = null): TodaySummaryResult
     {
         $timezone = $trip->primary_timezone ?: 'UTC';
         $now = $overrideNow ?: CarbonImmutable::now($timezone);
@@ -216,19 +216,22 @@ final class TripService
             'progress_percentage' => $progressPercentage,
         ];
 
-        // Budget pacing
+        // Budget pacing (exclude other travelers' private personal expenses)
         $budgetPacing = null;
         $budget = $trip->budget;
-        $hasExpenses = $trip->expenses()->exists();
+        $hasExpenses = $trip->expenses()->visibleTo($viewer)->exists();
 
         if ($budget !== null || $hasExpenses) {
             $currency = $budget?->currency ?? $trip->destination_currency ?? CountryCurrencyResolver::resolve($trip->destination_country ?? $trip->title);
 
             $spentTodayMinor = (int) $trip->expenses()
+                ->visibleTo($viewer)
                 ->whereDate('expense_date', $todayDate)
                 ->sum('base_amount_minor');
 
-            $totalSpentMinor = (int) $trip->expenses()->sum('base_amount_minor');
+            $totalSpentMinor = (int) $trip->expenses()
+                ->visibleTo($viewer)
+                ->sum('base_amount_minor');
             $remainingBudgetMinor = $budget !== null
                 ? ($budget->total_budget_minor - $totalSpentMinor)
                 : 0;

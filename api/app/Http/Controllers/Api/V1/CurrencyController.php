@@ -24,6 +24,14 @@ final class CurrencyController extends Controller
 
         $rateData = $this->rateService->getRate($from, $to);
 
+        if (! $rateData->available) {
+            return $this->response->error(
+                'exchange_rate_unavailable',
+                "Exchange rate is currently unavailable for {$from} to {$to}.",
+                503,
+            );
+        }
+
         return $this->response->success($rateData->toArray());
     }
 }

@@ -9,10 +9,11 @@ final class ExchangeRateData
     public function __construct(
         public string $from,
         public string $to,
-        public float $rate,
-        public float $reciprocalRate,
+        public ?float $rate,
+        public ?float $reciprocalRate,
         public string $asOf,
         public string $provider = 'open_exchange_rates',
+        public bool $available = true,
     ) {}
 
     /**
@@ -27,6 +28,7 @@ final class ExchangeRateData
             'reciprocal_rate' => $this->reciprocalRate,
             'as_of' => $this->asOf,
             'provider' => $this->provider,
+            'available' => $this->available,
         ];
     }
 }

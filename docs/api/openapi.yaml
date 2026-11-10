@@ -2793,6 +2793,8 @@ paths:
                     $ref: "#/components/schemas/Expense"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (not a trip member or private personal expense owned by another companion).
         "404":
           description: Expense not found.
     patch:
@@ -2831,6 +2833,14 @@ paths:
           description: Forbidden.
         "404":
           description: Expense not found.
+        "409":
+          description: Optimistic concurrency conflict (`version_conflict`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
     delete:
       operationId: deleteExpense
       summary: Delete an expense record
@@ -2845,6 +2855,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: base_version
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
       responses:
         "204":
           description: Expense deleted successfully.
@@ -2854,6 +2870,12 @@ paths:
           description: Forbidden.
         "404":
           description: Expense not found.
+        "409":
+          description: Optimistic concurrency conflict (`version_conflict`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /expenses/{expense}/receipt:
     post:
@@ -3007,14 +3029,24 @@ paths:
                         type: string
                       rate:
                         type: number
+                        nullable: true
                       reciprocal_rate:
                         type: number
+                        nullable: true
                       as_of:
                         type: string
                       provider:
                         type: string
+                      available:
+                        type: boolean
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "503":
+          description: Upstream exchange rate provider unavailable; callers must not fabricate rates.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /trips/{trip}/journal:
     get:
@@ -5908,7 +5940,7 @@ components:
           nullable: true
         entity_type:
           type: string
-          enum: [trip, itinerary_item, stay, checklist_item]
+          enum: [trip, itinerary_item, stay, checklist_item, expense]
         entity_id:
           type: string
           format: uuid
@@ -6170,9 +6202,10 @@ components:
         - title
         - amount_minor
         - currency
-        - base_amount_minor
+        - conversion_status
         - expense_date
         - split_type
+        - visibility
       properties:
         id:
           type: string
@@ -6183,6 +6216,10 @@ components:
         payer_id:
           type: string
           format: uuid
+        created_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
         category:
           type: string
           enum: [transport, accommodation, dining, activities, shopping, other]
@@ -6200,9 +6237,22 @@ components:
           type: number
           nullable: true
           example: 0.0067
+        rate_source:
+          type: string
+          nullable: true
+          example: cached_snapshot
+        rate_captured_at:
+          type: string
+          format: date-time
+          nullable: true
+        conversion_status:
+          type: string
+          enum: [converted, unavailable]
+          example: converted
         base_amount_minor:
           type: integer
-          example: 20
+          nullable: true
+          example: 2010
         expense_date:
           type: string
           format: date
@@ -6220,14 +6270,42 @@ components:
           nullable: true
         split_type:
           type: string
-          enum: [single, equal, exact, shares]
+          enum: [single, equal, selected, custom]
           example: single
+        visibility:
+          type: string
+          enum: [private, shared]
+          example: private
         receipt_url:
           type: string
           nullable: true
         version:
           type: integer
           example: 1
+        client_operation_id:
+          type: string
+          format: uuid
+          nullable: true
+        splits:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              user_id:
+                type: string
+                format: uuid
+              amount_minor:
+                type: integer
+              base_amount_minor:
+                type: integer
+                nullable: true
+              shares:
+                type: integer
+              settled:
+                type: boolean
         created_at:
           type: string
           format: date-time
@@ -6244,6 +6322,10 @@ components:
         - currency
         - expense_date
       properties:
+        payer_id:
+          type: string
+          format: uuid
+          nullable: true
         category:
           type: string
           enum: [transport, accommodation, dining, activities, shopping, other]
@@ -6260,13 +6342,25 @@ components:
         exchange_rate:
           type: number
           nullable: true
+        rate_source:
+          type: string
+          enum: [identity, open_exchange_rates, cached_snapshot, user_manual, fake, unavailable]
+          nullable: true
+        rate_captured_at:
+          type: string
+          format: date-time
+          nullable: true
+        conversion_status:
+          type: string
+          enum: [converted, unavailable]
+          nullable: true
         expense_date:
           type: string
           format: date
         notes:
           type: string
           nullable: true
-          maxLength: 1000
+          maxLength: 2000
         itinerary_item_id:
           type: string
           format: uuid
@@ -6277,14 +6371,47 @@ components:
           nullable: true
         split_type:
           type: string
-          enum: [single, equal, exact, shares]
+          enum: [single, equal, selected, custom]
+        visibility:
+          type: string
+          enum: [private, shared]
+        participant_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        splits:
+          type: array
+          items:
+            type: object
+            required:
+              - user_id
+              - amount_minor
+            properties:
+              user_id:
+                type: string
+                format: uuid
+              amount_minor:
+                type: integer
+                minimum: 1
+              shares:
+                type: integer
+                minimum: 1
         receipt_url:
           type: string
+          nullable: true
+        client_operation_id:
+          type: string
+          format: uuid
           nullable: true
 
     UpdateExpenseRequest:
       type: object
       properties:
+        payer_id:
+          type: string
+          format: uuid
+          nullable: true
         category:
           type: string
           enum: [transport, accommodation, dining, activities, shopping, other]
@@ -6301,13 +6428,25 @@ components:
         exchange_rate:
           type: number
           nullable: true
+        rate_source:
+          type: string
+          enum: [identity, open_exchange_rates, cached_snapshot, user_manual, fake, unavailable]
+          nullable: true
+        rate_captured_at:
+          type: string
+          format: date-time
+          nullable: true
+        conversion_status:
+          type: string
+          enum: [converted, unavailable]
+          nullable: true
         expense_date:
           type: string
           format: date
         notes:
           type: string
           nullable: true
-          maxLength: 1000
+          maxLength: 2000
         itinerary_item_id:
           type: string
           format: uuid
@@ -6316,9 +6455,40 @@ components:
           type: string
           format: uuid
           nullable: true
+        split_type:
+          type: string
+          enum: [single, equal, selected, custom]
+        visibility:
+          type: string
+          enum: [private, shared]
+        participant_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        splits:
+          type: array
+          items:
+            type: object
+            required:
+              - user_id
+              - amount_minor
+            properties:
+              user_id:
+                type: string
+                format: uuid
+              amount_minor:
+                type: integer
+                minimum: 1
+              shares:
+                type: integer
+                minimum: 1
         receipt_url:
           type: string
           nullable: true
+        base_version:
+          type: integer
+          minimum: 1
 
     TripExpenseSummary:
       type: object
@@ -6345,6 +6515,12 @@ components:
         total_spent_base_minor:
           type: integer
           example: 25000
+        shared_spent_base_minor:
+          type: integer
+          example: 20000
+        personal_spent_base_minor:
+          type: integer
+          example: 5000
         remaining_budget_minor:
           type: integer
           nullable: true
@@ -6356,6 +6532,22 @@ components:
         expenses_count:
           type: integer
           example: 5
+        unconverted_expenses_count:
+          type: integer
+          example: 0
+        unconverted_totals:
+          type: array
+          items:
+            type: object
+            properties:
+              currency:
+                type: string
+              amount_minor:
+                type: integer
+              count:
+                type: integer
+        accounting_notice:
+          type: string
         category_breakdown:
           type: array
           items:
@@ -6425,6 +6617,17 @@ components:
         currency:
           type: string
           example: USD
+        exchange_rate:
+          type: number
+          nullable: true
+        rate_source:
+          type: string
+          enum: [identity, open_exchange_rates, cached_snapshot, user_manual, fake]
+          nullable: true
+        rate_captured_at:
+          type: string
+          format: date-time
+          nullable: true
         settled_at:
           type: string
           format: date-time
@@ -6432,7 +6635,11 @@ components:
         notes:
           type: string
           nullable: true
-          example: Venmo transfer
+          example: Cash adjustment logged
+        client_operation_id:
+          type: string
+          format: uuid
+          nullable: true
 
     ExpenseSettlement:
       type: object
@@ -6456,17 +6663,38 @@ components:
         payee_id:
           type: string
           format: uuid
+        created_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
         amount_minor:
           type: integer
           example: 3000
         currency:
           type: string
           example: USD
+        exchange_rate:
+          type: number
+          nullable: true
+        base_amount_minor:
+          type: integer
+          nullable: true
+        rate_source:
+          type: string
+          nullable: true
+        rate_captured_at:
+          type: string
+          format: date-time
+          nullable: true
         settled_at:
           type: string
           format: date-time
         notes:
           type: string
+          nullable: true
+        client_operation_id:
+          type: string
+          format: uuid
           nullable: true
         created_at:
           type: string
@@ -6502,13 +6730,24 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ExpenseSettlement"
+        per_currency_balances:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: "#/components/schemas/MemberBalance"
+        unconverted_expenses:
+          type: array
+          items:
+            type: object
+        accounting_notice:
+          type: string
 
     MemberBalance:
       type: object
       required:
         - user_id
         - name
-        - email
         - net_balance_minor
         - status
       properties:
@@ -6518,9 +6757,6 @@ components:
         name:
           type: string
           example: Alice
-        email:
-          type: string
-          example: alice@example.com
         net_balance_minor:
           type: integer
           example: 3000
@@ -6528,6 +6764,9 @@ components:
           type: string
           enum: [is_owed, owes, settled]
           example: is_owed
+        is_departed:
+          type: boolean
+          example: false
 
     SuggestedSettlement:
       type: object

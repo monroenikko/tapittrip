@@ -47,6 +47,29 @@ class DailySpending {
   }
 }
 
+class UnconvertedCurrencyTotal {
+  const UnconvertedCurrencyTotal({
+    required this.currency,
+    required this.amountMinor,
+    required this.count,
+  });
+
+  final String currency;
+  final int amountMinor;
+  final int count;
+
+  String formatAmount() =>
+      CurrencyFormatter.formatAmount(amountMinor, currency, isMinor: true);
+
+  factory UnconvertedCurrencyTotal.fromJson(Map<String, dynamic> json) {
+    return UnconvertedCurrencyTotal(
+      currency: (json['currency'] as String?) ?? 'USD',
+      amountMinor: (json['amount_minor'] as num?)?.toInt() ?? 0,
+      count: (json['count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class ExpenseSummary {
   const ExpenseSummary({
     required this.tripId,
@@ -54,9 +77,14 @@ class ExpenseSummary {
     this.totalBudgetMinor,
     this.dailyBudgetMinor,
     required this.totalSpentBaseMinor,
+    this.sharedSpentBaseMinor = 0,
+    this.personalSpentBaseMinor = 0,
     this.remainingBudgetMinor,
     this.budgetUtilizationPercent,
     required this.expensesCount,
+    this.unconvertedExpensesCount = 0,
+    this.unconvertedTotals = const [],
+    this.accountingNotice = '',
     this.categoryBreakdown = const [],
     this.dailySpending = const [],
   });
@@ -66,9 +94,14 @@ class ExpenseSummary {
   final int? totalBudgetMinor;
   final int? dailyBudgetMinor;
   final int totalSpentBaseMinor;
+  final int sharedSpentBaseMinor;
+  final int personalSpentBaseMinor;
   final int? remainingBudgetMinor;
   final double? budgetUtilizationPercent;
   final int expensesCount;
+  final int unconvertedExpensesCount;
+  final List<UnconvertedCurrencyTotal> unconvertedTotals;
+  final String accountingNotice;
   final List<CategorySpending> categoryBreakdown;
   final List<DailySpending> dailySpending;
 
@@ -95,10 +128,24 @@ class ExpenseSummary {
       dailyBudgetMinor: (json['daily_budget_minor'] as num?)?.toInt(),
       totalSpentBaseMinor:
           (json['total_spent_base_minor'] as num?)?.toInt() ?? 0,
+      sharedSpentBaseMinor:
+          (json['shared_spent_base_minor'] as num?)?.toInt() ?? 0,
+      personalSpentBaseMinor:
+          (json['personal_spent_base_minor'] as num?)?.toInt() ?? 0,
       remainingBudgetMinor: (json['remaining_budget_minor'] as num?)?.toInt(),
       budgetUtilizationPercent: (json['budget_utilization_percent'] as num?)
           ?.toDouble(),
       expensesCount: (json['expenses_count'] as num?)?.toInt() ?? 0,
+      unconvertedExpensesCount:
+          (json['unconverted_expenses_count'] as num?)?.toInt() ?? 0,
+      unconvertedTotals: (json['unconverted_totals'] as List<dynamic>? ?? [])
+          .whereType<Map>()
+          .map(
+            (e) =>
+                UnconvertedCurrencyTotal.fromJson(Map<String, dynamic>.from(e)),
+          )
+          .toList(),
+      accountingNotice: (json['accounting_notice'] as String?) ?? '',
       categoryBreakdown: (json['category_breakdown'] as List<dynamic>? ?? [])
           .map(
             (e) =>

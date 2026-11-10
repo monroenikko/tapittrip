@@ -7,9 +7,9 @@ namespace App\Contracts;
 interface ExchangeRateProviderInterface
 {
     /**
-     * Get the exchange rate from one currency to another.
+     * Get the exchange rate from one currency to another, or null when unavailable.
      */
-    public function getRate(string $fromCurrency, string $toCurrency): float;
+    public function getRate(string $fromCurrency, string $toCurrency): ?float;
 
     /**
      * Get all available rates for a base currency.

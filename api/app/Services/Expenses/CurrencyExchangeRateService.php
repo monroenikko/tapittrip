@@ -35,21 +35,48 @@ final class CurrencyExchangeRateService
         }
 
         $cacheKey = "forex_rate_{$from}_{$to}";
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && isset($cached['rate']) && is_numeric($cached['rate']) && (float) $cached['rate'] > 0) {
+            $rate = (float) $cached['rate'];
+            $reciprocalRate = round(1.0 / $rate, 6);
 
-        /** @var float $rate */
-        $rate = (float) Cache::remember($cacheKey, 3600, function () use ($from, $to) {
-            return (float) $this->provider->getRate($from, $to);
-        });
+            return new ExchangeRateData(
+                from: $from,
+                to: $to,
+                rate: $rate,
+                reciprocalRate: $reciprocalRate,
+                asOf: (string) ($cached['as_of'] ?? Carbon::now()->toIso8601String()),
+                provider: $this->provider instanceof FakeExchangeRateProvider ? 'fake' : 'open_exchange_rates',
+                available: true,
+            );
+        }
 
-        $reciprocalRate = $rate > 0 ? round(1.0 / $rate, 6) : 0.0;
+        $rate = $this->provider->getRate($from, $to);
+        if ($rate === null || $rate <= 0) {
+            return new ExchangeRateData(
+                from: $from,
+                to: $to,
+                rate: null,
+                reciprocalRate: null,
+                asOf: Carbon::now()->toIso8601String(),
+                provider: 'unavailable',
+                available: false,
+            );
+        }
+
+        $asOf = Carbon::now()->toIso8601String();
+        Cache::put($cacheKey, ['rate' => $rate, 'as_of' => $asOf], 3600);
+
+        $reciprocalRate = round(1.0 / $rate, 6);
 
         return new ExchangeRateData(
             from: $from,
             to: $to,
             rate: (float) $rate,
             reciprocalRate: (float) $reciprocalRate,
-            asOf: Carbon::now()->toIso8601String(),
+            asOf: $asOf,
             provider: $this->provider instanceof FakeExchangeRateProvider ? 'fake' : 'open_exchange_rates',
+            available: true,
         );
     }
 }

@@ -11,14 +11,7 @@ use Throwable;
 
 final class LiveExchangeRateProvider implements ExchangeRateProviderInterface
 {
-    private FakeExchangeRateProvider $fallbackProvider;
-
-    public function __construct(?FakeExchangeRateProvider $fallbackProvider = null)
-    {
-        $this->fallbackProvider = $fallbackProvider ?? new FakeExchangeRateProvider;
-    }
-
-    public function getRate(string $fromCurrency, string $toCurrency): float
+    public function getRate(string $fromCurrency, string $toCurrency): ?float
     {
         $from = strtoupper(trim($fromCurrency));
         $to = strtoupper(trim($toCurrency));
@@ -42,7 +35,7 @@ final class LiveExchangeRateProvider implements ExchangeRateProviderInterface
             Log::warning("LiveExchangeRateProvider failed to fetch live rate for {$from}->{$to}: ".$e->getMessage());
         }
 
-        return $this->fallbackProvider->getRate($from, $to);
+        return null;
     }
 
     public function getRatesForBase(string $baseCurrency): array
@@ -71,6 +64,6 @@ final class LiveExchangeRateProvider implements ExchangeRateProviderInterface
             Log::warning("LiveExchangeRateProvider failed to fetch rates for {$base}: ".$e->getMessage());
         }
 
-        return $this->fallbackProvider->getRatesForBase($base);
+        return [];
     }
 }

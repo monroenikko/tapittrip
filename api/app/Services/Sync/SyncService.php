@@ -5,13 +5,19 @@ declare(strict_types=1);
 namespace App\Services\Sync;
 
 use App\Domain\Stays\StayPrivacy;
+use App\DTOs\Expenses\CreateExpenseData;
+use App\DTOs\Expenses\UpdateExpenseData;
 use App\DTOs\Sync\PullSyncChangesData;
 use App\DTOs\Sync\PullSyncResult;
 use App\DTOs\Sync\PushSyncOperationsData;
 use App\DTOs\Sync\SyncOperationItemData;
 use App\DTOs\Sync\SyncOperationResult;
+use App\Exceptions\VersionConflictException;
+use App\Http\Requests\Api\V1\Expenses\CreateExpenseRequest;
+use App\Http\Requests\Api\V1\Expenses\UpdateExpenseRequest;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
+use App\Models\Expense;
 use App\Models\ItineraryItem;
 use App\Models\Stay;
 use App\Models\SyncCursor;
@@ -21,14 +27,23 @@ use App\Models\TripDay;
 use App\Models\TripMember;
 use App\Models\TripTraveler;
 use App\Models\User;
+use App\Services\Expenses\ExpenseService;
 use App\Services\Notifications\NotificationService;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class SyncService
 {
+    public function __construct(
+        private readonly ExpenseService $expenseService,
+    ) {}
+
     /**
      * Push a batch of client offline mutations, verifying idempotency and permissions.
      *
@@ -180,10 +195,41 @@ final class SyncService
         $hasMore = $records->count() > $data->limit;
         $items = $hasMore ? $records->slice(0, $data->limit) : $records;
 
+        $expenseIds = $items
+            ->where('entity_type', 'expense')
+            ->pluck('entity_id')
+            ->filter(static fn (mixed $id): bool => is_string($id) && $id !== '')
+            ->values()
+            ->all();
+        $expensesById = $expenseIds !== []
+            ? Expense::withTrashed()
+                ->whereIn('id', $expenseIds)
+                ->get(['id', 'visibility', 'created_by_user_id', 'payer_id'])
+                ->keyBy('id')
+            : collect();
+
         $newCursor = $data->cursor;
         $operations = [];
 
         foreach ($items as $op) {
+            if ($op->server_sequence > $newCursor) {
+                $newCursor = $op->server_sequence;
+            }
+
+            if ($op->entity_type === 'expense' && $op->user_id !== $user->id) {
+                $expenseModel = $expensesById->get($op->entity_id);
+                if ($expenseModel instanceof Expense && ! $expenseModel->isVisibleTo($user)) {
+                    continue;
+                }
+
+                $payload = is_array($op->payload) ? $op->payload : [];
+                $payloadVis = $payload['visibility'] ?? null;
+                $payloadSplit = $payload['split_type'] ?? null;
+                if ($payloadVis === 'private' || ($expenseModel === null && $payloadSplit === 'single' && $payloadVis !== 'shared')) {
+                    continue;
+                }
+            }
+
             $operations[] = [
                 'id' => $op->id,
                 'operation_id' => $op->operation_id,
@@ -197,10 +243,6 @@ final class SyncService
                 'server_sequence' => $op->server_sequence,
                 'created_at' => $op->created_at?->toIso8601String(),
             ];
-
-            if ($op->server_sequence > $newCursor) {
-                $newCursor = $op->server_sequence;
-            }
         }
 
         // Update cursor in database if we moved forward
@@ -228,11 +270,119 @@ final class SyncService
     {
         return match ($op->entityType) {
             'checklist_item' => $this->handleChecklistItem($user, $deviceKey, $op),
+            'expense' => $this->handleExpense($user, $deviceKey, $op),
             'itinerary_item' => $this->handleItineraryItem($user, $deviceKey, $op),
             'stay' => $this->handleStay($user, $deviceKey, $op),
             'trip' => $this->handleTrip($user, $deviceKey, $op),
             default => $this->rejectUnsupported($user, $deviceKey, $op, "Unsupported entity type: {$op->entityType}"),
         };
+    }
+
+    private function handleExpense(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult
+    {
+        if ($op->tripId === null) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'trip_id is required for expense sync operations');
+        }
+
+        $trip = Trip::find($op->tripId);
+        if ($trip === null) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'Trip not found');
+        }
+
+        if ($op->operationType === 'create') {
+            $existing = Expense::withTrashed()->find($op->entityId);
+            if ($existing !== null) {
+                if ($existing->trip_id !== $op->tripId) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Expense belongs to another trip');
+                }
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+
+                return $this->recordAccepted($user, $deviceKey, $op, $existing->version);
+            }
+
+            $rawPayload = $op->payload ?? [];
+            $validator = Validator::make($rawPayload, (new CreateExpenseRequest)->rules());
+            if ($validator->fails()) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, $validator->errors()->first());
+            }
+
+            $validated = $validator->validated();
+            $validated['client_operation_id'] = $op->operationId;
+            if (Str::isUuid($op->entityId)) {
+                $validated['id'] = $op->entityId;
+            }
+
+            try {
+                $created = $this->expenseService->createExpense(
+                    $trip,
+                    CreateExpenseData::fromArray($validated, $user->id, $user->id),
+                );
+            } catch (ValidationException|AuthorizationException $e) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, $e->getMessage());
+            }
+
+            return $this->recordAccepted($user, $deviceKey, $op, $created->version);
+        }
+
+        if ($op->operationType === 'update') {
+            $expense = Expense::find($op->entityId);
+            if ($expense === null) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Expense not found');
+            }
+            if ($expense->trip_id !== $op->tripId) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Expense does not belong to the specified trip');
+            }
+
+            $rawPayload = $op->payload ?? [];
+            $validator = Validator::make($rawPayload, (new UpdateExpenseRequest)->rules());
+            if ($validator->fails()) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, $validator->errors()->first());
+            }
+
+            $validated = $validator->validated();
+            $validated['base_version'] = $op->baseVersion;
+
+            try {
+                $updated = $this->expenseService->updateExpense(
+                    $expense,
+                    UpdateExpenseData::fromArray($validated),
+                    $user,
+                );
+            } catch (VersionConflictException $e) {
+                return $this->recordConflict($user, $deviceKey, $op, $e->serverVersion, $e->serverPayload ?? []);
+            } catch (ValidationException|AuthorizationException $e) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, $e->getMessage());
+            }
+
+            return $this->recordAccepted($user, $deviceKey, $op, $updated->version);
+        }
+
+        if ($op->operationType === 'delete') {
+            $expense = Expense::withTrashed()->find($op->entityId);
+            if ($expense === null) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Expense not found');
+            }
+            if ($expense->trip_id !== $op->tripId) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Expense does not belong to the specified trip');
+            }
+            if ($expense->trashed()) {
+                return $this->recordAccepted($user, $deviceKey, $op, $expense->version);
+            }
+
+            try {
+                $this->expenseService->deleteExpense($expense, $user, $op->baseVersion);
+            } catch (VersionConflictException $e) {
+                return $this->recordConflict($user, $deviceKey, $op, $e->serverVersion, $e->serverPayload ?? []);
+            } catch (AuthorizationException $e) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, $e->getMessage());
+            }
+
+            return $this->recordAccepted($user, $deviceKey, $op, $expense->version);
+        }
+
+        return $this->rejectUnsupported($user, $deviceKey, $op, "Unsupported operation type: {$op->operationType}");
     }
 
     private function handleChecklistItem(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult

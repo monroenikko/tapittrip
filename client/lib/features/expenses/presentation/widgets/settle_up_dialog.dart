@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_exceptions.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../sync/services/sync_service.dart';
 import '../providers/expense_provider.dart';
 
 class SettleUpDialog extends ConsumerStatefulWidget {
@@ -55,19 +57,21 @@ class SettleUpDialog extends ConsumerStatefulWidget {
 class _SettleUpDialogState extends ConsumerState<SettleUpDialog> {
   late final TextEditingController _amountController;
   late final TextEditingController _notesController;
+  late final String _clientOperationId;
   bool _submitting = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    final isZeroDecimal = widget.currency == 'JPY';
+    _clientOperationId = SyncService.generateUuid();
+    final isZeroDecimal = CurrencyFormatter.isZeroDecimal(widget.currency);
     _amountController = TextEditingController(
       text: isZeroDecimal
           ? widget.initialAmountMinor.toString()
           : (widget.initialAmountMinor / 100.0).toStringAsFixed(2),
     );
-    _notesController = TextEditingController(text: 'Direct payment');
+    _notesController = TextEditingController(text: 'Offline ledger adjustment');
   }
 
   @override
@@ -106,6 +110,7 @@ class _SettleUpDialogState extends ConsumerState<SettleUpDialog> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        clientOperationId: _clientOperationId,
       );
 
       ref.invalidate(groupBalancesProvider(widget.tripId));
@@ -113,6 +118,15 @@ class _SettleUpDialogState extends ConsumerState<SettleUpDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(true);
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _error = e is NetworkException
+              ? 'Recording settlements requires connectivity so trip ledger balances stay synchronized.'
+              : e.message;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -136,6 +150,33 @@ class _SettleUpDialogState extends ConsumerState<SettleUpDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colorScheme.secondaryContainer.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: colorScheme.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Ledger record only — TapItTrip tracks balances and does not transfer funds or verify payments.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -195,7 +236,7 @@ class _SettleUpDialogState extends ConsumerState<SettleUpDialog> {
               ),
               decoration: InputDecoration(
                 labelText: 'Amount (${widget.currency})',
-                prefixText: widget.currency == 'JPY' ? '¥ ' : '\$ ',
+                prefixText: CurrencyFormatter.symbol(widget.currency),
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -203,8 +244,8 @@ class _SettleUpDialogState extends ConsumerState<SettleUpDialog> {
             TextField(
               controller: _notesController,
               decoration: const InputDecoration(
-                labelText: 'Payment Note',
-                hintText: 'e.g. Cash, Venmo, Revolut',
+                labelText: 'Note (Optional)',
+                hintText: 'e.g. Settled in cash, bank transfer',
                 border: OutlineInputBorder(),
               ),
             ),
