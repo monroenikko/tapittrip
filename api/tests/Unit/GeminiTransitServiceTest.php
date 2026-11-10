@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Application\Stays\Data\CompareStayTransportData;
-use App\Application\Stays\Services\GeminiTransitService;
-use App\Domain\Stays\Models\Stay;
+use App\DTOs\Stays\CompareStayTransportData;
+use App\Models\Stay;
 use App\Models\Trip;
+use App\Services\Stays\GeminiTransitService;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

@@ -12,7 +12,6 @@ use App\Domain\Expenses\Models\TripBudget;
 use App\Domain\Journal\Models\JournalEntry;
 use App\Domain\Media\Models\MediaAttachment;
 use App\Domain\Notifications\Models\Reminder;
-use App\Domain\Stays\Models\Stay;
 use Database\Factories\TripFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

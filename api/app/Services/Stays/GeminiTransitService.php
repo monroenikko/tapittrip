@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Stays\Services;
+namespace App\Services\Stays;
 
-use App\Application\Stays\Data\CompareStayTransportData;
-use App\Domain\Stays\Models\Stay;
+use App\DTOs\Stays\CompareStayTransportData;
+use App\Models\Stay;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 

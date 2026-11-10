@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use App\Application\Weather\Services\GetTripWeatherService;
-use App\Domain\Stays\Models\Stay;
+use App\Models\Stay;
 use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;

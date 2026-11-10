@@ -7,7 +7,7 @@ namespace Tests\Feature;
 use App\Domain\Lounges\Models\Airport;
 use App\Domain\Lounges\Models\AirportLounge;
 use App\Domain\Lounges\Models\AirportTerminal;
-use App\Domain\Stays\Models\Stay;
+use App\Models\Stay;
 use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;

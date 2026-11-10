@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Stays\Services;
+namespace App\Services\Stays;
 
-use App\Domain\Stays\Models\Stay;
+use App\Models\Stay;
 
 final class StayTransitService
 {

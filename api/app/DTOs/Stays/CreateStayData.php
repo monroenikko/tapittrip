@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Stays\Data;
+namespace App\DTOs\Stays;
 
 use App\DTOs\Itinerary\CreatePlaceData;
 use Carbon\Carbon;

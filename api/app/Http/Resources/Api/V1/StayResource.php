@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Application\Stays\Services\StayTransitService;
-use App\Domain\Stays\Models\Stay;
+use App\Models\Stay;
+use App\Services\Stays\StayTransitService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

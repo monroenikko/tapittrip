@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\DTOs\Trip;
 
 use App\Application\Weather\Data\WeatherConditionData;
-use App\Domain\Stays\Models\Stay;
 use App\Models\ItineraryItem;
+use App\Models\Stay;
 use App\Models\Trip;
 use Illuminate\Support\Collection;
 
