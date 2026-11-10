@@ -10,6 +10,30 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-10 — Architecture Simplification: Feature 1 (Trips) to Service-Model-DTO Pattern
+
+### Completed
+
+- **Feature-by-Feature Architecture Migration**:
+  - Migrated `Trips` from DDD/Modular Monolith layer to standard Laravel Service-Model-DTO architecture.
+  - **Models (`app/Models/`)**:
+    - Moved `Trip.php` and `TripMember.php` to `app/Models/` (namespace `App\Models`).
+    - Updated `User.php` and all relational models across the backend to reference `App\Models\Trip` directly.
+  - **Policies (`app/Policies/`)**:
+    - Moved `TripPolicy.php` to standard `app/Policies/TripPolicy.php` (namespace `App\Policies`).
+    - Configured gate policy registration in `AppServiceProvider`.
+  - **DTOs (`app/DTOs/Trip/`)**:
+    - Created `app/DTOs/Trip/CreateTripData.php`, `UpdateTripData.php`, and `TodaySummaryResult.php` (namespace `App\DTOs\Trip`).
+  - **Services (`app/Services/Trip/`)**:
+    - Unified `CreateTrip`, `UpdateTrip`, `DeleteTrip`, and `GetTodaySummaryService` into a cohesive `TripService` under `app/Services/Trip/TripService.php` (`create`, `update`, `delete`, `getTodaySummary`).
+  - **Controllers (`app/Http/Controllers/Api/V1/`)**:
+    - Simplified `TripController` and `TripTodayController` to inject and delegate directly to `TripService`.
+  - **Factories & Tests**:
+    - Updated `TripFactory.php`, `TripMemberFactory.php`, and all 25+ test suites referencing `Trip` to use the new namespaces.
+- **Verification**:
+  - Ran `php artisan test`: All 127 tests passed (787 assertions) in 14.73s.
+  - Ran `./vendor/bin/pint`: Fixed styling and imports across modified files.
+
 ## 2026-11-09 — Destination Country Flag in Trip Card and Itinerary Header
 
 ### Completed
