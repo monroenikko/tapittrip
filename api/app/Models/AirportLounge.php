@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Lounges\Models;
+namespace App\Models;
 
 use Database\Factories\AirportLoungeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

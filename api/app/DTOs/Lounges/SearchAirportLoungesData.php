@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Lounges\Data;
+namespace App\DTOs\Lounges;
 
 final readonly class SearchAirportLoungesData
 {

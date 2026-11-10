@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Application\Lounges\Services\AirportLoungeDirectoryService;
-use App\Domain\Lounges\Models\Airport;
-use App\Domain\Lounges\Models\AirportLounge;
-use App\Domain\Lounges\Models\AirportTerminal;
+use App\Models\Airport;
+use App\Models\AirportLounge;
+use App\Models\AirportTerminal;
+use App\Services\Lounges\AirportLoungeDirectoryService;
 use Illuminate\Database\Seeder;
 
 final class AirportLoungeSeeder extends Seeder

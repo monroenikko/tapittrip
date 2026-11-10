@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Lounges\Services;
+namespace App\Services\Lounges;
 
-use App\Domain\Lounges\Models\Airport;
-use App\Domain\Lounges\Models\AirportLounge;
-use App\Domain\Lounges\Models\AirportTerminal;
+use App\Models\Airport;
+use App\Models\AirportLounge;
+use App\Models\AirportTerminal;
 use Illuminate\Support\Facades\DB;
 
 final class AirportLoungeDirectoryService

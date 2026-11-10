@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Lounges\Models\Airport;
-use App\Domain\Lounges\Models\AirportLounge;
-use App\Domain\Lounges\Models\AirportTerminal;
+use App\Models\Airport;
+use App\Models\AirportLounge;
+use App\Models\AirportTerminal;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

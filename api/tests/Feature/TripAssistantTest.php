@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Lounges\Models\Airport;
-use App\Domain\Lounges\Models\AirportLounge;
-use App\Domain\Lounges\Models\AirportTerminal;
+use App\Models\Airport;
+use App\Models\AirportLounge;
+use App\Models\AirportTerminal;
 use App\Models\Stay;
 use App\Models\Trip;
 use App\Models\User;

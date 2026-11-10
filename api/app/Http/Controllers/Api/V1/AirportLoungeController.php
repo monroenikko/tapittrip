@@ -4,31 +4,32 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Lounges\Data\SearchAirportLoungesData;
-use App\Application\Lounges\Services\AirportLoungeDirectoryService;
-use App\Application\Lounges\Services\GetAirportLoungeDetailsService;
-use App\Application\Lounges\Services\SearchAirportLoungesService;
+use App\DTOs\Lounges\SearchAirportLoungesData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Lounges\SearchAirportLoungesRequest;
 use App\Http\Resources\Api\V1\AirportLoungeResource;
 use App\Http\Resources\Api\V1\AirportResource;
+use App\Services\Lounges\AirportLoungeService;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 final class AirportLoungeController extends Controller
 {
+    public function __construct(
+        private readonly AirportLoungeService $loungeService,
+        private readonly ApiResponse $response,
+    ) {}
+
     /**
      * List and search worldwide airports and their terminals.
      */
-    public function airports(
-        Request $request,
-        ApiResponse $response,
-    ): JsonResponse {
+    public function airports(Request $request): JsonResponse
+    {
         $q = $request->query('q');
-        $airports = AirportLoungeDirectoryService::listGlobalAirports($q ? (string) $q : null);
+        $airports = $this->loungeService->listAirports($q ? (string) $q : null);
 
-        return $response->success($airports);
+        return $this->response->success($airports);
     }
 
     /**
@@ -37,8 +38,6 @@ final class AirportLoungeController extends Controller
     public function index(
         string $iata,
         SearchAirportLoungesRequest $request,
-        SearchAirportLoungesService $service,
-        ApiResponse $response,
     ): JsonResponse {
         $validated = $request->validated();
         $data = new SearchAirportLoungesData(
@@ -50,9 +49,9 @@ final class AirportLoungeController extends Controller
                 : null,
         );
 
-        $result = $service->execute($data);
+        $result = $this->loungeService->searchLounges($data);
 
-        return $response->success([
+        return $this->response->success([
             'airport' => new AirportResource($result['airport']),
             'lounges' => AirportLoungeResource::collection($result['lounges']),
         ]);
@@ -61,13 +60,10 @@ final class AirportLoungeController extends Controller
     /**
      * Get detailed information for an airport lounge.
      */
-    public function show(
-        string $lounge,
-        GetAirportLoungeDetailsService $service,
-        ApiResponse $response,
-    ): JsonResponse {
-        $loungeModel = $service->execute($lounge);
+    public function show(string $lounge): JsonResponse
+    {
+        $loungeModel = $this->loungeService->getLoungeDetails($lounge);
 
-        return $response->success(new AirportLoungeResource($loungeModel));
+        return $this->response->success(new AirportLoungeResource($loungeModel));
     }
 }

@@ -2,20 +2,32 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Lounges\Services;
+namespace App\Services\Lounges;
 
-use App\Application\Lounges\Data\SearchAirportLoungesData;
-use App\Domain\Lounges\Models\Airport;
-use App\Domain\Lounges\Models\AirportLounge;
+use App\DTOs\Lounges\SearchAirportLoungesData;
+use App\Models\Airport;
+use App\Models\AirportLounge;
 use Illuminate\Database\Eloquent\Collection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class SearchAirportLoungesService
+final class AirportLoungeService
 {
     /**
+     * List global airports matching an optional query string.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listAirports(?string $query = null): array
+    {
+        return AirportLoungeDirectoryService::listGlobalAirports($query);
+    }
+
+    /**
+     * Search lounges in an airport with filters for terminal, airside, and access methods.
+     *
      * @return array{airport: Airport, lounges: Collection<int, AirportLounge>}
      */
-    public function execute(SearchAirportLoungesData $data): array
+    public function searchLounges(SearchAirportLoungesData $data): array
     {
         $iata = AirportLoungeDirectoryService::resolveIata($data->iataCode);
         $airport = Airport::with('terminals')->where('iata_code', $iata)->first();
@@ -57,5 +69,19 @@ final class SearchAirportLoungesService
             'airport' => $airport,
             'lounges' => $lounges,
         ];
+    }
+
+    /**
+     * Get details for a single airport lounge by ID.
+     */
+    public function getLoungeDetails(string $loungeId): AirportLounge
+    {
+        $lounge = AirportLounge::with(['terminal', 'airport'])->find($loungeId);
+
+        if ($lounge === null) {
+            throw new NotFoundHttpException('Airport lounge not found');
+        }
+
+        return $lounge;
     }
 }

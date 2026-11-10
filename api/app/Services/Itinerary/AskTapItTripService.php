@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Itinerary;
 
-use App\Domain\Lounges\Models\AirportLounge;
 use App\DTOs\Itinerary\TripAssistantResult;
+use App\Models\AirportLounge;
 use App\Models\Trip;
 
 final class AskTapItTripService
