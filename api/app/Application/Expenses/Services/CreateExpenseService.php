@@ -7,7 +7,7 @@ namespace App\Application\Expenses\Services;
 use App\Application\Expenses\Data\CreateExpenseData;
 use App\Domain\Expenses\Models\Expense;
 use App\Domain\Expenses\Models\ExpenseSplit;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Support\Facades\DB;
 
 final class CreateExpenseService

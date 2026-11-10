@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Itinerary\Services;
 
 use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Trips\Models\Trip;
-use App\Domain\Trips\Models\TripMember;
+use App\Models\Trip;
+use App\Models\TripMember;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

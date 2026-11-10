@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Trips\Data;
+namespace App\DTOs\Trip;
 
 final readonly class UpdateTripData
 {

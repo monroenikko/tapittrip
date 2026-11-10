@@ -7,7 +7,7 @@ namespace App\Application\Weather\Services;
 use App\Application\Weather\Data\DailyForecastData;
 use App\Application\Weather\Data\TripWeatherData;
 use App\Application\Weather\Data\WeatherConditionData;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;

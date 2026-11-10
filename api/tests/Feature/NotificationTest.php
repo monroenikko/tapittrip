@@ -11,7 +11,7 @@ use App\Domain\Notifications\Models\NotificationPreference;
 use App\Domain\Notifications\Models\Reminder;
 use App\Domain\Notifications\Models\UserDevice;
 use App\Domain\Stays\Models\Stay;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;

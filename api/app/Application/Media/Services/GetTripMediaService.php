@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Media\Services;
 
 use App\Domain\Media\Models\MediaAttachment;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Database\Eloquent\Collection;
 
 final class GetTripMediaService

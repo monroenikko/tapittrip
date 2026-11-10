@@ -5,8 +5,6 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Domain\Notifications\Models\NotificationPreference;
 use App\Domain\Notifications\Models\UserDevice;
-use App\Domain\Trips\Models\Trip;
-use App\Domain\Trips\Models\TripMember;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;

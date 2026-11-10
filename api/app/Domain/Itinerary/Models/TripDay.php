@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Itinerary\Models;
 
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Database\Factories\TripDayFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

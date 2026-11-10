@@ -6,7 +6,7 @@ namespace Tests\Unit;
 
 use App\Application\Itinerary\Data\GenerateAiItineraryData;
 use App\Application\Itinerary\Services\GeminiItineraryService;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

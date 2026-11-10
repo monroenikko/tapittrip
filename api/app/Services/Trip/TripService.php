@@ -2,27 +2,89 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Trips\Services;
+namespace App\Services\Trip;
 
 use App\Application\Expenses\Services\CountryCurrencyResolver;
-use App\Application\Trips\Data\TodaySummaryResult;
 use App\Application\Weather\Services\GetTripWeatherService;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Stays\Models\Stay;
-use App\Domain\Trips\Models\Trip;
+use App\DTOs\Trip\CreateTripData;
+use App\DTOs\Trip\TodaySummaryResult;
+use App\DTOs\Trip\UpdateTripData;
+use App\Models\Trip;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
-final class GetTodaySummaryService
+final class TripService
 {
     public function __construct(
         private readonly GetTripWeatherService $weatherService,
     ) {}
 
     /**
+     * Create a new trip and assign the creator as the owner.
+     */
+    public function create(User $owner, CreateTripData $data): Trip
+    {
+        return DB::transaction(function () use ($owner, $data): Trip {
+            /** @var Trip $trip */
+            $trip = Trip::query()->create([
+                'owner_id' => $owner->id,
+                'title' => $data->title,
+                'start_date' => $data->startDate,
+                'end_date' => $data->endDate,
+                'primary_timezone' => $data->primaryTimezone,
+                'origin_country' => $data->originCountry,
+                'destination_country' => $data->destinationCountry,
+                'trip_type' => $data->tripType,
+                'planning_mode' => $data->planningMode,
+                'status' => 'planned',
+                'version' => 1,
+            ]);
+
+            $trip->members()->create([
+                'user_id' => $owner->id,
+                'role' => 'owner',
+                'invitation_status' => 'accepted',
+            ]);
+
+            return $trip;
+        });
+    }
+
+    /**
+     * Update an existing trip.
+     *
+     * @param  array<string, mixed>  $rawPayload
+     */
+    public function update(Trip $trip, UpdateTripData $data, array $rawPayload): Trip
+    {
+        return DB::transaction(function () use ($trip, $data, $rawPayload): Trip {
+            $updates = $data->toUpdatePayload($rawPayload);
+            $updates['version'] = $trip->version + 1;
+
+            $trip->update($updates);
+
+            return $trip->fresh();
+        });
+    }
+
+    /**
+     * Delete an existing trip.
+     */
+    public function delete(Trip $trip): void
+    {
+        DB::transaction(function () use ($trip): void {
+            $trip->delete();
+        });
+    }
+
+    /**
      * Compute today's dashboard summary for the given trip.
      */
-    public function handle(Trip $trip, ?CarbonImmutable $overrideNow = null): TodaySummaryResult
+    public function getTodaySummary(Trip $trip, ?CarbonImmutable $overrideNow = null): TodaySummaryResult
     {
         $timezone = $trip->primary_timezone ?: 'UTC';
         $now = $overrideNow ?: CarbonImmutable::now($timezone);
@@ -162,7 +224,7 @@ final class GetTodaySummaryService
             ];
         }
 
-        $weather = $this->weatherService?->getCurrentWeather($trip);
+        $weather = $this->weatherService->getCurrentWeather($trip);
 
         return new TodaySummaryResult(
             trip: $trip,

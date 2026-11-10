@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Trips\Actions\CreateTrip;
-use App\Domain\Trips\Data\CreateTripData;
-use App\Domain\Trips\Models\Trip;
+use App\DTOs\Trip\CreateTripData;
+use App\Models\Trip;
 use App\Models\User;
+use App\Services\Trip\TripService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -112,9 +112,9 @@ final class TripTest extends TestCase
         $userA = User::factory()->create();
         $userB = User::factory()->create();
 
-        $createTrip = app(CreateTrip::class);
-        $tripA = $createTrip->handle($userA, CreateTripData::from(['title' => 'Trip of User A']));
-        $tripB = $createTrip->handle($userB, CreateTripData::from(['title' => 'Trip of User B']));
+        $tripService = app(TripService::class);
+        $tripA = $tripService->create($userA, CreateTripData::from(['title' => 'Trip of User A']));
+        $tripB = $tripService->create($userB, CreateTripData::from(['title' => 'Trip of User B']));
 
         Sanctum::actingAs($userA);
 
@@ -130,7 +130,7 @@ final class TripTest extends TestCase
     public function test_user_can_view_trip_they_belong_to(): void
     {
         $user = User::factory()->create();
-        $trip = app(CreateTrip::class)->handle($user, CreateTripData::from(['title' => 'Kyoto Autumn Walk']));
+        $trip = app(TripService::class)->create($user, CreateTripData::from(['title' => 'Kyoto Autumn Walk']));
 
         Sanctum::actingAs($user);
 
@@ -152,7 +152,7 @@ final class TripTest extends TestCase
         $owner = User::factory()->create();
         $outsider = User::factory()->create();
 
-        $trip = app(CreateTrip::class)->handle($owner, CreateTripData::from(['title' => 'Secret Trip']));
+        $trip = app(TripService::class)->create($owner, CreateTripData::from(['title' => 'Secret Trip']));
 
         Sanctum::actingAs($outsider);
 
@@ -166,7 +166,7 @@ final class TripTest extends TestCase
         $owner = User::factory()->create();
         $editor = User::factory()->create();
 
-        $trip = app(CreateTrip::class)->handle($owner, CreateTripData::from([
+        $trip = app(TripService::class)->create($owner, CreateTripData::from([
             'title' => 'Original Trip Title',
             'planning_mode' => 'diy',
         ]));
@@ -205,7 +205,7 @@ final class TripTest extends TestCase
         $owner = User::factory()->create();
         $viewer = User::factory()->create();
 
-        $trip = app(CreateTrip::class)->handle($owner, CreateTripData::from(['title' => 'Family Tour']));
+        $trip = app(TripService::class)->create($owner, CreateTripData::from(['title' => 'Family Tour']));
 
         $trip->members()->create([
             'user_id' => $viewer->id,
@@ -228,7 +228,7 @@ final class TripTest extends TestCase
         $owner = User::factory()->create();
         $editor = User::factory()->create();
 
-        $trip = app(CreateTrip::class)->handle($owner, CreateTripData::from(['title' => 'Protected Trip']));
+        $trip = app(TripService::class)->create($owner, CreateTripData::from(['title' => 'Protected Trip']));
 
         $trip->members()->create([
             'user_id' => $editor->id,
@@ -247,7 +247,7 @@ final class TripTest extends TestCase
     public function test_trip_owner_can_delete_trip(): void
     {
         $owner = User::factory()->create();
-        $trip = app(CreateTrip::class)->handle($owner, CreateTripData::from(['title' => 'Trip to Cancel']));
+        $trip = app(TripService::class)->create($owner, CreateTripData::from(['title' => 'Trip to Cancel']));
 
         Sanctum::actingAs($owner);
 

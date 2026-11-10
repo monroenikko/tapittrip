@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Trips\Models;
+namespace App\Models;
 
-use App\Models\User;
 use Database\Factories\TripMemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

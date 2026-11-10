@@ -9,7 +9,7 @@ use App\Domain\Expenses\Models\TripBudget;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\TripDay;
 use App\Domain\Stays\Models\Stay;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;

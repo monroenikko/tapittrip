@@ -6,7 +6,7 @@ namespace App\Application\Notifications\Services;
 
 use App\Domain\Notifications\Models\NotificationPreference;
 use App\Domain\Notifications\Models\Reminder;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;

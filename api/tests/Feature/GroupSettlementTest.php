@@ -6,8 +6,8 @@ namespace Tests\Feature;
 
 use App\Domain\Expenses\Models\Expense;
 use App\Domain\Expenses\Models\TripBudget;
-use App\Domain\Trips\Models\Trip;
-use App\Domain\Trips\Models\TripMember;
+use App\Models\Trip;
+use App\Models\TripMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;

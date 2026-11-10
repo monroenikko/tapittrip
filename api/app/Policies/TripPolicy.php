@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Trips\Policies;
+namespace App\Policies;
 
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 
 final class TripPolicy

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Trips\Models;
+namespace App\Models;
 
 use App\Domain\Checklists\Models\Checklist;
 use App\Domain\Checklists\Models\ChecklistItem;
@@ -15,7 +15,6 @@ use App\Domain\Journal\Models\JournalEntry;
 use App\Domain\Media\Models\MediaAttachment;
 use App\Domain\Notifications\Models\Reminder;
 use App\Domain\Stays\Models\Stay;
-use App\Models\User;
 use Database\Factories\TripFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

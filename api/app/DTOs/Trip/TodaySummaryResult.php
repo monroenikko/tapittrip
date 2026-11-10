@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Trips\Data;
+namespace App\DTOs\Trip;
 
 use App\Application\Weather\Data\WeatherConditionData;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Stays\Models\Stay;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Support\Collection;
 
 final readonly class TodaySummaryResult

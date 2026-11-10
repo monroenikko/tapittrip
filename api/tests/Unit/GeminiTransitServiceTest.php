@@ -7,7 +7,7 @@ namespace Tests\Unit;
 use App\Application\Stays\Data\CompareStayTransportData;
 use App\Application\Stays\Services\GeminiTransitService;
 use App\Domain\Stays\Models\Stay;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

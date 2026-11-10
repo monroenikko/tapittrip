@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Journal\Models;
 
 use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 use Database\Factories\JournalEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

@@ -6,7 +6,7 @@ namespace App\Application\Journal\Services;
 
 use App\Application\Journal\Data\CreateJournalEntryData;
 use App\Domain\Journal\Models\JournalEntry;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 
 final class CreateJournalEntryService

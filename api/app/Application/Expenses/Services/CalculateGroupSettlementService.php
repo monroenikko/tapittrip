@@ -7,7 +7,7 @@ namespace App\Application\Expenses\Services;
 use App\Application\Expenses\Data\GroupSettlementResult;
 use App\Domain\Expenses\Models\Expense;
 use App\Domain\Expenses\Models\ExpenseSettlement;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 
 final class CalculateGroupSettlementService

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Expenses\Services;
 
 use App\Application\Expenses\Data\TripExpensesSummaryResult;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 
 final class GetTripExpensesSummaryService

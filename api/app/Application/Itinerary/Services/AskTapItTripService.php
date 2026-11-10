@@ -6,7 +6,7 @@ namespace App\Application\Itinerary\Services;
 
 use App\Application\Itinerary\Data\TripAssistantResult;
 use App\Domain\Lounges\Models\AirportLounge;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 
 final class AskTapItTripService
 {

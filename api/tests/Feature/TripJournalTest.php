@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Journal\Models\JournalEntry;
-use App\Domain\Trips\Models\Trip;
-use App\Domain\Trips\Models\TripMember;
+use App\Models\Trip;
+use App\Models\TripMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Checklists\Services;
 
 use App\Domain\Checklists\Models\Checklist;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Database\Eloquent\Collection;
 
 final class GetTripChecklistsService

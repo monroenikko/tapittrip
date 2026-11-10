@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\V1\Journal;
 
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class CreateJournalEntryRequest extends FormRequest

@@ -8,7 +8,7 @@ use App\Domain\Lounges\Models\Airport;
 use App\Domain\Lounges\Models\AirportLounge;
 use App\Domain\Lounges\Models\AirportTerminal;
 use App\Domain\Stays\Models\Stay;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Config;

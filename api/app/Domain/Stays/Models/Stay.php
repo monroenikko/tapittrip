@@ -6,7 +6,7 @@ namespace App\Domain\Stays\Models;
 
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\Place;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Database\Factories\StayFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;

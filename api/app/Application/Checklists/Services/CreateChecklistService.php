@@ -6,7 +6,7 @@ namespace App\Application\Checklists\Services;
 
 use App\Application\Checklists\Data\CreateChecklistData;
 use App\Domain\Checklists\Models\Checklist;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 
 final class CreateChecklistService
 {

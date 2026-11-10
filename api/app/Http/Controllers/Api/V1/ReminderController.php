@@ -6,9 +6,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Application\Notifications\Services\GetTripRemindersService;
 use App\Application\Notifications\Services\ScheduleTripRemindersService;
-use App\Domain\Trips\Models\Trip;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ReminderResource;
+use App\Models\Trip;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;

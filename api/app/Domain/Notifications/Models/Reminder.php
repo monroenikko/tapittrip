@@ -6,7 +6,7 @@ namespace App\Domain\Notifications\Models;
 
 use App\Domain\Checklists\Models\Checklist;
 use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Database\Factories\ReminderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

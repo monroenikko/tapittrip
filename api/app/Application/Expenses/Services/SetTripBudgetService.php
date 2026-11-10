@@ -6,7 +6,7 @@ namespace App\Application\Expenses\Services;
 
 use App\Application\Expenses\Data\SetTripBudgetData;
 use App\Domain\Expenses\Models\TripBudget;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Support\Facades\DB;
 
 final class SetTripBudgetService

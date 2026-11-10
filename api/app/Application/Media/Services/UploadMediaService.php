@@ -7,7 +7,7 @@ namespace App\Application\Media\Services;
 use App\Application\Media\Data\UploadMediaData;
 use App\Domain\Checklists\Models\ChecklistItem;
 use App\Domain\Media\Models\MediaAttachment;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;

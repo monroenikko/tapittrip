@@ -5,8 +5,8 @@ namespace App\Providers;
 use App\Application\Expenses\Contracts\ExchangeRateProviderInterface;
 use App\Application\Expenses\Services\FakeExchangeRateProvider;
 use App\Application\Expenses\Services\LiveExchangeRateProvider;
-use App\Domain\Trips\Models\Trip;
-use App\Domain\Trips\Policies\TripPolicy;
+use App\Models\Trip;
+use App\Policies\TripPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 

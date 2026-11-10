@@ -8,7 +8,7 @@ use App\Application\Itinerary\Data\ApplyAiItineraryData;
 use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Itinerary\Models\Place;
 use App\Domain\Itinerary\Models\TripDay;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;

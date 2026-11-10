@@ -6,7 +6,7 @@ namespace App\Application\Expenses\Services;
 
 use App\Application\Expenses\Data\RecordSettlementData;
 use App\Domain\Expenses\Models\ExpenseSettlement;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;

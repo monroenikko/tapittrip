@@ -6,7 +6,7 @@ namespace App\Application\Itinerary\Services;
 
 use App\Application\Itinerary\Data\CreateItineraryItemData;
 use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Support\Facades\DB;
 
 final class CreateItineraryItemService

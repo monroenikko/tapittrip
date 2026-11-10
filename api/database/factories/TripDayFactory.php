@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Domain\Itinerary\Models\TripDay;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

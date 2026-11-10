@@ -7,7 +7,7 @@ namespace App\Application\Itinerary\Services;
 use App\Application\Itinerary\Data\AiActivitySuggestionData;
 use App\Application\Itinerary\Data\AiDaySuggestionData;
 use App\Application\Itinerary\Data\GenerateAiItineraryData;
-use App\Domain\Trips\Models\Trip;
+use App\Models\Trip;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
