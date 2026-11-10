@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Application\Weather\Services\GetTripWeatherService;
 use App\Models\Stay;
 use App\Models\Trip;
 use App\Models\User;
+use App\Services\Weather\WeatherService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-final class GetTripWeatherServiceTest extends TestCase
+final class WeatherServiceTest extends TestCase
 {
     use DatabaseTransactions;
 
     private Trip $trip;
 
-    private GetTripWeatherService $service;
+    private WeatherService $service;
 
     protected function setUp(): void
     {
@@ -34,7 +34,7 @@ final class GetTripWeatherServiceTest extends TestCase
             'primary_timezone' => 'Asia/Tokyo',
         ]);
 
-        $this->service = new GetTripWeatherService;
+        $this->service = new WeatherService;
     }
 
     public function test_resolves_coordinates_from_stay_when_available(): void

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Weather\Data;
+namespace App\DTOs\Weather;
 
 final readonly class DailyForecastData
 {
