@@ -260,7 +260,10 @@ void main() {
           ),
         );
 
-        expect(find.textContaining('Tue: 24°C • Partly Cloudy'), findsOneWidget);
+        expect(
+          find.textContaining('Tue: 24°C • Partly Cloudy'),
+          findsOneWidget,
+        );
         expect(find.textContaining('25%'), findsOneWidget);
 
         await tester.tap(find.textContaining('Tue: 24°C • Partly Cloudy'));

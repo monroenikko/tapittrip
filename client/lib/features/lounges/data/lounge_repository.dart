@@ -92,7 +92,9 @@ class LoungeRepository {
 
     if (terminal != null && terminal.isNotEmpty) {
       filtered = filtered
-          .where((l) => l.terminal?.code.toUpperCase() == terminal.toUpperCase())
+          .where(
+            (l) => l.terminal?.code.toUpperCase() == terminal.toUpperCase(),
+          )
           .toList();
     }
     if (isAirside != null) {
@@ -126,20 +128,20 @@ class LoungeRepository {
       Map<String, dynamic>.from(data['airport'] as Map),
     );
     final lounges = (data['lounges'] as List<dynamic>? ?? [])
-        .map(
-          (e) => AirportLounge.fromJson(Map<String, dynamic>.from(e as Map)),
-        )
+        .map((e) => AirportLounge.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
 
     return LoungeSearchResult(airport: airport, lounges: lounges);
   }
 
   void _refreshInBackground(String iata, String cacheKey) {
-    _fetchFromNetwork(iata, cacheKey).then((freshResult) {
-      _memoryCache[iata] = freshResult;
-    }).catchError((_) {
-      // Silently ignore background network errors
-    });
+    _fetchFromNetwork(iata, cacheKey)
+        .then((freshResult) {
+          _memoryCache[iata] = freshResult;
+        })
+        .catchError((_) {
+          // Silently ignore background network errors
+        });
   }
 
   Future<LoungeSearchResult> searchLounges(
@@ -275,7 +277,8 @@ class LoungeRepository {
         destination.contains('manila') ||
         destination.contains('ph')) {
       codes.addAll(['MNL', 'CEB']);
-    } else if (destination.contains('singapore') || destination.contains('sg')) {
+    } else if (destination.contains('singapore') ||
+        destination.contains('sg')) {
       codes.add('SIN');
     } else if (destination.contains('thailand') ||
         destination.contains('bangkok') ||

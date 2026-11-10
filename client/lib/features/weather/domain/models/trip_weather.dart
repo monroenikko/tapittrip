@@ -50,8 +50,9 @@ class TripWeather {
         ? Map<String, dynamic>.from(rawCurrent)
         : <String, dynamic>{};
     final rawForecast = json['forecast'];
-    final List<dynamic> forecastList =
-        rawForecast is List ? rawForecast : const [];
+    final List<dynamic> forecastList = rawForecast is List
+        ? rawForecast
+        : const [];
 
     return TripWeather(
       destination: (json['destination'] as String?) ?? 'Destination',

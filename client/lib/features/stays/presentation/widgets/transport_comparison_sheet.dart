@@ -576,7 +576,8 @@ class _TransportComparisonSheetState
             ? option.estimatedCostMinor.toDouble()
             : (option.estimatedCostMinor / 100.0);
         final converted = baseUnits * rate.rate;
-        convertedCost = '≈ ${CurrencyFormatter.formatAmount(converted, homeCurrency, isMinor: false)}';
+        convertedCost =
+            '≈ ${CurrencyFormatter.formatAmount(converted, homeCurrency, isMinor: false)}';
       }
     }
 

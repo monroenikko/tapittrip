@@ -51,7 +51,8 @@ class Expense {
   double get baseAmount => baseAmountMinor / 100.0;
 
   String formatAmount({String? baseCurrency, bool useBaseCurrency = false}) {
-    final cur = (useBaseCurrency && baseCurrency != null && baseCurrency.isNotEmpty)
+    final cur =
+        (useBaseCurrency && baseCurrency != null && baseCurrency.isNotEmpty)
         ? baseCurrency
         : (useBaseCurrency ? 'USD' : currency);
     final minor = useBaseCurrency ? baseAmountMinor : amountMinor;

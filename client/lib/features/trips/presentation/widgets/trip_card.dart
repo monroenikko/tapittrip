@@ -36,7 +36,8 @@ class TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final flag = CountryCurrencyHelper.resolveFlag(trip.destinationCountry) ??
+    final flag =
+        CountryCurrencyHelper.resolveFlag(trip.destinationCountry) ??
         CountryCurrencyHelper.resolveFlag(trip.title);
 
     return Container(
@@ -202,10 +203,7 @@ class TripCard extends StatelessWidget {
                     ],
                     if (trip.destinationCountry != null) ...[
                       if (flag != null) ...[
-                        Text(
-                          flag,
-                          style: const TextStyle(fontSize: 13),
-                        ),
+                        Text(flag, style: const TextStyle(fontSize: 13)),
                         const SizedBox(width: 4),
                       ] else ...[
                         Icon(
@@ -247,19 +245,12 @@ class TripCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withValues(alpha: 0.25),
-            width: 0.8,
-          ),
+          border: Border.all(color: color.withValues(alpha: 0.25), width: 0.8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              condition.weatherIcon,
-              size: 13,
-              color: color,
-            ),
+            Icon(condition.weatherIcon, size: 13, color: color),
             const SizedBox(width: 4),
             Text(
               condition.tempString,

@@ -254,19 +254,23 @@ void main() {
       addTearDown(container.dispose);
 
       // Initialize with authenticated user
-      await container.read(authProvider.notifier).register(
-        name: 'Maria Santos',
-        email: 'maria@tapittrip.local',
-        password: 'password123',
-        passwordConfirmation: 'password123',
-      );
+      await container
+          .read(authProvider.notifier)
+          .register(
+            name: 'Maria Santos',
+            email: 'maria@tapittrip.local',
+            password: 'password123',
+            passwordConfirmation: 'password123',
+          );
 
-      final success = await container.read(authProvider.notifier).updateProfile(
-        displayName: 'Maria S.',
-        permanentAddress: 'Cebu City, Philippines',
-        homeCountry: 'PH',
-        homeCurrency: 'PHP',
-      );
+      final success = await container
+          .read(authProvider.notifier)
+          .updateProfile(
+            displayName: 'Maria S.',
+            permanentAddress: 'Cebu City, Philippines',
+            homeCountry: 'PH',
+            homeCurrency: 'PHP',
+          );
 
       expect(success, isTrue);
       final state = container.read(authProvider);

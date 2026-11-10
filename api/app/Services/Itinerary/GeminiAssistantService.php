@@ -30,8 +30,8 @@ final class GeminiAssistantService
         $prompt = $this->buildPrompt($trip, $query, $contextSummary);
 
         try {
-            $response = Http::timeout(15)
-                ->retry(2, 100)
+            $response = Http::timeout(10)
+                ->retry(1, 50)
                 ->post($url, [
                     'contents' => [
                         [

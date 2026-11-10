@@ -95,7 +95,9 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
           .createTrip(
             title: _titleController.text.trim(),
             destinationCountry: dest.isEmpty ? null : dest,
-            startDate: _startDate != null ? dateFormat.format(_startDate!) : null,
+            startDate: _startDate != null
+                ? dateFormat.format(_startDate!)
+                : null,
             endDate: _endDate != null ? dateFormat.format(_endDate!) : null,
             tripType: _selectedTripType,
             planningMode: _selectedMode,
@@ -142,9 +144,12 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
               await aiRepo.applyPlan(result.id, plan.days);
             }
           } catch (aiErr, stackTrace) {
-            debugPrint('Auto-itinerary generation non-fatal fallback: $aiErr\n$stackTrace');
+            debugPrint(
+              'Auto-itinerary generation non-fatal fallback: $aiErr\n$stackTrace',
+            );
           }
-        } else if (_addManualStop && _firstStopTitleController.text.trim().isNotEmpty) {
+        } else if (_addManualStop &&
+            _firstStopTitleController.text.trim().isNotEmpty) {
           setState(() {
             _loadingStatus = 'Adding your first activity...';
           });
@@ -175,7 +180,10 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
 
         // Navigate directly to the newly populated trip itinerary
         if (GoRouter.maybeOf(context) != null) {
-          context.pushReplacement('/trips/${result.id}/itinerary', extra: result);
+          context.pushReplacement(
+            '/trips/${result.id}/itinerary',
+            extra: result,
+          );
         } else {
           Navigator.of(context).maybePop();
         }
@@ -208,7 +216,8 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
         } else if (e is ApiException) {
           _errorMessage = e.message;
         } else {
-          final clean = e.toString()
+          final clean = e
+              .toString()
               .replaceAll(RegExp(r'^ApiException\([^)]+\):\s*'), '')
               .replaceAll(RegExp(r'^Exception:\s*'), '');
           _errorMessage = clean.isNotEmpty
@@ -375,7 +384,10 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
                         },
                         title: const Text(
                           '✨ Auto-generate starter itinerary with AI',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                         subtitle: const Text(
                           'Creates day-by-day stops and activities for your destination.',
@@ -398,9 +410,13 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
                           spacing: 8,
                           runSpacing: 8,
                           children: _availableInterests.map((interest) {
-                            final isSelected = _selectedInterests.contains(interest['id']);
+                            final isSelected = _selectedInterests.contains(
+                              interest['id'],
+                            );
                             return FilterChip(
-                              label: Text('${interest['icon']} ${interest['label']}'),
+                              label: Text(
+                                '${interest['icon']} ${interest['label']}',
+                              ),
                               selected: isSelected,
                               onSelected: (selected) {
                                 setState(() {
@@ -408,7 +424,9 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
                                     _selectedInterests.add(interest['id']!);
                                   } else {
                                     if (_selectedInterests.length > 1) {
-                                      _selectedInterests.remove(interest['id']!);
+                                      _selectedInterests.remove(
+                                        interest['id']!,
+                                      );
                                     }
                                   }
                                 });
@@ -435,7 +453,10 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
                         },
                         title: const Text(
                           '✍️ Add your first stop manually instead',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
                         subtitle: const Text(
                           'Input your first planned activity or check-in now.',
@@ -475,10 +496,22 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
                             prefixIcon: Icon(Icons.category_outlined),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'attraction', child: Text('Sightseeing / Attraction')),
-                            DropdownMenuItem(value: 'dining', child: Text('Dining / Restaurant')),
-                            DropdownMenuItem(value: 'lodging', child: Text('Hotel / Lodging')),
-                            DropdownMenuItem(value: 'transit', child: Text('Transit / Flight')),
+                            DropdownMenuItem(
+                              value: 'attraction',
+                              child: Text('Sightseeing / Attraction'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'dining',
+                              child: Text('Dining / Restaurant'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'lodging',
+                              child: Text('Hotel / Lodging'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'transit',
+                              child: Text('Transit / Flight'),
+                            ),
                           ],
                           onChanged: (v) {
                             if (v != null) setState(() => _firstStopKind = v);
@@ -506,11 +539,16 @@ class _TripCreatePageState extends ConsumerState<TripCreatePage> {
                           const SizedBox(
                             height: 18,
                             width: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            _loadingStatus.isNotEmpty ? _loadingStatus : 'Creating Trip...',
+                            _loadingStatus.isNotEmpty
+                                ? _loadingStatus
+                                : 'Creating Trip...',
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                         ],

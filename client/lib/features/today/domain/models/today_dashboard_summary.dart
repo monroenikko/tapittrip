@@ -183,7 +183,9 @@ class TodayDashboardSummary {
           : null,
       todayItems: rawTodayItems
           .whereType<Map>()
-          .map((item) => ItineraryItem.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => ItineraryItem.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
       nextUpcomingItem: json['next_upcoming_item'] is Map
           ? ItineraryItem.fromJson(

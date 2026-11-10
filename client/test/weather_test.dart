@@ -46,7 +46,8 @@ void main() {
         'humidity': 72,
         'wind_kph': 14.5,
         'precipitation_probability': 15,
-        'advisory': 'Warm and partly cloudy in Taguig. Ideal for outdoor walking.',
+        'advisory':
+            'Warm and partly cloudy in Taguig. Ideal for outdoor walking.',
       };
 
       final condition = WeatherCondition.fromJson(json);
@@ -157,21 +158,24 @@ void main() {
 
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TodayWeatherCard(summary: summary),
-          ),
+          home: Scaffold(body: TodayWeatherCard(summary: summary)),
         ),
       );
 
       expect(find.text('28°C'), findsOneWidget);
       expect(find.text('Partly Cloudy'), findsOneWidget);
-      expect(find.textContaining('Great day for exploring High Street'), findsOneWidget);
+      expect(
+        find.textContaining('Great day for exploring High Street'),
+        findsOneWidget,
+      );
       expect(find.textContaining('70%'), findsOneWidget);
     });
   });
 
   group('TripWeatherView Widget', () {
-    testWidgets('renders forecast days and destination climate', (tester) async {
+    testWidgets('renders forecast days and destination climate', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -226,14 +230,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            tripWeatherProvider('test-trip-1').overrideWith(
-              (ref) => Future.value(mockTripWeather),
-            ),
+            tripWeatherProvider('test-trip-1')
+                .overrideWith((ref) => Future.value(mockTripWeather)),
           ],
           child: const MaterialApp(
-            home: Scaffold(
-              body: TripWeatherView(tripId: 'test-trip-1'),
-            ),
+            home: Scaffold(body: TripWeatherView(tripId: 'test-trip-1')),
           ),
         ),
       );
@@ -248,209 +249,227 @@ void main() {
       expect(find.textContaining('Open-Meteo'), findsOneWidget);
     });
 
-    testWidgets('renders beautiful message when viewing offline synced weather', (tester) async {
-      const mockOfflineWeather = TripWeather(
-        destination: 'Taguig, PH',
-        latitude: 14.55,
-        longitude: 121.05,
-        timezone: 'Asia/Manila',
-        isOfflineSynced: true,
-        current: WeatherCondition(
-          temperatureC: 28.0,
-          temperatureF: 82.4,
-          condition: 'Clear Sky',
-          icon: 'sunny',
-          humidity: 60,
-          windKph: 9.0,
-          precipitationProbability: 0,
-          advisory: 'Sunny weather in Taguig',
-        ),
-      );
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            tripWeatherProvider('test-offline-trip').overrideWith(
-              (ref) => Future.value(mockOfflineWeather),
-            ),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(
-              body: TripWeatherView(tripId: 'test-offline-trip'),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('No internet connection — showing your last synced forecast.'),
-        findsOneWidget,
-      );
-      expect(find.text('28°C'), findsWidgets);
-    });
-
-    testWidgets('TripWeatherView renders full climate hero and 7-day forecast inside a ListView', (tester) async {
-      tester.view.physicalSize = const Size(800, 2400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      const mockWeather = TripWeather(
-        destination: 'Taguig',
-        latitude: 14.55,
-        longitude: 121.05,
-        timezone: 'Asia/Manila',
-        current: WeatherCondition(
-          temperatureC: 29.0,
-          temperatureF: 84.2,
-          condition: 'Partly Cloudy',
-          icon: 'partly_cloudy',
-          humidity: 70,
-          windKph: 12.0,
-          precipitationProbability: 20,
-          advisory: 'Pleasant weather — ideal conditions for walking tours.',
-        ),
-        forecast: [
-          DailyForecast(
-            date: '2026-11-09',
-            dayName: 'Today',
-            tempMaxC: 30.0,
-            tempMinC: 24.0,
-            tempMaxF: 86.0,
-            tempMinF: 75.2,
-            condition: 'Partly Cloudy',
-            icon: 'partly_cloudy',
-            precipitationProbability: 20,
-          ),
-          DailyForecast(
-            date: '2026-11-10',
-            dayName: 'Tomorrow',
-            tempMaxC: 31.0,
-            tempMinC: 25.0,
-            tempMaxF: 87.8,
-            tempMinF: 77.0,
+    testWidgets(
+      'renders beautiful message when viewing offline synced weather',
+      (tester) async {
+        const mockOfflineWeather = TripWeather(
+          destination: 'Taguig, PH',
+          latitude: 14.55,
+          longitude: 121.05,
+          timezone: 'Asia/Manila',
+          isOfflineSynced: true,
+          current: WeatherCondition(
+            temperatureC: 28.0,
+            temperatureF: 82.4,
             condition: 'Clear Sky',
             icon: 'sunny',
-            precipitationProbability: 10,
+            humidity: 60,
+            windKph: 9.0,
+            precipitationProbability: 0,
+            advisory: 'Sunny weather in Taguig',
           ),
-          DailyForecast(
-            date: '2026-11-11',
-            dayName: 'Wednesday',
-            tempMaxC: 29.0,
-            tempMinC: 23.0,
-            tempMaxF: 84.2,
-            tempMinF: 73.4,
-            condition: 'Rain Showers',
-            icon: 'rain',
-            precipitationProbability: 60,
-          ),
-          DailyForecast(
-            date: '2026-11-12',
-            dayName: 'Thursday',
-            tempMaxC: 30.0,
-            tempMinC: 24.0,
-            tempMaxF: 86.0,
-            tempMinF: 75.2,
-            condition: 'Partly Cloudy',
-            icon: 'partly_cloudy',
-            precipitationProbability: 15,
-          ),
-          DailyForecast(
-            date: '2026-11-13',
-            dayName: 'Friday',
-            tempMaxC: 31.0,
-            tempMinC: 24.0,
-            tempMaxF: 87.8,
-            tempMinF: 75.2,
-            condition: 'Clear Sky',
-            icon: 'sunny',
-            precipitationProbability: 10,
-          ),
-          DailyForecast(
-            date: '2026-11-14',
-            dayName: 'Saturday',
-            tempMaxC: 32.0,
-            tempMinC: 25.0,
-            tempMaxF: 89.6,
-            tempMinF: 77.0,
-            condition: 'Clear Sky',
-            icon: 'sunny',
-            precipitationProbability: 10,
-          ),
-          DailyForecast(
-            date: '2026-11-15',
-            dayName: 'Sunday',
-            tempMaxC: 30.0,
-            tempMinC: 24.0,
-            tempMaxF: 86.0,
-            tempMinF: 75.2,
-            condition: 'Partly Cloudy',
-            icon: 'partly_cloudy',
-            precipitationProbability: 20,
-          ),
-        ],
-        providerAttribution: 'Live Weather via Open-Meteo',
-      );
+        );
 
-      // Render inside a parent ListView, exactly like TripItineraryPage
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            tripWeatherProvider('trip-bgc').overrideWith(
-              (ref) => Future.value(mockWeather),
-            ),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: ListView(
-                children: const [
-                  TripWeatherView(tripId: 'trip-bgc'),
-                ],
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tripWeatherProvider('test-offline-trip')
+                  .overrideWith((ref) => Future.value(mockOfflineWeather)),
+            ],
+            child: const MaterialApp(
+              home: Scaffold(
+                body: TripWeatherView(tripId: 'test-offline-trip'),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Current weather hero
-      expect(find.text('Taguig'), findsOneWidget);
-      expect(find.text('Live Weather & Climate (Asia/Manila)'), findsOneWidget);
-      expect(find.text('29°C'), findsWidgets);
-      expect(find.text('(84°F)'), findsOneWidget);
-      expect(find.text('Partly Cloudy'), findsWidgets);
-      expect(find.text('Feels Like'), findsOneWidget);
-      expect(find.text('Humidity'), findsOneWidget);
-      expect(find.text('Wind'), findsOneWidget);
+        expect(
+          find.text(
+            'No internet connection — showing your last synced forecast.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('28°C'), findsWidgets);
+      },
+    );
 
-      // Advisory
-      expect(find.text('Destination Weather Advisory'), findsOneWidget);
-      expect(find.text('Pleasant weather — ideal conditions for walking tours.'), findsOneWidget);
+    testWidgets(
+      'TripWeatherView renders full climate hero and 7-day forecast inside a ListView',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 2400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
 
-      // 7-day forecast
-      expect(find.text('Forecast for Trip Days'), findsOneWidget);
-      expect(find.textContaining('Expected weather for the whole week'), findsOneWidget);
-      expect(find.text('Today'), findsOneWidget);
-      expect(find.text('Tomorrow'), findsOneWidget);
-      expect(find.text('Wednesday'), findsOneWidget);
-      expect(find.text('Thursday'), findsOneWidget);
-      expect(find.text('Friday'), findsOneWidget);
-      expect(find.text('Saturday'), findsOneWidget);
-      expect(find.text('Sunday'), findsOneWidget);
-      expect(find.text('24° / 30°C'), findsWidgets);
+        const mockWeather = TripWeather(
+          destination: 'Taguig',
+          latitude: 14.55,
+          longitude: 121.05,
+          timezone: 'Asia/Manila',
+          current: WeatherCondition(
+            temperatureC: 29.0,
+            temperatureF: 84.2,
+            condition: 'Partly Cloudy',
+            icon: 'partly_cloudy',
+            humidity: 70,
+            windKph: 12.0,
+            precipitationProbability: 20,
+            advisory: 'Pleasant weather — ideal conditions for walking tours.',
+          ),
+          forecast: [
+            DailyForecast(
+              date: '2026-11-09',
+              dayName: 'Today',
+              tempMaxC: 30.0,
+              tempMinC: 24.0,
+              tempMaxF: 86.0,
+              tempMinF: 75.2,
+              condition: 'Partly Cloudy',
+              icon: 'partly_cloudy',
+              precipitationProbability: 20,
+            ),
+            DailyForecast(
+              date: '2026-11-10',
+              dayName: 'Tomorrow',
+              tempMaxC: 31.0,
+              tempMinC: 25.0,
+              tempMaxF: 87.8,
+              tempMinF: 77.0,
+              condition: 'Clear Sky',
+              icon: 'sunny',
+              precipitationProbability: 10,
+            ),
+            DailyForecast(
+              date: '2026-11-11',
+              dayName: 'Wednesday',
+              tempMaxC: 29.0,
+              tempMinC: 23.0,
+              tempMaxF: 84.2,
+              tempMinF: 73.4,
+              condition: 'Rain Showers',
+              icon: 'rain',
+              precipitationProbability: 60,
+            ),
+            DailyForecast(
+              date: '2026-11-12',
+              dayName: 'Thursday',
+              tempMaxC: 30.0,
+              tempMinC: 24.0,
+              tempMaxF: 86.0,
+              tempMinF: 75.2,
+              condition: 'Partly Cloudy',
+              icon: 'partly_cloudy',
+              precipitationProbability: 15,
+            ),
+            DailyForecast(
+              date: '2026-11-13',
+              dayName: 'Friday',
+              tempMaxC: 31.0,
+              tempMinC: 24.0,
+              tempMaxF: 87.8,
+              tempMinF: 75.2,
+              condition: 'Clear Sky',
+              icon: 'sunny',
+              precipitationProbability: 10,
+            ),
+            DailyForecast(
+              date: '2026-11-14',
+              dayName: 'Saturday',
+              tempMaxC: 32.0,
+              tempMinC: 25.0,
+              tempMaxF: 89.6,
+              tempMinF: 77.0,
+              condition: 'Clear Sky',
+              icon: 'sunny',
+              precipitationProbability: 10,
+            ),
+            DailyForecast(
+              date: '2026-11-15',
+              dayName: 'Sunday',
+              tempMaxC: 30.0,
+              tempMinC: 24.0,
+              tempMaxF: 86.0,
+              tempMinF: 75.2,
+              condition: 'Partly Cloudy',
+              icon: 'partly_cloudy',
+              precipitationProbability: 20,
+            ),
+          ],
+          providerAttribution: 'Live Weather via Open-Meteo',
+        );
 
-      // AI Backup Ideas
-      expect(find.text('Ask TapItTrip for Weather Backup Ideas'), findsOneWidget);
-    });
+        // Render inside a parent ListView, exactly like TripItineraryPage
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tripWeatherProvider('trip-bgc')
+                  .overrideWith((ref) => Future.value(mockWeather)),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: ListView(
+                  children: const [TripWeatherView(tripId: 'trip-bgc')],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Current weather hero
+        expect(find.text('Taguig'), findsOneWidget);
+        expect(
+          find.text('Live Weather & Climate (Asia/Manila)'),
+          findsOneWidget,
+        );
+        expect(find.text('29°C'), findsWidgets);
+        expect(find.text('(84°F)'), findsOneWidget);
+        expect(find.text('Partly Cloudy'), findsWidgets);
+        expect(find.text('Feels Like'), findsOneWidget);
+        expect(find.text('Humidity'), findsOneWidget);
+        expect(find.text('Wind'), findsOneWidget);
+
+        // Advisory
+        expect(find.text('Destination Weather Advisory'), findsOneWidget);
+        expect(
+          find.text('Pleasant weather — ideal conditions for walking tours.'),
+          findsOneWidget,
+        );
+
+        // 7-day forecast
+        expect(find.text('Forecast for Trip Days'), findsOneWidget);
+        expect(
+          find.textContaining('Expected weather for the whole week'),
+          findsOneWidget,
+        );
+        expect(find.text('Today'), findsOneWidget);
+        expect(find.text('Tomorrow'), findsOneWidget);
+        expect(find.text('Wednesday'), findsOneWidget);
+        expect(find.text('Thursday'), findsOneWidget);
+        expect(find.text('Friday'), findsOneWidget);
+        expect(find.text('Saturday'), findsOneWidget);
+        expect(find.text('Sunday'), findsOneWidget);
+        expect(find.text('24° / 30°C'), findsWidgets);
+
+        // AI Backup Ideas
+        expect(
+          find.text('Ask TapItTrip for Weather Backup Ideas'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('LiveWeatherTripCard Widget', () {
-    testWidgets('renders weather badge automatically when provider emits', (tester) async {
+    testWidgets('renders weather badge automatically when provider emits', (
+      tester,
+    ) async {
       const trip = Trip(
         id: 'trip-bgc-1',
         ownerId: 'user-1',
@@ -480,14 +499,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            tripWeatherProvider('trip-bgc-1').overrideWith(
-              (ref) => Future.value(mockWeather),
-            ),
+            tripWeatherProvider('trip-bgc-1')
+                .overrideWith((ref) => Future.value(mockWeather)),
           ],
           child: const MaterialApp(
-            home: Scaffold(
-              body: LiveWeatherTripCard(trip: trip),
-            ),
+            home: Scaffold(body: LiveWeatherTripCard(trip: trip)),
           ),
         ),
       );
@@ -502,34 +518,37 @@ void main() {
   });
 
   group('WeatherRepository Unit Tests', () {
-    test('parses unwrapped API response correctly without type error', () async {
-      final fakeApi = FakeWeatherApiClient()
-        ..getResponse = {
-          'destination': 'Taguig',
-          'latitude': 14.55,
-          'longitude': 121.05,
-          'timezone': 'Asia/Manila',
-          'current': {
-            'temperature_c': 28.0,
-            'temperature_f': 82.4,
-            'condition': 'Clear Sky',
-            'icon': 'sunny',
-            'humidity': 60,
-            'wind_kph': 10.0,
-            'precipitation_probability': 0,
-            'advisory': 'Warm and pleasant.',
-          },
-          'forecast': [],
-          'provider_attribution': 'Live Weather',
-        };
+    test(
+      'parses unwrapped API response correctly without type error',
+      () async {
+        final fakeApi = FakeWeatherApiClient()
+          ..getResponse = {
+            'destination': 'Taguig',
+            'latitude': 14.55,
+            'longitude': 121.05,
+            'timezone': 'Asia/Manila',
+            'current': {
+              'temperature_c': 28.0,
+              'temperature_f': 82.4,
+              'condition': 'Clear Sky',
+              'icon': 'sunny',
+              'humidity': 60,
+              'wind_kph': 10.0,
+              'precipitation_probability': 0,
+              'advisory': 'Warm and pleasant.',
+            },
+            'forecast': [],
+            'provider_attribution': 'Live Weather',
+          };
 
-      final repo = WeatherRepository(apiClient: fakeApi);
-      final weather = await repo.fetchTripWeather('trip-bgc-1');
+        final repo = WeatherRepository(apiClient: fakeApi);
+        final weather = await repo.fetchTripWeather('trip-bgc-1');
 
-      expect(weather.destination, 'Taguig');
-      expect(weather.current.temperatureC, 28.0);
-      expect(weather.current.condition, 'Clear Sky');
-    });
+        expect(weather.destination, 'Taguig');
+        expect(weather.current.temperatureC, 28.0);
+        expect(weather.current.condition, 'Clear Sky');
+      },
+    );
 
     test('parses nested data wrapped API response correctly', () async {
       final fakeApi = FakeWeatherApiClient()

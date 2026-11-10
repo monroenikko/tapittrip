@@ -163,10 +163,7 @@ void main() {
           child: MaterialApp(
             theme: AppTheme.light(),
             home: const Scaffold(
-              body: TripCard(
-                trip: trip,
-                weather: weather,
-              ),
+              body: TripCard(trip: trip, weather: weather),
             ),
           ),
         ),

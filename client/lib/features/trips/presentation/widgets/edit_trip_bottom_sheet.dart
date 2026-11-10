@@ -112,7 +112,9 @@ class _EditTripBottomSheetState extends ConsumerState<EditTripBottomSheet> {
             destinationCountry: _destinationController.text.trim().isEmpty
                 ? null
                 : _destinationController.text.trim(),
-            startDate: _startDate != null ? dateFormat.format(_startDate!) : null,
+            startDate: _startDate != null
+                ? dateFormat.format(_startDate!)
+                : null,
             endDate: _endDate != null ? dateFormat.format(_endDate!) : null,
             primaryTimezone: _timezoneController.text.trim().isEmpty
                 ? 'UTC'
@@ -149,7 +151,8 @@ class _EditTripBottomSheetState extends ConsumerState<EditTripBottomSheet> {
         } else if (e is ApiException) {
           _errorMessage = e.message;
         } else {
-          _errorMessage = 'Failed to update trip. Please check your connection.';
+          _errorMessage =
+              'Failed to update trip. Please check your connection.';
         }
       });
     }

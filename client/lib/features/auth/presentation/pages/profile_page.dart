@@ -123,7 +123,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+                : const Text(
+                    'Save',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
           ),
         ],
       ),
@@ -179,7 +182,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       gradient: LinearGradient(
                         colors: [
                           colorScheme.primaryContainer.withValues(alpha: 0.45),
-                          colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          colorScheme.surfaceContainerHighest.withValues(
+                            alpha: 0.3,
+                          ),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -245,13 +250,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       labelText: 'Permanent Address / Home City',
                       hintText: 'e.g. Taguig City, Philippines',
                       prefixIcon: Icon(Icons.home_outlined),
-                      helperText:
-                          'Used to automatically detect your local home currency',
+                      helperText: 'Used to automatically detect your local home currency',
                     ),
                     textInputAction: TextInputAction.next,
                     onChanged: (val) {
-                      final currency = CountryCurrencyHelper.resolveCurrency(val);
-                      for (final c in CountryCurrencyHelper.supportedCountries) {
+                      final currency = CountryCurrencyHelper.resolveCurrency(
+                        val,
+                      );
+                      for (final c
+                          in CountryCurrencyHelper.supportedCountries) {
                         if (c.currency == currency) {
                           setState(() {
                             _selectedCountryCode = c.code;
@@ -290,7 +297,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                       child: Row(
@@ -370,7 +379,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       return DropdownMenuItem(
                         value: c,
                         child: Text(
-                          '$c (${CountryCurrencyHelper.supportedCountries.firstWhere((item) => item.currency == c, orElse: () => const CountryItem(name: '', code: '', currency: '', flag: '🌐')).flag})',
+                          '$c (${CountryCurrencyHelper.supportedCountries.firstWhere(
+                            (item) => item.currency == c,
+                            orElse: () => const CountryItem(name: '', code: '', currency: '', flag: '🌐'),
+                          ).flag})',
                         ),
                       );
                     }).toList(),

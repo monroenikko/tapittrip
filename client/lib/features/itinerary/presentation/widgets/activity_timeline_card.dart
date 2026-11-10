@@ -395,23 +395,7 @@ class LiveWeatherActivityTimelineCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final place = item.place;
-    final lat = place?.latitude;
-    final lng = place?.longitude;
-    final locName = place?.name ?? item.title;
-
-    final weatherAsync = ref.watch(
-      itemLocationWeatherProvider((
-        tripId: tripId,
-        latitude: lat,
-        longitude: lng,
-        location: locName,
-      )),
-    );
-
-    final weather =
-        weatherAsync.asData?.value ??
-        ref.watch(tripWeatherProvider(tripId)).asData?.value;
+    final weather = ref.watch(tripWeatherProvider(tripId)).asData?.value;
 
     return ActivityTimelineCard(
       item: item,

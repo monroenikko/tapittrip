@@ -131,9 +131,12 @@ class _AskTapItTripSheetState extends ConsumerState<AskTapItTripSheet> {
       }
     } catch (e) {
       if (mounted) {
+        final friendlyMessage = e is ApiException
+            ? e.message
+            : 'Could not get response: $e';
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Could not get response: $e';
+          _errorMessage = friendlyMessage;
         });
         _scrollToBottom();
       }

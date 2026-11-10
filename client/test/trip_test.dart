@@ -48,11 +48,11 @@ class FakeAiApiClient extends ApiClient {
                   'neighborhood': 'Asakusa',
                   'place_name': 'Senso-ji',
                   'description': 'Tokyo oldest Buddhist temple',
-                }
+                },
               ],
-            }
+            },
           ],
-        }
+        },
       };
     }
     if (path.contains('/ai-plan/apply')) {
@@ -66,8 +66,8 @@ class FakeAiApiClient extends ApiClient {
             'status': 'planned',
             'sort_order': 1,
             'version': 1,
-          }
-        ]
+          },
+        ],
       };
     }
     return postResponse ?? {'data': {}};
@@ -321,104 +321,105 @@ void main() {
       },
     );
 
-    testWidgets(
-      'TripCreatePage toggling manual stop shows input fields',
-      (tester) async {
-        tester.view.physicalSize = const Size(800, 2400);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(() {
-          tester.view.resetPhysicalSize();
-          tester.view.resetDevicePixelRatio();
-        });
+    testWidgets('TripCreatePage toggling manual stop shows input fields', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-        final fakeRepo = FakeTripRepository();
-        final fakeApi = FakeAiApiClient();
+      final fakeRepo = FakeTripRepository();
+      final fakeApi = FakeAiApiClient();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              tripRepositoryProvider.overrideWithValue(fakeRepo),
-              apiClientProvider.overrideWithValue(fakeApi),
-            ],
-            child: MaterialApp(
-              theme: AppTheme.light(),
-              home: const TripCreatePage(),
-            ),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tripRepositoryProvider.overrideWithValue(fakeRepo),
+            apiClientProvider.overrideWithValue(fakeApi),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const TripCreatePage(),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Initially manual input fields are not visible
-        expect(find.text('First stop title'), findsNothing);
+      // Initially manual input fields are not visible
+      expect(find.text('First stop title'), findsNothing);
 
-        // Tap checkbox to enable manual stop
-        final manualCheckbox = find.text('✍️ Add your first stop manually instead');
-        expect(manualCheckbox, findsOneWidget);
-        await tester.tap(manualCheckbox);
-        await tester.pumpAndSettle();
+      // Tap checkbox to enable manual stop
+      final manualCheckbox = find.text(
+        '✍️ Add your first stop manually instead',
+      );
+      expect(manualCheckbox, findsOneWidget);
+      await tester.tap(manualCheckbox);
+      await tester.pumpAndSettle();
 
-        // Now first stop fields are revealed
-        expect(find.text('First stop title'), findsOneWidget);
-        expect(find.text('Category'), findsOneWidget);
-      },
-    );
+      // Now first stop fields are revealed
+      expect(find.text('First stop title'), findsOneWidget);
+      expect(find.text('Category'), findsOneWidget);
+    });
 
-    testWidgets(
-      'TripCreatePage creates trip and navigates',
-      (tester) async {
-        tester.view.physicalSize = const Size(800, 2400);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(() {
-          tester.view.resetPhysicalSize();
-          tester.view.resetDevicePixelRatio();
-        });
+    testWidgets('TripCreatePage creates trip and navigates', (tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-        final fakeRepo = FakeTripRepository();
-        final fakeApi = FakeAiApiClient();
+      final fakeRepo = FakeTripRepository();
+      final fakeApi = FakeAiApiClient();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              tripRepositoryProvider.overrideWithValue(fakeRepo),
-              apiClientProvider.overrideWithValue(fakeApi),
-            ],
-            child: MaterialApp(
-              theme: AppTheme.light(),
-              home: const TripCreatePage(),
-            ),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tripRepositoryProvider.overrideWithValue(fakeRepo),
+            apiClientProvider.overrideWithValue(fakeApi),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const TripCreatePage(),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Enter trip title
-        await tester.enterText(find.byType(TextFormField).first, 'Tokyo Trip');
-        await tester.pump();
+      // Enter trip title
+      await tester.enterText(find.byType(TextFormField).first, 'Tokyo Trip');
+      await tester.pump();
 
-        // Submit form
-        await tester.tap(find.text('Create Trip'));
-        await tester.pump();
+      // Submit form
+      await tester.tap(find.text('Create Trip'));
+      await tester.pump();
 
-        // Wait for async operations to complete
-        await tester.pumpAndSettle();
+      // Wait for async operations to complete
+      await tester.pumpAndSettle();
 
-        // Trip was created in repository
-        expect(fakeRepo.trips.length, 1);
-        expect(fakeRepo.trips.first.title, 'Tokyo Trip');
+      // Trip was created in repository
+      expect(fakeRepo.trips.length, 1);
+      expect(fakeRepo.trips.first.title, 'Tokyo Trip');
 
-        // AI starter itinerary was generated and applied
-        expect(
-          fakeApi.postedPaths.any((p) => p.contains('/ai-plan/generate')),
-          isTrue,
-        );
-        expect(
-          fakeApi.postedPaths.any((p) => p.contains('/ai-plan/apply')),
-          isTrue,
-        );
-        final generateCall = fakeApi.postedPayloads.firstWhere(
-          (p) => p is Map && p['destination'] != null,
-        ) as Map<String, dynamic>;
-        expect(generateCall['travel_party'], 'couple'); // leisure mapped to couple
-      },
-    );
+      // AI starter itinerary was generated and applied
+      expect(
+        fakeApi.postedPaths.any((p) => p.contains('/ai-plan/generate')),
+        isTrue,
+      );
+      expect(
+        fakeApi.postedPaths.any((p) => p.contains('/ai-plan/apply')),
+        isTrue,
+      );
+      final generateCall = fakeApi.postedPayloads.firstWhere(
+        (p) => p is Map && p['destination'] != null,
+      ) as Map<String, dynamic>;
+      expect(
+        generateCall['travel_party'],
+        'couple',
+      ); // leisure mapped to couple
+    });
   });
 }

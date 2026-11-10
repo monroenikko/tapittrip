@@ -148,14 +148,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       labelText: 'Permanent Address / Home City',
                       hintText: 'e.g. Taguig City, Philippines',
                       prefixIcon: Icon(Icons.home_outlined),
-                      helperText: 'Your residence determines your base home currency',
+                      helperText:
+                          'Your residence determines your base home currency',
                     ),
                     textInputAction: TextInputAction.next,
                     onChanged: (val) {
                       // Attempt to auto-match country from address input
-                      final resolvedCode = CountryCurrencyHelper.resolveCurrency(val);
-                      for (final c in CountryCurrencyHelper.supportedCountries) {
-                        if (c.currency == resolvedCode && c != _selectedCountry) {
+                      final resolvedCode =
+                          CountryCurrencyHelper.resolveCurrency(val);
+                      for (final c
+                          in CountryCurrencyHelper.supportedCountries) {
+                        if (c.currency == resolvedCode &&
+                            c != _selectedCountry) {
                           setState(() => _selectedCountry = c);
                           break;
                         }
@@ -258,7 +262,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withValues(alpha: 0.25),
+                      color: colorScheme.primaryContainer.withValues(
+                        alpha: 0.25,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: colorScheme.primary.withValues(alpha: 0.35),

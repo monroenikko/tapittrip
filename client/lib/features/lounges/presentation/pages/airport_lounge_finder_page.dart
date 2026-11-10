@@ -186,7 +186,9 @@ class _AirportLoungeFinderPageState
                   decoration: InputDecoration(
                     hintText: 'Search city, airport name, or IATA (e.g. LHR, Tokyo, DXB)...',
                     hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      color: colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.7,
+                      ),
                       fontSize: 13,
                     ),
                     prefixIcon: const Icon(Icons.flight_takeoff_rounded),
@@ -224,7 +226,9 @@ class _AirportLoungeFinderPageState
                       color: colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -260,7 +264,10 @@ class _AirportLoungeFinderPageState
                           ),
                           title: Text(
                             apt.name,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
                           ),
                           subtitle: Text(
                             '${apt.city}, ${apt.country} • ${apt.terminals.length} Terminals',
@@ -377,7 +384,9 @@ class _AirportLoungeFinderPageState
                         color: colorScheme.surfaceContainerLow,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                          color: colorScheme.outlineVariant.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                       ),
                       child: Row(

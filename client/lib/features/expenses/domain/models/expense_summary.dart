@@ -80,7 +80,11 @@ class ExpenseSummary {
 
   String formatBaseAmount(int? amountMinor) {
     if (amountMinor == null) return '';
-    return CurrencyFormatter.formatAmount(amountMinor, baseCurrency, isMinor: true);
+    return CurrencyFormatter.formatAmount(
+      amountMinor,
+      baseCurrency,
+      isMinor: true,
+    );
   }
 
   factory ExpenseSummary.fromJson(Map<String, dynamic> json) {

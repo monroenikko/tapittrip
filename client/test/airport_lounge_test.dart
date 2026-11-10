@@ -238,34 +238,40 @@ void main() {
       },
     );
 
-    test('searchLounges returns immediately from memory cache on repeat lookup', () async {
-      FlutterSecureStorage.setMockInitialValues({});
-      const storage = FlutterSecureStorage();
-      final client = FakeLoungeApiClient();
-      final repo = LoungeRepository(apiClient: client, storage: storage);
+    test(
+      'searchLounges returns immediately from memory cache on repeat lookup',
+      () async {
+        FlutterSecureStorage.setMockInitialValues({});
+        const storage = FlutterSecureStorage();
+        final client = FakeLoungeApiClient();
+        final repo = LoungeRepository(apiClient: client, storage: storage);
 
-      // First call hits network
-      final first = await repo.searchLounges('MNL');
-      expect(first.isFromCache, false);
+        // First call hits network
+        final first = await repo.searchLounges('MNL');
+        expect(first.isFromCache, false);
 
-      // Second call returns from memory cache instantly
-      final second = await repo.searchLounges('MNL');
-      expect(second.isFromCache, true);
-      expect(second.airport.iataCode, 'MNL');
-    });
+        // Second call returns from memory cache instantly
+        final second = await repo.searchLounges('MNL');
+        expect(second.isFromCache, true);
+        expect(second.airport.iataCode, 'MNL');
+      },
+    );
 
-    test('prefetchAirports pulls and caches multiple airports in parallel', () async {
-      FlutterSecureStorage.setMockInitialValues({});
-      const storage = FlutterSecureStorage();
-      final client = FakeLoungeApiClient();
-      final repo = LoungeRepository(apiClient: client, storage: storage);
+    test(
+      'prefetchAirports pulls and caches multiple airports in parallel',
+      () async {
+        FlutterSecureStorage.setMockInitialValues({});
+        const storage = FlutterSecureStorage();
+        final client = FakeLoungeApiClient();
+        final repo = LoungeRepository(apiClient: client, storage: storage);
 
-      await repo.prefetchAirports(['MNL', 'HND']);
+        await repo.prefetchAirports(['MNL', 'HND']);
 
-      // Subsequent searches for prefetched airports are instant cache hits
-      final mnl = await repo.searchLounges('MNL');
-      expect(mnl.isFromCache, true);
-    });
+        // Subsequent searches for prefetched airports are instant cache hits
+        final mnl = await repo.searchLounges('MNL');
+        expect(mnl.isFromCache, true);
+      },
+    );
 
     test('detectAirportsForTrip resolves relevant hub IATA codes', () {
       final japanCodes = LoungeRepository.detectAirportsForTrip(

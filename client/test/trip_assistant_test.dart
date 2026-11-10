@@ -28,8 +28,7 @@ class FakeAssistantApiClient extends ApiClient {
     return postResponse ??
         {
           'data': {
-            'reply':
-                'Since you are staying at Shinjuku Granbell Hotel, here are local dining spots within 5 minutes walk.',
+            'reply': 'Since you are staying at Shinjuku Granbell Hotel, here are local dining spots within 5 minutes walk.',
             'category': 'dining',
             'context_summary': {
               'has_stay': true,
@@ -187,8 +186,7 @@ void main() {
         final fakeApi = FakeAssistantApiClient();
         fakeApi.postResponse = {
           'data': {
-            'reply':
-                'I am your TapItTrip travel companion, focused exclusively on travel advice, trip planning, and journey logistics. How can I assist with your trip?',
+            'reply': 'I am your TapItTrip travel companion, focused exclusively on travel advice, trip planning, and journey logistics. How can I assist with your trip?',
             'category': 'out_of_scope',
             'suggested_actions': [],
           },
