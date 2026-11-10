@@ -2783,6 +2783,56 @@ paths:
         "422":
           description: Validation error.
 
+  /trips/{trip}/feed:
+    get:
+      operationId: getTripActivityFeed
+      summary: Retrieve the chronological activity and moments stream for a trip circle (TC-8.2)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          description: Number of activity events to return (max 100, default 30)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 30
+        - name: before
+          in: query
+          required: false
+          description: Event ID cursor to fetch events before this point in time
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Chronological list of circle activity events.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ActivityEvent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (Not a member of this trip).
+
 components:
   securitySchemes:
     BearerAuth:
@@ -5338,6 +5388,73 @@ components:
           type: array
           items:
             type: string
+
+    ActivityEvent:
+      type: object
+      required:
+        - id
+        - trip_id
+        - event_type
+        - title
+        - occurred_at
+        - actor
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          example: moment_shared
+        title:
+          type: string
+          example: Senso-ji Temple Morning
+        summary:
+          type: string
+          nullable: true
+          example: Early morning walk through the historic temple grounds.
+        entity_type:
+          type: string
+          nullable: true
+          example: journal_entry
+        entity_id:
+          type: string
+          format: uuid
+          nullable: true
+        metadata:
+          type: object
+          nullable: true
+          example:
+            mood: peaceful
+            photos:
+              - https://example.com/sensoji.jpg
+        occurred_at:
+          type: string
+          format: date-time
+        actor:
+          type: object
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Alice
+            display_name:
+              type: string
+              example: Alice
+            avatar_url:
+              type: string
+              nullable: true
+              format: uri
+        created_at:
+          type: string
+          format: date-time
 
 
 

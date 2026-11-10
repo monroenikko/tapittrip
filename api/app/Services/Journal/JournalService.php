@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services\Journal;
 
+use App\DTOs\Activity\RecordActivityEventData;
 use App\DTOs\Journal\CreateJournalEntryData;
 use App\DTOs\Journal\UpdateJournalEntryData;
 use App\Models\JournalEntry;
 use App\Models\Trip;
 use App\Models\User;
+use App\Services\Activity\ActivityService;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
@@ -17,6 +20,10 @@ use Illuminate\Support\Str;
 
 final class JournalService
 {
+    public function __construct(
+        private readonly ActivityService $activityService,
+    ) {}
+
     /**
      * Get accessible journal entries for a traveler on a trip.
      * Shows traveler's own entries + entries shared with the circle.
@@ -62,6 +69,10 @@ final class JournalService
             'is_shared' => $data->isShared,
             'photos' => $data->photos,
         ]);
+
+        if ($entry->is_shared) {
+            $this->recordJournalActivity($entry, $user, $trip);
+        }
 
         return $entry;
     }
@@ -110,7 +121,15 @@ final class JournalService
             $entry->update($attributes);
         }
 
-        return $entry->fresh(['author', 'itineraryItem']);
+        $refreshed = $entry->fresh(['author', 'itineraryItem', 'trip']);
+
+        if ($refreshed->is_shared) {
+            $this->recordJournalActivity($refreshed, $user, $refreshed->trip);
+        } else {
+            $this->activityService->removeEventForEntity('journal_entry', $refreshed->id);
+        }
+
+        return $refreshed;
     }
 
     /**
@@ -133,7 +152,13 @@ final class JournalService
 
         $entry->update(['photos' => $currentPhotos]);
 
-        return $entry->fresh(['author', 'itineraryItem']);
+        $refreshed = $entry->fresh(['author', 'itineraryItem', 'trip']);
+
+        if ($refreshed->is_shared) {
+            $this->recordJournalActivity($refreshed, $user, $refreshed->trip);
+        }
+
+        return $refreshed;
     }
 
     /**
@@ -145,6 +170,32 @@ final class JournalService
             throw new AuthorizationException('You are not authorized to delete this journal entry.');
         }
 
+        $this->activityService->removeEventForEntity('journal_entry', $entry->id);
+
         $entry->delete();
+    }
+
+    private function recordJournalActivity(JournalEntry $entry, User $actor, Trip $trip): void
+    {
+        $metadata = array_filter([
+            'photos' => $entry->photos ?? [],
+            'location_name' => $entry->location_name,
+            'mood' => $entry->mood,
+            'weather' => $entry->weather,
+        ], fn ($val) => $val !== null && $val !== []);
+
+        $this->activityService->recordEvent(
+            $trip,
+            $actor,
+            new RecordActivityEventData(
+                eventType: 'moment_shared',
+                title: $entry->title,
+                summary: Str::limit(strip_tags((string) $entry->content), 140),
+                entityType: 'journal_entry',
+                entityId: $entry->id,
+                metadata: $metadata,
+                occurredAt: $entry->created_at ? CarbonImmutable::parse($entry->created_at) : CarbonImmutable::now(),
+            )
+        );
     }
 }

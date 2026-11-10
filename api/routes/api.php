@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\ActivityFeedController;
 use App\Http\Controllers\Api\V1\AiItineraryController;
 use App\Http\Controllers\Api\V1\AirportLoungeController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -94,6 +95,8 @@ Route::prefix('v1')->group(function (): void {
         Route::patch('/journal-entries/{entry}', [TripJournalController::class, 'update'])->name('journal-entries.update');
         Route::delete('/journal-entries/{entry}', [TripJournalController::class, 'destroy'])->name('journal-entries.destroy');
         Route::post('/journal-entries/{entry}/photos', [TripJournalController::class, 'uploadPhoto'])->name('journal-entries.photos.upload');
+
+        Route::get('/trips/{trip}/feed', [ActivityFeedController::class, 'index'])->name('trips.feed.index');
 
         Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');
         Route::post('/trips/{trip}/checklists', [ChecklistController::class, 'store'])->name('trips.checklists.store');

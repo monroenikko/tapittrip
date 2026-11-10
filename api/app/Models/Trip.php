@@ -235,4 +235,16 @@ final class Trip extends Model
             ->orderBy('entry_date', 'desc')
             ->orderBy('created_at', 'desc');
     }
+
+    /**
+     * All shared activity events and circle moments recorded for this trip.
+     *
+     * @return HasMany<ActivityEvent, $this>
+     */
+    public function activityEvents(): HasMany
+    {
+        return $this->hasMany(ActivityEvent::class)
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('created_at');
+    }
 }

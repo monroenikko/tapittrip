@@ -3,12 +3,53 @@
 ## Current milestone
 
 - Milestone: **M9 — Travel Memories, Photos & Group Journal**
-- Status: **Slice 1 Completed**
-- Basis: Approved Milestone M9 plan (`m9-travel-journal-and-memories-plan.md`). Personal and group travel reflections, mood chips, weather, and photo attachments; private by default on creation (`is_shared = false`), with companion sharing (TC-8.1).
+- Status: **Slice 2 Completed**
+- Basis: Approved Milestone M9 plan (`m9-travel-journal-and-memories-plan.md`). Personal and group travel reflections, mood chips, weather, and photo attachments; private by default on creation (`is_shared = false`), with companion sharing (TC-8.1); chronological shared circle activity feed with privacy redaction and idempotent moments stream (TC-8.2).
 - Boundary:
   - Slice 1: Personal & Group Travel Journal Entries & Photo Reflections — **Completed**.
-  - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
-  - Slice 3: Automated Trip Recap & Story Album — **Planned**.
+  - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Completed**.
+  - Slice 3: Automated Trip Recap & Story Album — **Next**.
+
+## 2026-11-10 — Milestone M9, Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2)
+
+### Completed
+
+- **Database Migration (`database/migrations/2026_11_10_020000_create_activity_events_table.php`)**:
+  - Created `activity_events` table with UUID primary key, `trip_id` foreign key, `actor_id` foreign key, `event_type`, `title`, `summary`, `entity_type`, `entity_id`, `metadata` (jsonb), `occurred_at` (timestamptz), timestamps, and `softDeletes()`.
+  - Added indexes on `['trip_id', 'occurred_at']` and `['entity_type', 'entity_id']`.
+  - Migrated both `tapittrip` and `tapittrip_test` PostgreSQL databases.
+- **Eloquent Models & DTOs**:
+  - Created `app/Models/ActivityEvent.php` with `SoftDeletes`, `HasUuids`, factory, and relationships `trip(): BelongsTo` and `actor(): BelongsTo`.
+  - Created `database/factories/ActivityEventFactory.php`.
+  - Created `app/DTOs/Activity/RecordActivityEventData.php` with typed properties.
+  - Added `activityEvents(): HasMany` relationship to `app/Models/Trip.php`.
+- **Application Services (`app/Services/Activity/ActivityService.php`)**:
+  - `getTripFeed(Trip $trip, User $user, int $limit = 30, ?string $beforeId = null)`: Enforces trip membership, provides cursor pagination with deterministic `occurred_at DESC, id DESC` sorting, and loads actor data.
+  - `recordEvent(Trip $trip, User $actor, RecordActivityEventData $data)`: Idempotently creates or updates activity events per entity, preventing duplicate event spam per TC-8.2.
+  - `removeEventForEntity(string $entityType, string $entityId)`: Soft-deletes events when shared entities are unshared or deleted.
+- **Journal Integration (`app/Services/Journal/JournalService.php`)**:
+  - Injected `ActivityService`.
+  - Automatically records `moment_shared` activity events when a journal reflection is created with `is_shared = true` or photo uploaded.
+  - Automatically soft-deletes activity events when author unshares (`is_shared = false`) or deletes a journal entry, preventing past cached summaries or companion leaks (TC-8.1 & TC-8.2).
+- **API Controller & Resource (`app/Http/Controllers/Api/V1/ActivityFeedController.php`)**:
+  - Injected `ActivityService` and `ApiResponse` via constructor DI.
+  - `GET /api/v1/trips/{trip}/feed`: Supports query parameters `limit` and `before` cursor.
+  - Returns `ActivityEventResource` collection conforming to public API response envelope.
+- **Routes & OpenAPI (`routes/api.php`, `docs/api/openapi.yaml`)**:
+  - Registered `Route::get('/trips/{trip}/feed', [ActivityFeedController::class, 'index'])->name('trips.feed.index')`.
+  - Documented `GET /trips/{trip}/feed` and `ActivityEvent` schema in OpenAPI.
+- **Automated Verification**:
+  - Created `tests/Feature/ActivityFeedTest.php` (8 tests, 36 assertions):
+    - Member feed access with actor and metadata.
+    - Outsider access blocked (HTTP 403).
+    - Shared journal creation triggers activity event.
+    - Private journal creation records zero events (TC-8.2).
+    - Unsharing journal immediately soft-deletes event from feed (TC-8.1 & TC-8.2).
+    - Deleting journal soft-deletes event from feed.
+    - Cursor pagination with before query parameter.
+    - Idempotent recording updates in-place without duplicates (TC-8.2).
+  - Full backend test suite passes: **145/145 tests passed (1,933 assertions)**.
+  - Laravel Pint verified: 0 style issues.
 
 ## 2026-11-10 — Universal Soft Deletes Across All Database Tables and Models
 
