@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Journal\Models\JournalEntry;
+use App\Models\JournalEntry;
 use App\Models\Trip;
 use App\Models\TripMember;
 use App\Models\User;

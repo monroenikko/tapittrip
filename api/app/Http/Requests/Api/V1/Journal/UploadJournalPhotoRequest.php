@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\V1\Journal;
 
-use App\Domain\Journal\Models\JournalEntry;
+use App\Models\JournalEntry;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class UploadJournalPhotoRequest extends FormRequest

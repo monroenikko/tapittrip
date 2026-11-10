@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Journal\Data;
+namespace App\DTOs\Journal;
 
 final class UpdateJournalEntryData
 {

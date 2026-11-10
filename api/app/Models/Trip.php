@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Domain\Journal\Models\JournalEntry;
 use App\Domain\Media\Models\MediaAttachment;
 use App\Domain\Notifications\Models\Reminder;
 use Database\Factories\TripFactory;
