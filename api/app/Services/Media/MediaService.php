@@ -2,18 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Media\Services;
+namespace App\Services\Media;
 
-use App\Application\Media\Data\UploadMediaData;
-use App\Domain\Media\Models\MediaAttachment;
+use App\DTOs\Media\UploadMediaData;
 use App\Models\ChecklistItem;
+use App\Models\MediaAttachment;
 use App\Models\Trip;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
-final class UploadMediaService
+final class MediaService
 {
     private const ALLOWED_MIME_TYPES = [
         'image/jpeg',
@@ -26,9 +27,25 @@ final class UploadMediaService
     private const MAX_BYTES = 10485760; // 10 MB
 
     /**
+     * Get all media attachments for a trip.
+     *
+     * @return Collection<int, MediaAttachment>
+     */
+    public function getTripMedia(Trip $trip, ?string $attachableType = null): Collection
+    {
+        $query = $trip->mediaAttachments()->with(['uploadedBy']);
+
+        if ($attachableType !== null) {
+            $query->where('attachable_type', $attachableType);
+        }
+
+        return $query->get();
+    }
+
+    /**
      * Upload and attach a media file or document to a trip or checklist item.
      */
-    public function handle(Trip $trip, User $user, UploadMediaData $data): MediaAttachment
+    public function upload(Trip $trip, User $user, UploadMediaData $data): MediaAttachment
     {
         $file = $data->file;
 
@@ -86,6 +103,30 @@ final class UploadMediaService
             }
 
             return $attachment->load(['uploadedBy', 'trip']);
+        });
+    }
+
+    /**
+     * Delete a media attachment and remove the physical file.
+     */
+    public function delete(MediaAttachment $attachment): void
+    {
+        DB::transaction(function () use ($attachment): void {
+            if ($attachment->attachable_type === 'checklist_item' && $attachment->attachable_id !== null) {
+                /** @var ChecklistItem|null $item */
+                $item = ChecklistItem::query()->find($attachment->attachable_id);
+                if ($item && $item->photo_url === $attachment->url) {
+                    $item->update([
+                        'photo_url' => null,
+                        'version' => $item->version + 1,
+                    ]);
+                }
+            }
+
+            // Remove file from disk
+            Storage::disk('local')->delete($attachment->file_path);
+
+            $attachment->delete();
         });
     }
 }

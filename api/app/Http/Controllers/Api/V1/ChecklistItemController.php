@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Media\Data\UploadMediaData;
-use App\Application\Media\Services\UploadMediaService;
 use App\DTOs\Checklists\CreateChecklistItemData;
 use App\DTOs\Checklists\UpdateChecklistItemData;
+use App\DTOs\Media\UploadMediaData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Checklists\StoreChecklistItemRequest;
 use App\Http\Requests\Api\V1\Checklists\UpdateChecklistItemRequest;
@@ -16,6 +15,7 @@ use App\Http\Resources\Api\V1\ChecklistItemResource;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Services\Checklists\ChecklistService;
+use App\Services\Media\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -100,14 +100,14 @@ final class ChecklistItemController extends Controller
     public function uploadPhoto(
         UploadMediaRequest $request,
         ChecklistItem $item,
-        UploadMediaService $service,
+        MediaService $service,
     ): JsonResponse {
         Gate::authorize('update', $item->trip);
 
         /** @var UploadedFile $file */
         $file = $request->file('file');
 
-        $service->handle(
+        $service->upload(
             $item->trip,
             $request->user(),
             new UploadMediaData(

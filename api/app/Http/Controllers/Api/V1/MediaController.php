@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Media\Data\UploadMediaData;
-use App\Application\Media\Services\DeleteMediaService;
-use App\Application\Media\Services\GetTripMediaService;
-use App\Application\Media\Services\UploadMediaService;
-use App\Domain\Media\Models\MediaAttachment;
+use App\DTOs\Media\UploadMediaData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Media\UploadMediaRequest;
 use App\Http\Resources\Api\V1\MediaAttachmentResource;
+use App\Models\MediaAttachment;
 use App\Models\Trip;
+use App\Services\Media\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -24,18 +22,19 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class MediaController extends Controller
 {
+    public function __construct(
+        private readonly MediaService $service,
+    ) {}
+
     /**
      * List all media attachments and documents for a trip.
      */
-    public function index(
-        Request $request,
-        Trip $trip,
-        GetTripMediaService $service,
-    ): AnonymousResourceCollection {
+    public function index(Request $request, Trip $trip): AnonymousResourceCollection
+    {
         Gate::authorize('view', $trip);
 
         $attachableType = $request->query('attachable_type');
-        $media = $service->handle($trip, is_string($attachableType) ? $attachableType : null);
+        $media = $this->service->getTripMedia($trip, is_string($attachableType) ? $attachableType : null);
 
         return MediaAttachmentResource::collection($media);
     }
@@ -43,17 +42,14 @@ final class MediaController extends Controller
     /**
      * Upload and attach a media file or document.
      */
-    public function store(
-        UploadMediaRequest $request,
-        Trip $trip,
-        UploadMediaService $service,
-    ): JsonResponse {
+    public function store(UploadMediaRequest $request, Trip $trip): JsonResponse
+    {
         Gate::authorize('update', $trip);
 
         /** @var UploadedFile $file */
         $file = $request->file('file');
 
-        $attachment = $service->handle(
+        $attachment = $this->service->upload(
             $trip,
             $request->user(),
             UploadMediaData::from($request->validated(), $file),
@@ -99,7 +95,6 @@ final class MediaController extends Controller
         Request $request,
         Trip $trip,
         MediaAttachment $media,
-        DeleteMediaService $service,
     ): Response {
         Gate::authorize('update', $trip);
 
@@ -107,7 +102,7 @@ final class MediaController extends Controller
             abort(404, 'Media attachment not found for this trip.');
         }
 
-        $service->handle($media);
+        $this->service->delete($media);
 
         return response()->noContent();
     }

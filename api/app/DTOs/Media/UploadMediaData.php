@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Media\Data;
+namespace App\DTOs\Media;
 
 use Illuminate\Http\UploadedFile;
 

@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Media\Models;
+namespace App\Models;
 
-use App\Models\Trip;
-use App\Models\User;
 use Database\Factories\MediaAttachmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
