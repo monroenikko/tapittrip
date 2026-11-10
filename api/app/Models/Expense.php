@@ -2,12 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Expenses\Models;
+namespace App\Models;
 
-use App\Models\ItineraryItem;
-use App\Models\Stay;
-use App\Models\Trip;
-use App\Models\User;
 use Database\Factories\ExpenseFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

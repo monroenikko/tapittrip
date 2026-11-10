@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Application\Expenses\Data\TripExpensesSummaryResult;
+use App\DTOs\Expenses\TripExpensesSummaryResult;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

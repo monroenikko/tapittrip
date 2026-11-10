@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Application\Expenses\Data\GroupSettlementResult;
+use App\DTOs\Expenses\GroupSettlementResult;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

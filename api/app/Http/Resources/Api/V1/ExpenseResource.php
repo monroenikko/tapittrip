@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Api\V1;
 
-use App\Domain\Expenses\Models\Expense;
+use App\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

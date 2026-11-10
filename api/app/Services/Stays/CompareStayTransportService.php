@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Stays;
 
-use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\DTOs\Stays\CompareStayTransportData;
 use App\Models\Stay;
+use App\Services\Expenses\CountryCurrencyResolver;
 
 final class CompareStayTransportService
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Expenses\Data;
+namespace App\DTOs\Expenses;
 
 final readonly class GroupSettlementResult
 {

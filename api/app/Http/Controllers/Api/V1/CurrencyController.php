@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Expenses\Services\CurrencyExchangeRateService;
 use App\Http\Controllers\Controller;
+use App\Services\Expenses\CurrencyExchangeRateService;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

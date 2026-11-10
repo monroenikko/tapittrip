@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Expenses\Models\Expense;
-use App\Domain\Expenses\Models\TripBudget;
+use App\Models\Expense;
 use App\Models\ItineraryItem;
 use App\Models\Stay;
 use App\Models\Trip;
+use App\Models\TripBudget;
 use App\Models\TripDay;
 use App\Models\User;
 use Carbon\Carbon;

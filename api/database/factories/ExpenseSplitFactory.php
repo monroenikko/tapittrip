@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Expenses\Models\Expense;
-use App\Domain\Expenses\Models\ExpenseSplit;
+use App\Models\Expense;
+use App\Models\ExpenseSplit;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

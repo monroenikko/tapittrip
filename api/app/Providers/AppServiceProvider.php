@@ -2,11 +2,11 @@
 
 namespace App\Providers;
 
-use App\Application\Expenses\Contracts\ExchangeRateProviderInterface;
-use App\Application\Expenses\Services\FakeExchangeRateProvider;
-use App\Application\Expenses\Services\LiveExchangeRateProvider;
+use App\Contracts\ExchangeRateProviderInterface;
 use App\Models\Trip;
 use App\Policies\TripPolicy;
+use App\Services\Expenses\FakeExchangeRateProvider;
+use App\Services\Expenses\LiveExchangeRateProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 

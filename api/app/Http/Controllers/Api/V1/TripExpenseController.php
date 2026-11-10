@@ -4,20 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Expenses\Data\CreateExpenseData;
-use App\Application\Expenses\Data\UpdateExpenseData;
-use App\Application\Expenses\Services\CreateExpenseService;
-use App\Application\Expenses\Services\DeleteExpenseService;
-use App\Application\Expenses\Services\GetTripExpensesSummaryService;
-use App\Application\Expenses\Services\UpdateExpenseService;
-use App\Domain\Expenses\Models\Expense;
+use App\DTOs\Expenses\CreateExpenseData;
+use App\DTOs\Expenses\UpdateExpenseData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Expenses\CreateExpenseRequest;
 use App\Http\Requests\Api\V1\Expenses\UpdateExpenseRequest;
 use App\Http\Requests\Api\V1\Expenses\UploadReceiptRequest;
 use App\Http\Resources\Api\V1\ExpenseResource;
 use App\Http\Resources\Api\V1\TripExpenseSummaryResource;
+use App\Models\Expense;
 use App\Models\Trip;
+use App\Services\Expenses\ExpenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -28,6 +25,10 @@ use Illuminate\Support\Facades\Storage;
 
 final class TripExpenseController extends Controller
 {
+    public function __construct(
+        private readonly ExpenseService $expenseService,
+    ) {}
+
     /**
      * List expenses for a trip with optional category/date filtering.
      */
@@ -56,7 +57,6 @@ final class TripExpenseController extends Controller
     public function store(
         CreateExpenseRequest $request,
         Trip $trip,
-        CreateExpenseService $service,
     ): JsonResponse {
         Gate::authorize('update', $trip);
 
@@ -65,7 +65,7 @@ final class TripExpenseController extends Controller
             defaultPayerId: (string) $request->user()->id,
         );
 
-        $expense = $service->execute($trip, $data);
+        $expense = $this->expenseService->createExpense($trip, $data);
 
         return (new ExpenseResource($expense))
             ->response()
@@ -89,12 +89,11 @@ final class TripExpenseController extends Controller
     public function update(
         UpdateExpenseRequest $request,
         Expense $expense,
-        UpdateExpenseService $service,
     ): JsonResponse {
         Gate::authorize('update', $expense->trip);
 
         $data = UpdateExpenseData::fromArray($request->validated());
-        $updated = $service->execute($expense, $data);
+        $updated = $this->expenseService->updateExpense($expense, $data);
 
         return (new ExpenseResource($updated))
             ->response();
@@ -106,11 +105,10 @@ final class TripExpenseController extends Controller
     public function destroy(
         Request $request,
         Expense $expense,
-        DeleteExpenseService $service,
     ): Response {
         Gate::authorize('update', $expense->trip);
 
-        $service->execute($expense);
+        $this->expenseService->deleteExpense($expense);
 
         return response()->noContent();
     }
@@ -121,11 +119,10 @@ final class TripExpenseController extends Controller
     public function summary(
         Request $request,
         Trip $trip,
-        GetTripExpensesSummaryService $service,
     ): JsonResponse {
         Gate::authorize('view', $trip);
 
-        $result = $service->execute($trip, $request->user());
+        $result = $this->expenseService->getExpensesSummary($trip, $request->user());
 
         return (new TripExpenseSummaryResource($result))
             ->response();

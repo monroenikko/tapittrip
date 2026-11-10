@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Expenses\Services;
+namespace App\Services\Expenses;
 
-use App\Application\Expenses\Contracts\ExchangeRateProviderInterface;
+use App\Contracts\ExchangeRateProviderInterface;
 
 final class FakeExchangeRateProvider implements ExchangeRateProviderInterface
 {

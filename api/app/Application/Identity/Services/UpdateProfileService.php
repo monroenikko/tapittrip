@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Identity\Services;
 
-use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Models\User;
+use App\Services\Expenses\CountryCurrencyResolver;
 
 final class UpdateProfileService
 {

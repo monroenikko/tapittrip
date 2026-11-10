@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Trip;
 
-use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Application\Weather\Services\GetTripWeatherService;
 use App\DTOs\Trip\CreateTripData;
 use App\DTOs\Trip\TodaySummaryResult;
@@ -13,6 +12,7 @@ use App\Models\ItineraryItem;
 use App\Models\Stay;
 use App\Models\Trip;
 use App\Models\User;
+use App\Services\Expenses\CountryCurrencyResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;

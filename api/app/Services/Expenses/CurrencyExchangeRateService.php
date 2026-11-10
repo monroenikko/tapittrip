@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Expenses\Services;
+namespace App\Services\Expenses;
 
-use App\Application\Expenses\Contracts\ExchangeRateProviderInterface;
-use App\Application\Expenses\Data\ExchangeRateData;
+use App\Contracts\ExchangeRateProviderInterface;
+use App\DTOs\Expenses\ExchangeRateData;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 

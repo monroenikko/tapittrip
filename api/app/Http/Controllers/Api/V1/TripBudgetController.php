@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Expenses\Data\SetTripBudgetData;
-use App\Application\Expenses\Services\SetTripBudgetService;
+use App\DTOs\Expenses\SetTripBudgetData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Expenses\SetTripBudgetRequest;
 use App\Http\Resources\Api\V1\TripBudgetResource;
 use App\Models\Trip;
+use App\Services\Expenses\ExpenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 final class TripBudgetController extends Controller
 {
+    public function __construct(
+        private readonly ExpenseService $expenseService,
+    ) {}
+
     /**
      * Get the target budget for a trip.
      */
@@ -37,12 +41,11 @@ final class TripBudgetController extends Controller
     public function store(
         SetTripBudgetRequest $request,
         Trip $trip,
-        SetTripBudgetService $service,
     ): JsonResponse {
         Gate::authorize('update', $trip);
 
         $data = SetTripBudgetData::fromArray($request->validated());
-        $budget = $service->execute($trip, $data);
+        $budget = $this->expenseService->setBudget($trip, $data);
 
         return (new TripBudgetResource($budget))
             ->response()

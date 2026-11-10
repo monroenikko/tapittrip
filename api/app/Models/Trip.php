@@ -6,9 +6,6 @@ namespace App\Models;
 
 use App\Domain\Checklists\Models\Checklist;
 use App\Domain\Checklists\Models\ChecklistItem;
-use App\Domain\Expenses\Models\Expense;
-use App\Domain\Expenses\Models\ExpenseSettlement;
-use App\Domain\Expenses\Models\TripBudget;
 use App\Domain\Journal\Models\JournalEntry;
 use App\Domain\Media\Models\MediaAttachment;
 use App\Domain\Notifications\Models\Reminder;

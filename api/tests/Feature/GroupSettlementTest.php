@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Expenses\Models\Expense;
-use App\Domain\Expenses\Models\TripBudget;
+use App\Models\Expense;
 use App\Models\Trip;
+use App\Models\TripBudget;
 use App\Models\TripMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;

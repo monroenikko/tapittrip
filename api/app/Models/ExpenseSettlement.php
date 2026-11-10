@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Domain\Expenses\Models;
+declare(strict_types=1);
 
-use App\Models\Trip;
-use App\Models\User;
+namespace App\Models;
+
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

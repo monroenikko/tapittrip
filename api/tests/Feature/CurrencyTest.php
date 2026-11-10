@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Models\Trip;
 use App\Models\User;
+use App\Services\Expenses\CountryCurrencyResolver;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;

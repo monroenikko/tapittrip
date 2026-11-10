@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Expenses\Services;
+namespace App\Services\Expenses;
 
 final class CountryCurrencyResolver
 {

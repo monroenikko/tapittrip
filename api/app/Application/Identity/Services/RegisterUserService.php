@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Application\Identity\Services;
 
-use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Application\Identity\Data\AccessTokenResult;
 use App\Application\Identity\Data\RegisterUserData;
 use App\Models\User;
+use App\Services\Expenses\CountryCurrencyResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
