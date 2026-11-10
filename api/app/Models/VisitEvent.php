@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Itinerary\Models;
+namespace App\Models;
 
-use App\Domain\Users\Models\User;
 use Database\Factories\VisitEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

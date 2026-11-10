@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Itinerary\Data\ApplyAiItineraryData;
-use App\Application\Itinerary\Data\GenerateAiItineraryData;
-use App\Application\Itinerary\Services\ApplyAiItineraryService;
-use App\Application\Itinerary\Services\AskTapItTripService;
-use App\Application\Itinerary\Services\GenerateAiItineraryService;
+use App\DTOs\Itinerary\ApplyAiItineraryData;
+use App\DTOs\Itinerary\GenerateAiItineraryData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Itinerary\ApplyAiItineraryRequest;
 use App\Http\Requests\Api\V1\Itinerary\AskTripAssistantRequest;
 use App\Http\Requests\Api\V1\Itinerary\GenerateAiItineraryRequest;
 use App\Http\Resources\Api\V1\ItineraryItemResource;
 use App\Models\Trip;
+use App\Services\Itinerary\ApplyAiItineraryService;
+use App\Services\Itinerary\AskTapItTripService;
+use App\Services\Itinerary\GenerateAiItineraryService;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;

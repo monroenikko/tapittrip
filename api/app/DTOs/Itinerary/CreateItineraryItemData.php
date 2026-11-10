@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Itinerary\Data;
+namespace App\DTOs\Itinerary;
 
 use Carbon\Carbon;
 use Carbon\CarbonInterface;

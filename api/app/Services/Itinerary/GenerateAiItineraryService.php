@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Itinerary\Services;
+namespace App\Services\Itinerary;
 
-use App\Application\Itinerary\Data\AiActivitySuggestionData;
-use App\Application\Itinerary\Data\AiDaySuggestionData;
-use App\Application\Itinerary\Data\AiItineraryPlanResult;
-use App\Application\Itinerary\Data\GenerateAiItineraryData;
+use App\DTOs\Itinerary\AiActivitySuggestionData;
+use App\DTOs\Itinerary\AiDaySuggestionData;
+use App\DTOs\Itinerary\AiItineraryPlanResult;
+use App\DTOs\Itinerary\GenerateAiItineraryData;
 use App\Models\Trip;
 
 final class GenerateAiItineraryService

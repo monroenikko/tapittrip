@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Itinerary\Services;
+namespace App\Services\Itinerary;
 
-use App\Application\Itinerary\Data\TripAssistantResult;
 use App\Domain\Lounges\Models\AirportLounge;
+use App\DTOs\Itinerary\TripAssistantResult;
 use App\Models\Trip;
 
 final class AskTapItTripService

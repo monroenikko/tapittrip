@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Itinerary\Models;
+namespace App\Models;
 
 use Database\Factories\PlaceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

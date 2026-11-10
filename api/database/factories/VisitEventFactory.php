@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Itinerary\Models\VisitEvent;
+use App\Models\ItineraryItem;
 use App\Models\User;
+use App\Models\VisitEvent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

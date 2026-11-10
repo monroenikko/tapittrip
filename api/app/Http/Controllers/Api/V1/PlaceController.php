@@ -4,27 +4,30 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Itinerary\Data\CreatePlaceData;
-use App\Application\Itinerary\Services\CreatePlaceService;
-use App\Application\Itinerary\Services\PlaceSearchService;
-use App\Domain\Itinerary\Models\Place;
+use App\DTOs\Itinerary\CreatePlaceData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Itinerary\StorePlaceRequest;
 use App\Http\Resources\Api\V1\PlaceResource;
+use App\Models\Place;
+use App\Services\Itinerary\PlaceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 final class PlaceController extends Controller
 {
+    public function __construct(
+        private readonly PlaceService $placeService,
+    ) {}
+
     /**
      * Search places by query string with 3rd-party provider fallback.
      */
-    public function search(Request $request, PlaceSearchService $searchService): AnonymousResourceCollection
+    public function search(Request $request): AnonymousResourceCollection
     {
         $query = (string) $request->query('q', '');
 
-        $places = $searchService->search($query);
+        $places = $this->placeService->search($query);
 
         return PlaceResource::collection($places);
     }
@@ -32,9 +35,9 @@ final class PlaceController extends Controller
     /**
      * Store a new place or return existing.
      */
-    public function store(StorePlaceRequest $request, CreatePlaceService $service): JsonResponse
+    public function store(StorePlaceRequest $request): JsonResponse
     {
-        $place = $service->handle(CreatePlaceData::from($request->validated()));
+        $place = $this->placeService->createPlace(CreatePlaceData::from($request->validated()));
 
         return (new PlaceResource($place))
             ->response()

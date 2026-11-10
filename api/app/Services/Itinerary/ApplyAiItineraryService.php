@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Itinerary\Services;
+namespace App\Services\Itinerary;
 
-use App\Application\Itinerary\Data\ApplyAiItineraryData;
-use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Itinerary\Models\Place;
-use App\Domain\Itinerary\Models\TripDay;
+use App\DTOs\Itinerary\ApplyAiItineraryData;
+use App\Models\ItineraryItem;
+use App\Models\Place;
 use App\Models\Trip;
+use App\Models\TripDay;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;

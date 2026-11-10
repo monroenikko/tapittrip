@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Stays\Models\Stay;
+use App\Models\ItineraryItem;
 use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;

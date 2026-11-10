@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Stays\Data;
 
-use App\Application\Itinerary\Data\CreatePlaceData;
+use App\DTOs\Itinerary\CreatePlaceData;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 

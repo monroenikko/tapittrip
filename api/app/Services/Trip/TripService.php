@@ -6,11 +6,11 @@ namespace App\Services\Trip;
 
 use App\Application\Expenses\Services\CountryCurrencyResolver;
 use App\Application\Weather\Services\GetTripWeatherService;
-use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Stays\Models\Stay;
 use App\DTOs\Trip\CreateTripData;
 use App\DTOs\Trip\TodaySummaryResult;
 use App\DTOs\Trip\UpdateTripData;
+use App\Models\ItineraryItem;
 use App\Models\Trip;
 use App\Models\User;
 use Carbon\CarbonImmutable;

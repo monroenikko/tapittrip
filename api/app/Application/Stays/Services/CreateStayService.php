@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Application\Stays\Services;
 
-use App\Application\Itinerary\Services\CreatePlaceService;
-use App\Application\Itinerary\Services\EnsureTripDayService;
 use App\Application\Stays\Data\CreateStayData;
-use App\Domain\Itinerary\Models\ItineraryItem;
 use App\Domain\Stays\Models\Stay;
+use App\Models\ItineraryItem;
 use App\Models\Trip;
+use App\Services\Itinerary\ItineraryService;
+use App\Services\Itinerary\PlaceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class CreateStayService
 {
     public function __construct(
-        private CreatePlaceService $createPlaceService,
-        private EnsureTripDayService $ensureTripDayService,
+        private PlaceService $placeService,
+        private ItineraryService $itineraryService,
     ) {}
 
     public function handle(Trip $trip, CreateStayData $data): Stay
@@ -32,7 +32,7 @@ final class CreateStayService
             $placeId = $data->placeId;
 
             if ($data->place !== null) {
-                $place = $this->createPlaceService->handle($data->place);
+                $place = $this->placeService->createPlace($data->place);
                 $placeId = $place->id;
             }
 
@@ -58,7 +58,7 @@ final class CreateStayService
             if ($data->createItineraryEvents) {
                 if ($data->checkInAt !== null) {
                     $inLocalDate = $data->checkInAt->copy()->setTimezone($data->timezone)->format('Y-m-d');
-                    $inDay = $this->ensureTripDayService->handle($trip, $inLocalDate);
+                    $inDay = $this->itineraryService->ensureTripDay($trip, $inLocalDate);
 
                     ItineraryItem::query()->create([
                         'trip_id' => $trip->id,
@@ -76,7 +76,7 @@ final class CreateStayService
 
                 if ($data->checkOutAt !== null) {
                     $outLocalDate = $data->checkOutAt->copy()->setTimezone($data->timezone)->format('Y-m-d');
-                    $outDay = $this->ensureTripDayService->handle($trip, $outLocalDate);
+                    $outDay = $this->itineraryService->ensureTripDay($trip, $outLocalDate);
 
                     ItineraryItem::query()->create([
                         'trip_id' => $trip->id,

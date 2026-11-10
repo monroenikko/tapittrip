@@ -2,19 +2,60 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Itinerary\Services;
+namespace App\Services\Itinerary;
 
-use App\Application\Itinerary\Data\CreatePlaceData;
-use App\Domain\Itinerary\Models\Place;
+use App\DTOs\Itinerary\CreatePlaceData;
+use App\Models\Place;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-final class PlaceSearchService
+final class PlaceService
 {
-    public function __construct(
-        private readonly CreatePlaceService $createPlaceService,
-    ) {}
+    /**
+     * Create or update a cached place in local storage.
+     */
+    public function createPlace(CreatePlaceData $data): Place
+    {
+        return DB::transaction(function () use ($data): Place {
+            if ($data->providerPlaceId !== null && $data->provider !== 'manual') {
+                /** @var Place|null $existing */
+                $existing = Place::query()
+                    ->where('provider', $data->provider)
+                    ->where('provider_place_id', $data->providerPlaceId)
+                    ->first();
+
+                if ($existing !== null) {
+                    $existing->update([
+                        'name' => $data->name,
+                        'formatted_address' => $data->formattedAddress ?? $existing->formatted_address,
+                        'country_code' => $data->countryCode ?? $existing->country_code,
+                        'latitude' => $data->latitude ?? $existing->latitude,
+                        'longitude' => $data->longitude ?? $existing->longitude,
+                        'photo_reference' => $data->photoReference ?? $existing->photo_reference,
+                        'attribution' => $data->attribution ?? $existing->attribution,
+                        'last_refreshed_at' => now(),
+                    ]);
+
+                    return $existing;
+                }
+            }
+
+            return Place::query()->create([
+                'provider' => $data->provider,
+                'provider_place_id' => $data->providerPlaceId,
+                'name' => $data->name,
+                'formatted_address' => $data->formattedAddress,
+                'country_code' => $data->countryCode,
+                'latitude' => $data->latitude,
+                'longitude' => $data->longitude,
+                'photo_reference' => $data->photoReference,
+                'attribution' => $data->attribution,
+                'last_refreshed_at' => now(),
+            ]);
+        });
+    }
 
     /**
      * Search places from local storage and third-party geocoding providers.
@@ -107,7 +148,7 @@ final class PlaceSearchService
                     ? strtoupper((string) $item['address']['country_code'])
                     : null;
 
-                $place = $this->createPlaceService->handle(
+                $place = $this->createPlace(
                     new CreatePlaceData(
                         name: $name,
                         provider: 'osm',
@@ -160,7 +201,7 @@ final class PlaceSearchService
                     continue;
                 }
 
-                $place = $this->createPlaceService->handle(
+                $place = $this->createPlace(
                     new CreatePlaceData(
                         name: (string) ($result['name'] ?? $query),
                         provider: 'google',

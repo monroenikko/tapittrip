@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Itinerary\Models\TripDay;
+use App\Models\ItineraryItem;
 use App\Models\Trip;
+use App\Models\TripDay;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Laravel\Sanctum\Sanctum;

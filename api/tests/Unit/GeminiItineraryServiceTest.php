@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Application\Itinerary\Data\GenerateAiItineraryData;
-use App\Application\Itinerary\Services\GeminiItineraryService;
+use App\DTOs\Itinerary\GenerateAiItineraryData;
 use App\Models\Trip;
+use App\Services\Itinerary\GeminiItineraryService;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

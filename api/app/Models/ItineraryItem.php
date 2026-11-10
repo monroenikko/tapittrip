@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Itinerary\Models;
+namespace App\Models;
 
 use App\Domain\Notifications\Models\Reminder;
 use App\Domain\Stays\Models\Stay;
-use App\Models\Trip;
 use Database\Factories\ItineraryItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Stays\Models;
 
-use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Itinerary\Models\Place;
+use App\Models\ItineraryItem;
+use App\Models\Place;
 use App\Models\Trip;
 use Database\Factories\StayFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;

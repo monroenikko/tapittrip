@@ -4,19 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Application\Itinerary\Data\CreateItineraryItemData;
-use App\Application\Itinerary\Data\UpdateItineraryItemData;
-use App\Application\Itinerary\Services\CreateItineraryItemService;
-use App\Application\Itinerary\Services\DeleteItineraryItemService;
-use App\Application\Itinerary\Services\ReorderItineraryItemsService;
-use App\Application\Itinerary\Services\UpdateItineraryItemService;
-use App\Domain\Itinerary\Models\ItineraryItem;
+use App\DTOs\Itinerary\CreateItineraryItemData;
+use App\DTOs\Itinerary\UpdateItineraryItemData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Itinerary\ReorderItineraryItemsRequest;
 use App\Http\Requests\Api\V1\Itinerary\StoreItineraryItemRequest;
 use App\Http\Requests\Api\V1\Itinerary\UpdateItineraryItemRequest;
 use App\Http\Resources\Api\V1\ItineraryItemResource;
+use App\Models\ItineraryItem;
 use App\Models\Trip;
+use App\Services\Itinerary\ItineraryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -25,6 +22,10 @@ use Illuminate\Support\Facades\Gate;
 
 final class ItineraryItemController extends Controller
 {
+    public function __construct(
+        private readonly ItineraryService $itineraryService,
+    ) {}
+
     /**
      * List all itinerary items for a trip.
      */
@@ -44,14 +45,11 @@ final class ItineraryItemController extends Controller
     /**
      * Store a newly created itinerary item.
      */
-    public function store(
-        StoreItineraryItemRequest $request,
-        Trip $trip,
-        CreateItineraryItemService $service,
-    ): JsonResponse {
+    public function store(StoreItineraryItemRequest $request, Trip $trip): JsonResponse
+    {
         Gate::authorize('update', $trip);
 
-        $item = $service->handle(
+        $item = $this->itineraryService->createItem(
             $trip,
             CreateItineraryItemData::from($request->validated(), $trip->primary_timezone),
         );
@@ -75,14 +73,11 @@ final class ItineraryItemController extends Controller
     /**
      * Update the specified itinerary item.
      */
-    public function update(
-        UpdateItineraryItemRequest $request,
-        ItineraryItem $item,
-        UpdateItineraryItemService $service,
-    ): JsonResponse {
+    public function update(UpdateItineraryItemRequest $request, ItineraryItem $item): JsonResponse
+    {
         Gate::authorize('update', $item->trip);
 
-        $updated = $service->handle(
+        $updated = $this->itineraryService->updateItem(
             $item,
             UpdateItineraryItemData::from($request->validated()),
         );
@@ -94,14 +89,11 @@ final class ItineraryItemController extends Controller
     /**
      * Remove the specified itinerary item.
      */
-    public function destroy(
-        Request $request,
-        ItineraryItem $item,
-        DeleteItineraryItemService $service,
-    ): Response {
+    public function destroy(Request $request, ItineraryItem $item): Response
+    {
         Gate::authorize('update', $item->trip);
 
-        $service->handle($item);
+        $this->itineraryService->deleteItem($item);
 
         return response()->noContent();
     }
@@ -109,17 +101,14 @@ final class ItineraryItemController extends Controller
     /**
      * Reorder itinerary items for a trip.
      */
-    public function reorder(
-        ReorderItineraryItemsRequest $request,
-        Trip $trip,
-        ReorderItineraryItemsService $service,
-    ): AnonymousResourceCollection {
+    public function reorder(ReorderItineraryItemsRequest $request, Trip $trip): AnonymousResourceCollection
+    {
         Gate::authorize('update', $trip);
 
         /** @var array<int, string> $itemIds */
         $itemIds = $request->validated('item_ids');
 
-        $reordered = $service->handle($trip, $itemIds);
+        $reordered = $this->itineraryService->reorderItems($trip, $itemIds);
 
         return ItineraryItemResource::collection($reordered);
     }

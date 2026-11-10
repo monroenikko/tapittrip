@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Domain\Checklists\Models\Checklist;
-use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Itinerary\Models\TripDay;
 use App\Domain\Notifications\Models\NotificationPreference;
 use App\Domain\Notifications\Models\Reminder;
 use App\Domain\Notifications\Models\UserDevice;
 use App\Domain\Stays\Models\Stay;
+use App\Models\ItineraryItem;
 use App\Models\Trip;
+use App\Models\TripDay;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;

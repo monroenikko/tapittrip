@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Application\Itinerary\Services\GeminiAssistantService;
 use App\Models\Trip;
 use App\Models\User;
+use App\Services\Itinerary\GeminiAssistantService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;

@@ -6,10 +6,10 @@ namespace Tests\Feature;
 
 use App\Domain\Expenses\Models\Expense;
 use App\Domain\Expenses\Models\TripBudget;
-use App\Domain\Itinerary\Models\ItineraryItem;
-use App\Domain\Itinerary\Models\TripDay;
 use App\Domain\Stays\Models\Stay;
+use App\Models\ItineraryItem;
 use App\Models\Trip;
+use App\Models\TripDay;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
