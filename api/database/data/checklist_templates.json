@@ -1,0 +1,265 @@
+{
+    "international_essentials": {
+        "title": "International Essentials",
+        "type": "packing",
+        "description": "Essential travel documents, international currency, and core travel gear.",
+        "items": [
+            {
+                "title": "Passport & Visa Copies",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Boarding Passes & Tickets",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Travel Insurance & Health Cards",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Local Currency & Credit Cards",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Universal Power Adapter",
+                "category": "electronics",
+                "quantity": 1
+            },
+            {
+                "title": "Phone Charger & Cables",
+                "category": "electronics",
+                "quantity": 1
+            },
+            {
+                "title": "Portable Power Bank",
+                "category": "electronics",
+                "quantity": 1
+            },
+            {
+                "title": "Personal Medications & First Aid",
+                "category": "health",
+                "quantity": 1
+            },
+            {
+                "title": "Toothbrush & Toothpaste",
+                "category": "toiletries",
+                "quantity": 1
+            },
+            {
+                "title": "TSA-compliant Liquids Bag",
+                "category": "toiletries",
+                "quantity": 1
+            }
+        ]
+    },
+    "electronics_gear": {
+        "title": "Electronics & Tech",
+        "type": "packing",
+        "description": "Chargers, adapters, devices, and entertainment.",
+        "items": [
+            {
+                "title": "Smartphone & Charger",
+                "category": "electronics",
+                "quantity": 1
+            },
+            {
+                "title": "Noise-Cancelling Headphones",
+                "category": "electronics",
+                "quantity": 1
+            },
+            {
+                "title": "Power Bank \/ Battery Pack",
+                "category": "electronics",
+                "quantity": 1
+            },
+            {
+                "title": "Universal Plug Adapter",
+                "category": "electronics",
+                "quantity": 1
+            },
+            {
+                "title": "Laptop \/ Tablet & Charger",
+                "category": "electronics",
+                "quantity": 1
+            },
+            {
+                "title": "Extra USB Cables",
+                "category": "electronics",
+                "quantity": 2
+            },
+            {
+                "title": "Camera & Memory Cards",
+                "category": "electronics",
+                "quantity": 1
+            }
+        ]
+    },
+    "clothing_apparel": {
+        "title": "Clothing & Apparel",
+        "type": "packing",
+        "description": "Apparel, shoes, and layers for the journey.",
+        "items": [
+            {
+                "title": "T-Shirts & Tops",
+                "category": "clothing",
+                "quantity": 5
+            },
+            {
+                "title": "Pants & Shorts",
+                "category": "clothing",
+                "quantity": 3
+            },
+            {
+                "title": "Underwear & Socks",
+                "category": "clothing",
+                "quantity": 5
+            },
+            {
+                "title": "Sleepwear & Pajamas",
+                "category": "clothing",
+                "quantity": 2
+            },
+            {
+                "title": "Lightweight Jacket or Fleece",
+                "category": "clothing",
+                "quantity": 1
+            },
+            {
+                "title": "Comfortable Walking Shoes",
+                "category": "clothing",
+                "quantity": 1
+            },
+            {
+                "title": "Rain Jacket or Umbrella",
+                "category": "clothing",
+                "quantity": 1
+            }
+        ]
+    },
+    "toiletries_health": {
+        "title": "Toiletries & Health",
+        "type": "packing",
+        "description": "Hygiene essentials, skin protection, and health items.",
+        "items": [
+            {
+                "title": "Toothbrush & Floss",
+                "category": "toiletries",
+                "quantity": 1
+            },
+            {
+                "title": "Travel Size Shampoo & Body Wash",
+                "category": "toiletries",
+                "quantity": 1
+            },
+            {
+                "title": "Deodorant",
+                "category": "toiletries",
+                "quantity": 1
+            },
+            {
+                "title": "Sunscreen & Lip Balm",
+                "category": "toiletries",
+                "quantity": 1
+            },
+            {
+                "title": "Pain Relievers & Prescription Meds",
+                "category": "health",
+                "quantity": 1
+            },
+            {
+                "title": "Bandages & Antiseptic Wipes",
+                "category": "health",
+                "quantity": 1
+            },
+            {
+                "title": "Motion Sickness \/ Allergy Meds",
+                "category": "health",
+                "quantity": 1
+            }
+        ]
+    },
+    "all_essentials": {
+        "title": "Trip Packing Essentials",
+        "type": "packing",
+        "description": "Comprehensive checklist covering documents, electronics, clothing, toiletries, and health.",
+        "items": []
+    },
+    "departure_day": {
+        "title": "Departure Day Checklist",
+        "type": "departure",
+        "description": "Final day checklist before leaving home: keys, appliances, passports, and luggage checks.",
+        "items": [
+            {
+                "title": "Check flight status & online check-in",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Physical passport, ID & visa in hand",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Luggage weighed & luggage tags attached",
+                "category": "gear",
+                "quantity": 1
+            },
+            {
+                "title": "Water bottle emptied before airport security",
+                "category": "gear",
+                "quantity": 1
+            },
+            {
+                "title": "House keys, wallet & phone in personal bag",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Turn off home appliances & lock doors\/windows",
+                "category": "other",
+                "quantity": 1
+            }
+        ]
+    },
+    "return_trip": {
+        "title": "Return Trip Checklist",
+        "type": "return",
+        "description": "Hotel room departure checks, souvenir packing, tax-free receipts, and airport return transit.",
+        "items": [
+            {
+                "title": "Check hotel room safe & wardrobe",
+                "category": "other",
+                "quantity": 1
+            },
+            {
+                "title": "Return room keys & settle hotel bill",
+                "category": "other",
+                "quantity": 1
+            },
+            {
+                "title": "Souvenirs & tax-free receipts organized",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Repack liquids in checked luggage",
+                "category": "gear",
+                "quantity": 1
+            },
+            {
+                "title": "Passport, return tickets & boarding passes ready",
+                "category": "documents",
+                "quantity": 1
+            },
+            {
+                "title": "Confirm airport return transit & departure terminal",
+                "category": "other",
+                "quantity": 1
+            }
+        ]
+    }
+}
