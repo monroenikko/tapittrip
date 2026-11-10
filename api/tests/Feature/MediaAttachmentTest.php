@@ -140,6 +140,7 @@ final class MediaAttachmentTest extends TestCase
         $media = MediaAttachment::query()->where('attachable_id', $item->id)->firstOrFail();
         $deleteResp = $this->deleteJson("/api/v1/trips/{$trip->id}/media/{$media->id}");
         $deleteResp->assertNoContent();
+        $this->assertSoftDeleted('media_attachments', ['id' => $media->id]);
 
         $item->refresh();
         $this->assertNull($item->photo_url);

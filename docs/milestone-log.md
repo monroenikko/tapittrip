@@ -10,6 +10,22 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-10 — Universal Soft Deletes Across All Database Tables and Models
+
+### Completed
+
+- **Database Migration (`database/migrations/2026_11_10_010000_add_soft_deletes_to_all_tables.php`)**:
+  - Added `softDeletes()` (`deleted_at` timestamp) to all remaining 19 application tables: `trip_members`, `places`, `trip_days`, `checklists`, `checklist_items`, `media_attachments`, `user_devices`, `notification_preferences`, `reminders`, `visit_events`, `sync_operations`, `sync_cursors`, `airports`, `airport_terminals`, `airport_lounges`, `trip_budgets`, `expense_splits`, `expense_settlements`, and `countries`.
+  - Migrated both development (`tapittrip`) and test (`tapittrip_test`) databases.
+- **Eloquent Models (`app/Models/`)**:
+  - Added `Illuminate\Database\Eloquent\SoftDeletes` trait to all 19 previously unsoft-deleted models.
+  - **100% of application models (25 of 25)** now use `SoftDeletes`, preventing any accidental hard deletes.
+- **Test Suite Updates**:
+  - Updated `ChecklistTest` to assert `$this->assertSoftDeleted(...)`.
+  - Added soft delete verification in `MediaAttachmentTest`.
+  - All 137 tests passed (1,897 assertions) with 0 failures.
+  - Laravel Pint verified with 0 formatting issues.
+
 ## 2026-11-10 — Architecture Simplification: Feature 11 (Weather) & Feature 12 (Identity) — Complete Backend Migration
 
 ### Completed

@@ -44,9 +44,17 @@ Data that can change, expand, or be updated in the future must not be hardcoded 
 4. **Weather City Coordinates Catalog**:
    - Coordinates and destination names for global cities are stored in `database/data/city_coordinates.json` and cached via `Cache::rememberForever`, removing hardcoded arrays from `WeatherService`.
 
+### 3. Universal Soft Deletes Across All Application Tables
+To guarantee auditability, avoid accidental data loss, and support offline-first sync tombstone tracking:
+- **No Hard Deletes**: Hard deletion is prohibited on application domain tables.
+- **Database Schema**: Every application table includes a nullable timestamp `deleted_at` column added via `$table->softDeletes()`.
+- **Eloquent Models**: Every Eloquent model in `app/Models/` uses Laravel's `Illuminate\Database\Eloquent\SoftDeletes` trait.
+- **Framework Tables Excluded**: Ephemeral and internal framework infrastructure tables (`sessions`, `cache`, `jobs`, `personal_access_tokens`) retain standard lifecycle management.
+
 ## Consequences
 
 - **Readability & Maintainability**: Reduced code sprawl and eliminated dozens of single-action classes.
+- **Data Protection & Auditability**: Soft deletes prevent irreversible data destruction and allow restoration or historic auditing across trips, members, checklists, media, and expenses.
 - **Dynamic Updates**: Reference data (countries, currencies, city aliases) can be updated directly via migrations, seeders, or database updates without altering PHP source code.
 - **Zero Breaking Changes**: Public API JSON response envelopes (`{"data": ...}`, `{"error": ...}`) and mobile client compatibility remain 100% intact.
 - **High Performance**: In-memory caching preserves sub-millisecond execution times.

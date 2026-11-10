@@ -182,13 +182,13 @@ final class ChecklistTest extends TestCase
         $this->deleteJson("/api/v1/checklist-items/{$item->id}")
             ->assertNoContent();
 
-        $this->assertDatabaseMissing('checklist_items', ['id' => $item->id]);
+        $this->assertSoftDeleted('checklist_items', ['id' => $item->id]);
 
         // Delete checklist
         $this->deleteJson("/api/v1/checklists/{$checklist->id}")
             ->assertNoContent();
 
-        $this->assertDatabaseMissing('checklists', ['id' => $checklist->id]);
+        $this->assertSoftDeleted('checklists', ['id' => $checklist->id]);
     }
 
     public function test_authorization_isolation_non_members_cannot_access_or_modify_checklists(): void
