@@ -3,12 +3,43 @@
 ## Current milestone
 
 - Milestone: **M9 — Travel Memories, Photos & Group Journal**
-- Status: **Slice 2 Completed**
-- Basis: Approved Milestone M9 plan (`m9-travel-journal-and-memories-plan.md`). Personal and group travel reflections, mood chips, weather, and photo attachments; private by default on creation (`is_shared = false`), with companion sharing (TC-8.1); chronological shared circle activity feed with privacy redaction and idempotent moments stream (TC-8.2).
+- Status: **Completed (All 3 Slices)**
+- Basis: Approved Milestone M9 plan (`m9-travel-journal-and-memories-plan.md`). Personal and group travel reflections, mood chips, weather, and photo attachments; private by default on creation (`is_shared = false`), with companion sharing (TC-8.1); chronological shared circle activity feed with privacy redaction and idempotent moments stream (TC-8.2); automated trip recap, highlights summary, mood journey, and photo story album (Slice 3).
 - Boundary:
   - Slice 1: Personal & Group Travel Journal Entries & Photo Reflections — **Completed**.
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Completed**.
-  - Slice 3: Automated Trip Recap & Story Album — **Next**.
+  - Slice 3: Automated Trip Recap & Story Album — **Completed**.
+- Next Boundary: Milestone M9 is complete; awaiting explicit approval before starting Milestone M10 (Voice & Camera Translation, Offline Language Packs, & Safety Intelligence).
+
+## 2026-11-10 — Milestone M9, Slice 3: Automated Trip Recap & Story Album
+
+### Completed
+
+- **Backend Recap Aggregation (`app/DTOs/Recap/TripRecapData.php`, `app/Services/Recap/TripRecapService.php`)**:
+  - Created `TripRecapService` with constructor DI (`ExpenseService`).
+  - `getRecap(Trip $trip, User $user)` enforces trip membership (`403` for non-members) and aggregates:
+    - **Trip Metadata**: ID, title, destination, start/end dates, calculated duration days, and status.
+    - **Trip Highlights**: Visited vs. planned itinerary stops count, completion percentage, stays count, calculated total lodging nights across all stays, and accepted circle companion count.
+    - **Photo Story Album & Emotional Journey**: Extracts accessible photos (`photos` array), top moments, mood frequency breakdown, and top mood highlight across own and shared (`is_shared = true`) journal entries. Strictly excludes unshared reflections from other companions (TC-8.1) and soft-deleted records.
+    - **Expense Footprint Summary**: Aggregates trip total spent in base destination/budget currency with symbol formatting (supporting both zero-decimal currencies like JPY/KRW and cent-based currencies like USD/PHP), expense count, top spending category, and budget utilization percentage.
+- **API Controller, Resource, & Contract (`TripRecapController`, `TripRecapResource`, `docs/api/openapi.yaml`)**:
+  - Registered `GET /api/v1/trips/{trip}/recap` under `auth:sanctum` middleware.
+  - Normalized empty `mood_breakdown` maps to JSON `{}` in `TripRecapResource` to prevent client deserialization errors.
+  - Updated `docs/api/openapi.yaml` with `GET /trips/{trip}/recap` and schemas (`TripRecap`, `TripRecapPhoto`, `TripRecapMoment`).
+- **Mobile Client (`client/lib/features/journal/`)**:
+  - Created domain models (`TripRecap`, `TripRecapInfo`, `TripRecapHighlights`, `TripRecapStoryAlbum`, `TripRecapPhoto`, `TripRecapMoment`, `TripRecapExpenseSummary`).
+  - Extended `JournalRepository` with `getTripRecap(tripId)` and `FlutterSecureStorage` caching (`cached_recap_{tripId}`) for offline viewing.
+  - Added `tripRecapProvider` Riverpod `FutureProvider.family`.
+  - Implemented `TripRecapPage` with hero showcase banner (country flag emoji, duration badge), 4-card highlights stat grid with progress indicator, horizontal Photo Story Album gallery with tap-to-zoom preview, Emotional Journey mood breakdown chips, and Top Moments story stream.
+  - Wired `/trips/:tripId/recap` into `AppRouter`, `TripItineraryPage` overflow menu (*"Story Album & Recap"*), and `TripJournalPage` app bar.
+- **Automated Verification**:
+  - Backend Feature Tests (`api/tests/Feature/TripRecapTest.php`, 8 tests, 52 assertions): verified highlights, stays/nights math, currency formatting, empty trip safety, `401` unauthenticated, `403` outsider denial, strict exclusion of unshared entries from other users, and exclusion of soft-deleted items.
+  - Full backend suite: `./vendor/bin/sail exec -e DB_CONNECTION=pgsql -e DB_DATABASE=tapittrip_test laravel.test php artisan test` $\rightarrow$ **155/155 tests passed (2,000 assertions)**.
+  - Backend Pint: `./vendor/bin/sail pint` $\rightarrow$ **0 style issues**.
+  - Mobile Flutter Tests (`client/test/trip_recap_test.dart`, 6 tests): model serialization, null-safe deserialization, repository caching & offline fallback, and `TripRecapPage` widget rendering/error recovery.
+  - Full mobile suite: `cd client && flutter test` $\rightarrow$ **175/175 tests passed**.
+  - Mobile Analyzer & Formatter: `cd client && dart format lib/ test/ && flutter analyze` $\rightarrow$ **0 issues found**.
+- **Feature Documentation**: Updated `docs/features/travel-journal-and-memories.md`.
 
 ## 2026-11-10 — Milestone M9, Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2)
 

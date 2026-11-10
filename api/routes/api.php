@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
 use App\Http\Controllers\Api\V1\TripExpenseController;
 use App\Http\Controllers\Api\V1\TripJournalController;
+use App\Http\Controllers\Api\V1\TripRecapController;
 use App\Http\Controllers\Api\V1\TripTodayController;
 use App\Http\Controllers\Api\V1\TripWeatherController;
 use App\Http\Controllers\Api\V1\VisitEventController;
@@ -97,6 +98,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/journal-entries/{entry}/photos', [TripJournalController::class, 'uploadPhoto'])->name('journal-entries.photos.upload');
 
         Route::get('/trips/{trip}/feed', [ActivityFeedController::class, 'index'])->name('trips.feed.index');
+        Route::get('/trips/{trip}/recap', [TripRecapController::class, 'show'])->name('trips.recap.show');
 
         Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');
         Route::post('/trips/{trip}/checklists', [ChecklistController::class, 'store'])->name('trips.checklists.store');

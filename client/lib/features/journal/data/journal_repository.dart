@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/network/api_client.dart';
 import '../domain/models/journal_entry.dart';
+import '../domain/models/trip_recap.dart';
 
 class JournalRepository {
   JournalRepository({required this.apiClient, FlutterSecureStorage? storage})
@@ -147,6 +148,29 @@ class JournalRepository {
     );
     final data = _extractData(response) as Map<String, dynamic>;
     return JournalEntry.fromJson(data);
+  }
+
+  Future<TripRecap> getTripRecap(String tripId) async {
+    try {
+      final response = await apiClient.get('/trips/$tripId/recap');
+      final rawData = _extractData(response);
+      final mapData = Map<String, dynamic>.from(rawData as Map);
+      final recap = TripRecap.fromJson(mapData);
+
+      await _storage.write(
+        key: 'cached_recap_$tripId',
+        value: jsonEncode(mapData),
+      );
+
+      return recap;
+    } catch (_) {
+      final cached = await _storage.read(key: 'cached_recap_$tripId');
+      if (cached != null) {
+        final mapData = Map<String, dynamic>.from(jsonDecode(cached) as Map);
+        return TripRecap.fromJson(mapData);
+      }
+      rethrow;
+    }
   }
 }
 

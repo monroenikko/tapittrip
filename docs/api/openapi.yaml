@@ -2833,6 +2833,38 @@ paths:
         "403":
           description: Forbidden (Not a member of this trip).
 
+  /trips/{trip}/recap:
+    get:
+      operationId: getTripRecap
+      summary: Retrieve the automated trip recap, story album, highlights, and expense footprint (Milestone M9, Slice 3)
+      tags:
+        - Travel Journal & Memories
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Automated trip recap and story album details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripRecap"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (Not a member of this trip).
+
 components:
   securitySchemes:
     BearerAuth:
@@ -5455,6 +5487,190 @@ components:
         created_at:
           type: string
           format: date-time
+
+    TripRecap:
+      type: object
+      required:
+        - trip
+        - highlights
+        - story_album
+        - expense_summary
+      properties:
+        trip:
+          type: object
+          required:
+            - id
+            - title
+            - destination
+            - status
+          properties:
+            id:
+              type: string
+              format: uuid
+            title:
+              type: string
+            destination:
+              type: string
+            start_date:
+              type: string
+              format: date
+              nullable: true
+            end_date:
+              type: string
+              format: date
+              nullable: true
+            duration_days:
+              type: integer
+              nullable: true
+            status:
+              type: string
+        highlights:
+          type: object
+          required:
+            - total_places_visited
+            - total_places_planned
+            - completion_rate_percentage
+            - total_stays
+            - total_nights
+            - total_companions
+          properties:
+            total_places_visited:
+              type: integer
+            total_places_planned:
+              type: integer
+            completion_rate_percentage:
+              type: integer
+            total_stays:
+              type: integer
+            total_nights:
+              type: integer
+            total_companions:
+              type: integer
+        story_album:
+          type: object
+          required:
+            - total_photos
+            - photos
+            - moments
+            - mood_breakdown
+          properties:
+            total_photos:
+              type: integer
+            photos:
+              type: array
+              items:
+                $ref: "#/components/schemas/TripRecapPhoto"
+            moments:
+              type: array
+              items:
+                $ref: "#/components/schemas/TripRecapMoment"
+            mood_breakdown:
+              type: object
+              additionalProperties:
+                type: integer
+            top_mood:
+              type: string
+              nullable: true
+        expense_summary:
+          type: object
+          required:
+            - currency
+            - total_spent_minor
+            - formatted_total_spent
+            - expenses_count
+            - has_budget
+          properties:
+            currency:
+              type: string
+              example: JPY
+            total_spent_minor:
+              type: integer
+              example: 154200
+            formatted_total_spent:
+              type: string
+              example: "¥154,200"
+            expenses_count:
+              type: integer
+              example: 9
+            top_category:
+              type: string
+              nullable: true
+              example: dining
+            has_budget:
+              type: boolean
+            budget_utilization_percent:
+              type: number
+              nullable: true
+
+    TripRecapPhoto:
+      type: object
+      required:
+        - url
+        - caption
+        - author_name
+      properties:
+        url:
+          type: string
+          format: uri
+        caption:
+          type: string
+        date:
+          type: string
+          format: date
+          nullable: true
+        author_name:
+          type: string
+        mood:
+          type: string
+          nullable: true
+        location_name:
+          type: string
+          nullable: true
+
+    TripRecapMoment:
+      type: object
+      required:
+        - id
+        - title
+        - content
+        - author_name
+        - is_shared
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        author_name:
+          type: string
+        author_avatar_url:
+          type: string
+          format: uri
+          nullable: true
+        entry_date:
+          type: string
+          format: date
+          nullable: true
+        mood:
+          type: string
+          nullable: true
+        mood_emoji:
+          type: string
+          nullable: true
+        weather:
+          type: string
+          nullable: true
+        location_name:
+          type: string
+          nullable: true
+        cover_photo:
+          type: string
+          format: uri
+          nullable: true
+        is_shared:
+          type: boolean
 
 
 

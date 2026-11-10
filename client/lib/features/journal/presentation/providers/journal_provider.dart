@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/journal_repository.dart';
 import '../../domain/models/journal_entry.dart';
+import '../../domain/models/trip_recap.dart';
 
 class TripJournalNotifier extends AsyncNotifier<List<JournalEntry>> {
   TripJournalNotifier(this.tripId);
@@ -122,3 +123,11 @@ final tripJournalProvider =
       List<JournalEntry>,
       String
     >((tripId) => TripJournalNotifier(tripId));
+
+final tripRecapProvider = FutureProvider.family<TripRecap, String>((
+  ref,
+  tripId,
+) async {
+  final repo = ref.watch(journalRepositoryProvider);
+  return repo.getTripRecap(tripId);
+});

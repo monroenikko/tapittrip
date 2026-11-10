@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../trips/presentation/providers/trip_list_provider.dart';
 import '../../domain/models/journal_entry.dart';
@@ -165,6 +166,11 @@ class _TripJournalPageState extends ConsumerState<TripJournalPage> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.collections_bookmark_outlined),
+            tooltip: 'Story Album & Recap',
+            onPressed: () => context.push('/trips/${widget.tripId}/recap'),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh Journal',

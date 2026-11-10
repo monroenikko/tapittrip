@@ -10,6 +10,7 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/expenses/presentation/pages/trip_expenses_page.dart';
 import '../../features/itinerary/presentation/pages/trip_itinerary_page.dart';
 import '../../features/journal/presentation/pages/trip_journal_page.dart';
+import '../../features/journal/presentation/pages/trip_recap_page.dart';
 import '../../features/lounges/presentation/pages/airport_lounge_finder_page.dart';
 import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
 import '../../features/today/presentation/pages/today_dashboard_page.dart';
@@ -100,6 +101,13 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final tripId = state.pathParameters['tripId']!;
               return TripJournalPage(tripId: tripId);
+            },
+          ),
+          GoRoute(
+            path: ':tripId/recap',
+            builder: (context, state) {
+              final tripId = state.pathParameters['tripId']!;
+              return TripRecapPage(tripId: tripId);
             },
           ),
         ],

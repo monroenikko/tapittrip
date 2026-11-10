@@ -31,6 +31,15 @@ To respect traveler privacy in shared trip circles, every reflection is **strict
 - When an author unshares (`is_shared = false`) or deletes a journal entry, the corresponding activity feed event is immediately soft-deleted, preventing any companion from seeing past references or cached summaries (TC-8.1 & TC-8.2).
 - Companions cannot edit or delete reflections authored by other travelers (enforced server-side with HTTP 403 Forbidden).
 
+### 3. Automated Trip Recap & Story Album (Slice 3)
+1. From the **Itinerary** overflow menu or **Memories & Journal** header, tap **Story Album & Recap**.
+2. TapItTrip dynamically aggregates:
+   - **Trip Metadata & Highlights**: Travel duration (days), stops visited vs. planned with completion rate progress bar, total stays and calculated lodging nights, and travel circle companions count.
+   - **Photo Story Album Carousel**: Curated horizontal gallery of uploaded photos from shared circle entries and your personal reflections, with tap-to-zoom modal preview.
+   - **Emotional Journey & Mood Breakdown**: Frequency summary and top mood highlight across recorded journal reflections.
+   - **Expense Footprint Summary**: Total spent formatted in trip destination/budget currency, logged expenses count, and top spending category.
+3. All data is cached locally in `FlutterSecureStorage` (`cached_recap_{tripId}`) for offline trip review.
+
 ---
 
 ## Architecture & API Contracts
@@ -72,6 +81,7 @@ To respect traveler privacy in shared trip circles, every reflection is **strict
 - `DELETE /api/v1/journal-entries/{entry}`: Soft deletes entry (author or trip owner only).
 - `POST /api/v1/journal-entries/{entry}/photos`: Uploads image file and appends to `photos` array (author only).
 - `GET /api/v1/trips/{trip}/feed`: Retrieves chronological circle activity stream and shared moments (TC-8.2, cursor pagination supported).
+- `GET /api/v1/trips/{trip}/recap`: Retrieves the automated trip recap, highlights, photo story album, mood breakdown, and expense summary (Slice 3).
 
 ---
 
@@ -86,13 +96,22 @@ To respect traveler privacy in shared trip circles, every reflection is **strict
 - **Safe Response Envelope**: All endpoints return responses via the standardized `ApiResponse` envelope (`{"data": ...}`).
 
 ### Offline-First Storage
-- The mobile client caches all trip journal reflections in encrypted `FlutterSecureStorage` (`cached_journal_{tripId}`).
-- When offline or in airplane mode, travelers can continue reading past reflections and viewing cached entries.
+- The mobile client caches all trip journal reflections in encrypted `FlutterSecureStorage` (`cached_journal_{tripId}`) and trip recaps (`cached_recap_{tripId}`).
+- When offline or in airplane mode, travelers can continue reading past reflections, viewing cached entries, and reviewing their Trip Story Album.
 
 ---
 
 ## Automated Verification
 
+- **Backend Feature Tests (`TripRecapTest.php`)** (8 tests, 52 assertions):
+  - `test_trip_member_can_view_trip_recap_with_highlights_album_and_expenses`
+  - `test_outsider_cannot_view_trip_recap_forbidden`
+  - `test_recap_excludes_unshared_journal_entries_from_other_users_strict_privacy`
+  - `test_recap_handles_empty_trip_without_activities_stays_or_expenses`
+  - `test_recap_calculates_nights_across_multiple_stays`
+  - `test_unauthenticated_request_is_rejected`
+  - `test_soft_deleted_entries_and_activities_are_omitted_from_recap`
+  - `test_recap_formats_cents_based_currency_appropriately`
 - **Backend Feature Tests (`ActivityFeedTest.php`)** (8 tests, 36 assertions):
   - `test_trip_member_can_view_activity_feed_with_actor_and_metadata`
   - `test_outsider_cannot_view_trip_activity_feed` (403 Forbidden)
@@ -108,13 +127,13 @@ To respect traveler privacy in shared trip circles, every reflection is **strict
   - `test_author_can_update_journal_entry_and_toggle_sharing`
   - `test_non_author_companion_cannot_update_or_delete_entry`
   - `test_author_can_upload_photo_to_journal_entry`
-  - Full suite passes: **145/145 tests, 1,933 assertions**.
+  - Full suite passes: **155/155 tests, 2,000 assertions**.
 - **Backend Pint**: 0 style issues.
-- **Mobile Flutter Tests**: `client/test/journal_test.dart` (10 tests):
-  - Model serialization & mood/privacy/weather getters
-  - Repository caching and offline fallback
-  - Riverpod `TripJournalNotifier` state management & sharing toggles
-  - `JournalEntryCard`, `AddJournalEntrySheet`, and `TripJournalPage` widget interactions & filtering
-  - Full mobile suite passes: **136/136 tests**.
+- **Mobile Flutter Tests**: `client/test/journal_test.dart` (10 tests) & `client/test/trip_recap_test.dart` (6 tests):
+  - Model serialization & mood/privacy/weather/recap getters
+  - Repository caching and offline fallback (`cached_journal_{tripId}`, `cached_recap_{tripId}`)
+  - Riverpod `TripJournalNotifier` & `tripRecapProvider` state management & sharing toggles
+  - `JournalEntryCard`, `AddJournalEntrySheet`, `TripJournalPage`, and `TripRecapPage` widget interactions & filtering
+  - Full mobile suite passes: **175/175 tests**.
 - **Flutter Analyzer**: 0 issues (`flutter analyze` clean).
 - **Dart Formatter**: 100% formatted.

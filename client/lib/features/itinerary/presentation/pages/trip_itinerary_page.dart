@@ -200,6 +200,8 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 context.push('/trips/${widget.tripId}/expenses');
               } else if (value == 'journal') {
                 context.push('/trips/${widget.tripId}/journal');
+              } else if (value == 'recap') {
+                context.push('/trips/${widget.tripId}/recap');
               } else if (value == 'favorite') {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -238,6 +240,16 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                     Icon(Icons.auto_stories_outlined, size: 20),
                     SizedBox(width: 8),
                     Text('Memories & Journal'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'recap',
+                child: Row(
+                  children: [
+                    Icon(Icons.collections_bookmark_outlined, size: 20),
+                    SizedBox(width: 8),
+                    Text('Story Album & Recap'),
                   ],
                 ),
               ),
