@@ -10,6 +10,28 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-10 — Architecture Simplification: Feature 3 (Stays) to Service-Model-DTO Pattern
+
+### Completed
+
+- **Feature-by-Feature Architecture Migration**:
+  - Migrated `Stays` (accommodations & luggage-aware transport comparison) from DDD layer to standard Laravel Service-Model-DTO architecture.
+  - **Models (`app/Models/`)**:
+    - Moved `Stay.php` to `app/Models/` (namespace `App\Models`).
+    - Decoupled and updated relationships in `Trip.php`, `ItineraryItem.php`, `Expense.php`, and `TodaySummaryResult.php`.
+  - **DTOs (`app/DTOs/Stays/`)**:
+    - Consolidated `CreateStayData`, `UpdateStayData`, and `CompareStayTransportData` into `app/DTOs/Stays/`.
+  - **Services (`app/Services/Stays/`)**:
+    - Created unified `StayService` (`create`, `update`, `delete`, `compareTransport`).
+    - Moved `CompareStayTransportService`, `StayTransitService`, and `GeminiTransitService` under `app/Services/Stays/`.
+  - **Controllers (`app/Http/Controllers/Api/V1/`)**:
+    - Simplified `StayController` and `StayTransportController` to inject unified `StayService` directly.
+  - **Removed Legacy Paths**:
+    - Removed `app/Domain/Stays/` and `app/Application/Stays/`.
+- **Verification**:
+  - Ran `php artisan test`: All 127 tests passed (787 assertions) in 14.14s.
+  - Ran `./vendor/bin/pint`: Formatted and cleaned all modified files.
+
 ## 2026-11-10 — Architecture Simplification: Feature 2 (Itinerary) to Service-Model-DTO Pattern
 
 ### Completed
