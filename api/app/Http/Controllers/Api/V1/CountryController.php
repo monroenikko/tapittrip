@@ -31,4 +31,3 @@ final class CountryController extends Controller
         return CountryResource::collection($query->get());
     }
 }
-

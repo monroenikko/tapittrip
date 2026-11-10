@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Sync\Data;
+namespace App\DTOs\Sync;
 
 final readonly class SyncOperationItemData
 {

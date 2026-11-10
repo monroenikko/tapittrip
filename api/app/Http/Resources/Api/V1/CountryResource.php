@@ -29,4 +29,3 @@ final class CountryResource extends JsonResource
         ];
     }
 }
-

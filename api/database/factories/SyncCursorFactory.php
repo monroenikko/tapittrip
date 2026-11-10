@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Sync\Models\SyncCursor;
+use App\Models\SyncCursor;
 use App\Models\Trip;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;

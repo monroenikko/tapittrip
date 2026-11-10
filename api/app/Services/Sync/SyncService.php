@@ -2,27 +2,34 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Sync\Services;
+namespace App\Services\Sync;
 
-use App\Application\Sync\Data\PushSyncOperationsData;
-use App\Application\Sync\Data\SyncOperationItemData;
-use App\Application\Sync\Data\SyncOperationResult;
-use App\Domain\Sync\Models\SyncCursor;
-use App\Domain\Sync\Models\SyncOperation;
+use App\DTOs\Sync\PullSyncChangesData;
+use App\DTOs\Sync\PullSyncResult;
+use App\DTOs\Sync\PushSyncOperationsData;
+use App\DTOs\Sync\SyncOperationItemData;
+use App\DTOs\Sync\SyncOperationResult;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\ItineraryItem;
 use App\Models\Stay;
+use App\Models\SyncCursor;
+use App\Models\SyncOperation;
 use App\Models\Trip;
+use App\Models\TripMember;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class PushSyncOperationsService
+final class SyncService
 {
     /**
+     * Push a batch of client offline mutations, verifying idempotency and permissions.
+     *
      * @return array<int, SyncOperationResult>
      */
-    public function execute(PushSyncOperationsData $data): array
+    public function push(PushSyncOperationsData $data): array
     {
         $user = User::findOrFail($data->userId);
         $results = [];
@@ -108,6 +115,87 @@ final class PushSyncOperationsService
         });
 
         return $results;
+    }
+
+    /**
+     * Pull updates from the server using monotonic sequence cursors.
+     */
+    public function pull(PullSyncChangesData $data): PullSyncResult
+    {
+        $user = User::findOrFail($data->userId);
+
+        $query = SyncOperation::query()
+            ->where('server_sequence', '>', $data->cursor)
+            ->where('status', 'accepted')
+            ->orderBy('server_sequence', 'asc');
+
+        if ($data->tripId !== null) {
+            $trip = Trip::find($data->tripId);
+            if ($trip === null) {
+                throw new NotFoundHttpException('Trip not found');
+            }
+            if (! $trip->hasMember($user)) {
+                throw new AccessDeniedHttpException('User is not a member of this trip');
+            }
+
+            $query->where('trip_id', $data->tripId);
+        } else {
+            $userTripIds = TripMember::where('user_id', $user->id)->pluck('trip_id')->all();
+
+            $query->where(function ($q) use ($user, $userTripIds): void {
+                $q->where('user_id', $user->id);
+                if ($userTripIds !== []) {
+                    $q->orWhereIn('trip_id', $userTripIds);
+                }
+            });
+        }
+
+        $records = $query->limit($data->limit + 1)->get();
+        $hasMore = $records->count() > $data->limit;
+        $items = $hasMore ? $records->slice(0, $data->limit) : $records;
+
+        $newCursor = $data->cursor;
+        $operations = [];
+
+        foreach ($items as $op) {
+            $operations[] = [
+                'id' => $op->id,
+                'operation_id' => $op->operation_id,
+                'trip_id' => $op->trip_id,
+                'device_key' => $op->device_key,
+                'entity_type' => $op->entity_type,
+                'entity_id' => $op->entity_id,
+                'operation_type' => $op->operation_type,
+                'payload' => $op->payload,
+                'base_version' => $op->base_version,
+                'server_sequence' => $op->server_sequence,
+                'created_at' => $op->created_at?->toIso8601String(),
+            ];
+
+            if ($op->server_sequence > $newCursor) {
+                $newCursor = $op->server_sequence;
+            }
+        }
+
+        // Update cursor in database if we moved forward
+        if ($newCursor > $data->cursor && $data->deviceKey !== '') {
+            SyncCursor::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'device_key' => $data->deviceKey,
+                    'trip_id' => $data->tripId,
+                ],
+                [
+                    'last_server_sequence' => $newCursor,
+                ]
+            );
+        }
+
+        return new PullSyncResult(
+            cursor: $newCursor,
+            operations: $operations,
+            hasMore: $hasMore,
+        );
     }
 
     private function applyMutation(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult

@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Domain\Sync\Models;
+namespace App\Models;
 
-use App\Models\Trip;
-use App\Models\User;
 use Database\Factories\SyncCursorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
