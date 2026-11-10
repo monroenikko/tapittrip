@@ -230,15 +230,16 @@ final class ItineraryService
     }
 
     /**
-     * Reorder itinerary items by their IDs.
+     * Reorder itinerary items by their IDs and optional day reassignments.
      *
      * @param  array<int, string>  $orderedItemIds
+     * @param  array<string, string|null>  $dayAssignments
      * @return Collection<int, ItineraryItem>
      */
-    public function reorderItems(Trip $trip, array $orderedItemIds): Collection
+    public function reorderItems(Trip $trip, array $orderedItemIds, array $dayAssignments = []): Collection
     {
-        return DB::transaction(function () use ($trip, $orderedItemIds): Collection {
-            /** @var Collection<int, ItineraryItem> $items */
+        return DB::transaction(function () use ($trip, $orderedItemIds, $dayAssignments): Collection {
+            /** @var Collection<string, ItineraryItem> $items */
             $items = ItineraryItem::query()
                 ->where('trip_id', $trip->id)
                 ->whereIn('id', $orderedItemIds)
@@ -251,13 +252,55 @@ final class ItineraryService
                 ]);
             }
 
+            if ($dayAssignments !== []) {
+                foreach ($dayAssignments as $itemId => $dayId) {
+                    if (! $items->has((string) $itemId)) {
+                        throw ValidationException::withMessages([
+                            'day_assignments' => ['Day assignments must reference items included in the reorder list.'],
+                        ]);
+                    }
+                }
+
+                $nonNullDayIds = array_values(array_unique(array_filter(
+                    $dayAssignments,
+                    static fn (?string $dayId): bool => $dayId !== null && $dayId !== '',
+                )));
+
+                if ($nonNullDayIds !== []) {
+                    $validDayCount = TripDay::query()
+                        ->where('trip_id', $trip->id)
+                        ->whereIn('id', $nonNullDayIds)
+                        ->count();
+
+                    if ($validDayCount !== count($nonNullDayIds)) {
+                        throw ValidationException::withMessages([
+                            'day_assignments' => ['One or more target trip days do not belong to this trip.'],
+                        ]);
+                    }
+                }
+            }
+
             foreach ($orderedItemIds as $index => $id) {
                 $item = $items->get($id);
-                if ($item !== null && $item->sort_order !== $index) {
-                    $item->update([
-                        'sort_order' => $index,
-                        'version' => $item->version + 1,
-                    ]);
+                if ($item === null) {
+                    continue;
+                }
+
+                $updates = [];
+                if ($item->sort_order !== $index) {
+                    $updates['sort_order'] = $index;
+                }
+
+                if (array_key_exists($id, $dayAssignments)) {
+                    $targetDayId = $dayAssignments[$id] !== '' ? $dayAssignments[$id] : null;
+                    if ($item->trip_day_id !== $targetDayId) {
+                        $updates['trip_day_id'] = $targetDayId;
+                    }
+                }
+
+                if ($updates !== []) {
+                    $updates['version'] = $item->version + 1;
+                    $item->update($updates);
                 }
             }
 

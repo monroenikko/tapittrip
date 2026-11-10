@@ -3562,6 +3562,13 @@ components:
           items:
             type: string
             format: uuid
+        day_assignments:
+          type: object
+          description: Optional map of item UUID to target trip_day_id UUID (or null for unscheduled)
+          additionalProperties:
+            type: string
+            format: uuid
+            nullable: true
 
     Stay:
       type: object

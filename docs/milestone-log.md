@@ -11,6 +11,27 @@
   - Slice 3: Automated Trip Recap & Story Album — **Completed**.
 - Next Boundary: Milestone M9 is complete; awaiting explicit approval before starting Milestone M10 (Voice & Camera Translation, Offline Language Packs, & Safety Intelligence).
 
+## 2026-11-10 — Interactive Card Drag & Drop and Ordinal Number Reordering in Your Itinerary
+
+### Completed
+
+- **Backend Reorder & Day-Reassignment Endpoint (`api/app/Services/Itinerary/ItineraryService.php`, `ReorderItineraryItemsRequest`, `ItineraryItemController`)**:
+  - Updated `POST /api/v1/trips/{trip}/itinerary-items/reorder` to accept optional `day_assignments` (`item_id => trip_day_id|null`) alongside `item_ids` (enforcing `distinct` item UUIDs).
+  - Validates that every target `trip_day_id` belongs to the trip (blocking cross-trip IDOR with HTTP 422), transactionally updates both `sort_order` and `trip_day_id`, increments `version`, and persists cleanly.
+  - Updated `docs/api/openapi.yaml` and added feature tests in `tests/Feature/ItineraryItemTest.php` (12/12 tests, 65 assertions).
+- **Mobile Timeline Drag & Drop and Ordinal Position Sheet (`client/lib/features/itinerary/`)**:
+  - Added drag handle (`Icons.drag_indicator_rounded`) support to `ActivityTimelineCard` and `LiveWeatherActivityTimelineCard`, plus interactive ordinal tap support on `TimelineDayBadge`.
+  - Replaced the flat plain-`ListTile` reorder fallback in `TripItineraryPage` with unified, in-place `ReorderableListView.builder` timeline drag-and-drop supporting:
+    - Dragging cards directly within any Day section (`Day 1`, `Day 2`, ...) or dateless list via immediate `⋮⋮` drag handle or long-press, updating ordinal numbers (`1`, `2`, `3`...) immediately.
+    - Dragging cards across Day headers (`Day 2` $\leftrightarrow$ `Day 1` or unscheduled) to update both ordinal stop position and day assignment atomically.
+    - Preserving hidden days' items intact when a single Day filter chip is selected.
+    - Optimistic local updates in `ItineraryListNotifier` (`applyReorderedItems`, `moveItemToOrdinal`) with cache persistence and automatic rollback + snackbar warning on network failure.
+    - Accessible **Change Stop Order** bottom sheet when tapping any ordinal badge circle (`1`, `2`, `3`) to jump a stop directly to position `#N` or change its Day.
+- **Verification & Feature Docs**:
+  - Updated `docs/features/itinerary-and-places.md`.
+  - Backend: `./vendor/bin/sail pint --test` clean; full suite **158/158 tests (2,014 assertions)** passed.
+  - Mobile: `dart format lib/ test/` (154 files), `flutter analyze` (**0 issues**), `flutter test` (**182/182 tests passed**, including 7 new drag-and-drop / ordinal sheet tests in `client/test/itinerary_test.dart`).
+
 ## 2026-11-10 — Milestone M9, Slice 3: Automated Trip Recap & Story Album
 
 ### Completed

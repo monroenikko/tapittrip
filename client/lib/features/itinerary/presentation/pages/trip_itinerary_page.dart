@@ -13,6 +13,7 @@ import 'package:tapittrip/features/checklists/presentation/widgets/checklist_tem
 import 'package:tapittrip/features/checklists/presentation/widgets/checklists_view.dart';
 import 'package:tapittrip/features/expenses/data/currency_repository.dart';
 import 'package:tapittrip/features/itinerary/domain/models/ai_itinerary_plan.dart';
+import 'package:tapittrip/features/itinerary/domain/models/itinerary_item.dart';
 import 'package:tapittrip/features/itinerary/domain/models/trip_day.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/activity_timeline_card.dart';
@@ -842,7 +843,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
   Widget _buildItineraryTab(
     ThemeData theme,
     ColorScheme colorScheme,
-    List<dynamic> items,
+    List<ItineraryItem> items,
   ) {
     if (items.isEmpty) {
       return Padding(
@@ -881,66 +882,167 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
       );
     }
 
-    if (_isReordering) {
-      return ReorderableListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: items.length,
-        // ignore: deprecated_member_use
-        onReorder: (oldIndex, newIndex) {
-          ref
-              .read(itineraryListProvider(widget.tripId).notifier)
-              .reorder(oldIndex, newIndex);
-        },
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return ListTile(
-            key: ValueKey(item.id),
-            leading: CircleAvatar(
-              radius: 14,
-              backgroundColor: colorScheme.primary,
-              child: Text(
-                '${index + 1}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            title: Text(item.title),
-            subtitle: item.place != null ? Text(item.place!.name) : null,
-            trailing: const Icon(Icons.drag_handle_rounded),
-          );
-        },
-      );
-    }
-
     final days = ref.watch(tripDaysProvider(widget.tripId)).asData?.value ?? [];
 
-    if (days.isEmpty) {
-      return Column(
-        children: List.generate(items.length, (index) {
-          final item = items[index];
-          final isLast = index == items.length - 1;
-
-          return IntrinsicHeight(
+    final reorderHintBanner = _isReordering
+        ? Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: colorScheme.primary.withValues(alpha: 0.35),
+              ),
+            ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TimelineDayBadge(dayNumber: index + 1, isLast: isLast),
-                const SizedBox(width: 12),
+                Icon(
+                  Icons.drag_indicator_rounded,
+                  size: 18,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildTimelineCard(item),
+                  child: Text(
+                    'Drag cards by ⋮⋮ (or tap a number badge) to change order or move between days.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
+                ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  onPressed: () => setState(() => _isReordering = false),
+                  child: const Text('Done'),
                 ),
               ],
             ),
-          );
-        }),
+          )
+        : const SizedBox.shrink();
+
+    if (days.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          reorderHintBanner,
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            proxyDecorator: (child, index, animation) =>
+                _reorderProxyDecorator(child),
+            itemCount: items.length,
+            onReorderItem: (oldIndex, newIndex) async {
+              final ok = await ref
+                  .read(itineraryListProvider(widget.tripId).notifier)
+                  .reorder(oldIndex, newIndex);
+              if (!ok && mounted) {
+                _showReorderErrorSnackBar();
+              }
+            },
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final isLast = index == items.length - 1;
+
+              return ReorderableDelayedDragStartListener(
+                key: ValueKey('item_${item.id}'),
+                index: index,
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TimelineDayBadge(
+                        dayNumber: index + 1,
+                        isFirst: index == 0,
+                        isLast: isLast,
+                        isHighlighted: _isReordering,
+                        onTap: () => _openMoveStopPositionSheet(
+                          item,
+                          allItems: items,
+                          days: const [],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildTimelineCard(
+                            item,
+                            dragHandle: _buildCardDragHandle(
+                              index,
+                              colorScheme,
+                            ),
+                            highlightDrag: _isReordering,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       );
+    }
+
+    // Build flattened interactive timeline rows supporting Day grouping + Drag & Drop
+    final visibleDays = _selectedDayFilterId != null
+        ? [
+            days.firstWhere(
+              (d) => d.id == _selectedDayFilterId,
+              orElse: () => days.first,
+            ),
+          ]
+        : days;
+
+    final rows = <_TimelineRow>[];
+    for (final day in visibleDays) {
+      final dayItems = items.where((it) => it.tripDayId == day.id).toList();
+      rows.add(_DayHeaderRow(day));
+      if (dayItems.isEmpty) {
+        rows.add(_EmptyDayRow(day));
+      } else {
+        for (var idx = 0; idx < dayItems.length; idx++) {
+          rows.add(
+            _ActivityRow(
+              item: dayItems[idx],
+              ordinal: idx + 1,
+              isFirstInDay: idx == 0,
+              isLastInDay: idx == dayItems.length - 1,
+              dayId: day.id,
+            ),
+          );
+        }
+      }
+    }
+
+    if (_selectedDayFilterId == null) {
+      final unscheduledItems = items
+          .where(
+            (it) =>
+                it.tripDayId == null || !days.any((d) => d.id == it.tripDayId),
+          )
+          .toList();
+      if (unscheduledItems.isNotEmpty) {
+        rows.add(_UnscheduledHeaderRow(unscheduledItems.length));
+        for (var idx = 0; idx < unscheduledItems.length; idx++) {
+          rows.add(
+            _ActivityRow(
+              item: unscheduledItems[idx],
+              ordinal: idx + 1,
+              isFirstInDay: idx == 0,
+              isLastInDay: idx == unscheduledItems.length - 1,
+              dayId: null,
+            ),
+          );
+        }
+      }
     }
 
     return Column(
@@ -979,248 +1081,389 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
           ),
         ),
         const SizedBox(height: 16),
+        reorderHintBanner,
 
-        // Timeline Days & Stops
-        ...(_selectedDayFilterId != null
-            ? [
-                _buildDaySection(
-                  days.firstWhere(
-                    (d) => d.id == _selectedDayFilterId,
-                    orElse: () => days.first,
+        // Unified Day-Grouped Reorderable Timeline
+        ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          proxyDecorator: (child, index, animation) =>
+              _reorderProxyDecorator(child),
+          itemCount: rows.length,
+          onReorderItem: (oldIndex, newIndex) =>
+              _handleUnifiedReorder(oldIndex, newIndex, rows, days, items),
+          itemBuilder: (context, index) {
+            final row = rows[index];
+            return switch (row) {
+              _DayHeaderRow(:final day) => Padding(
+                key: ValueKey('day_header_${day.id}'),
+                padding: const EdgeInsets.only(bottom: 12, top: 4),
+                child: _buildDayHeader(day, theme, colorScheme),
+              ),
+              _EmptyDayRow(:final day) => Padding(
+                key: ValueKey('day_empty_${day.id}'),
+                padding: const EdgeInsets.only(bottom: 20),
+                child: _buildEmptyDayPlaceholder(day, theme, colorScheme),
+              ),
+              _UnscheduledHeaderRow(:final count) => Padding(
+                key: const ValueKey('unscheduled_header'),
+                padding: const EdgeInsets.only(bottom: 12, top: 4),
+                child: _buildUnscheduledHeader(count, theme, colorScheme),
+              ),
+              _ActivityRow(
+                :final item,
+                :final ordinal,
+                :final isFirstInDay,
+                :final isLastInDay,
+              ) =>
+                ReorderableDelayedDragStartListener(
+                  key: ValueKey('item_${item.id}'),
+                  index: index,
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TimelineDayBadge(
+                          dayNumber: ordinal,
+                          isFirst: isFirstInDay,
+                          isLast: isLastInDay,
+                          isHighlighted: _isReordering,
+                          onTap: () => _openMoveStopPositionSheet(
+                            item,
+                            allItems: items,
+                            days: days,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              bottom: isLastInDay ? 20 : 12,
+                            ),
+                            child: _buildTimelineCard(
+                              item,
+                              dragHandle: _buildCardDragHandle(
+                                index,
+                                colorScheme,
+                              ),
+                              highlightDrag: _isReordering,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  items
-                      .where((it) => it.tripDayId == _selectedDayFilterId)
-                      .toList(),
-                  theme,
-                  colorScheme,
                 ),
-              ]
-            : [
-                ...days.map((day) {
-                  final dayItems = items
-                      .where((it) => it.tripDayId == day.id)
-                      .toList();
-                  return _buildDaySection(day, dayItems, theme, colorScheme);
-                }),
-                if (items.any(
-                  (it) =>
-                      it.tripDayId == null ||
-                      !days.any((d) => d.id == it.tripDayId),
-                )) ...[
-                  _buildUnscheduledSection(
-                    items
-                        .where(
-                          (it) =>
-                              it.tripDayId == null ||
-                              !days.any((d) => d.id == it.tripDayId),
-                        )
-                        .toList(),
-                    theme,
-                    colorScheme,
-                  ),
-                ],
-              ]),
+            };
+          },
+        ),
       ],
     );
   }
 
-  Widget _buildDaySection(
-    TripDay day,
-    List<dynamic> dayItems,
-    ThemeData theme,
-    ColorScheme colorScheme,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Day Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_rounded,
-                  size: 16,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        day.displayHeader,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      if (day.notes != null &&
-                          day.notes!.isNotEmpty &&
-                          !day.notes!.startsWith('Day '))
-                        Text(
-                          day.notes!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                TextButton.icon(
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text('Add Stop', style: TextStyle(fontSize: 12)),
-                  onPressed: () =>
-                      _openAddActivitySheet(preselectedDayId: day.id),
-                ),
-              ],
+  Widget _reorderProxyDecorator(Widget child) {
+    return Material(
+      elevation: 8,
+      shadowColor: Colors.black26,
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: child,
+    );
+  }
+
+  Widget _buildCardDragHandle(int index, ColorScheme colorScheme) {
+    return ReorderableDragStartListener(
+      index: index,
+      child: Semantics(
+        label: 'Drag to reorder stop',
+        child: Tooltip(
+          message: 'Drag to reorder card',
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: _isReordering
+                ? BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(8),
+                  )
+                : null,
+            child: Icon(
+              Icons.drag_indicator_rounded,
+              size: 20,
+              color: _isReordering
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(height: 12),
+        ),
+      ),
+    );
+  }
 
-          // Day Activities
-          if (dayItems.isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.add_location_alt_outlined,
-                    size: 20,
-                    color: colorScheme.outline,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'No activities planned for ${day.displayTitle} yet.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  FilledButton.tonal(
-                    style: FilledButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    onPressed: () =>
-                        _openAddActivitySheet(preselectedDayId: day.id),
-                    child: const Text('Add Stop'),
-                  ),
-                ],
-              ),
-            )
-          else
-            ...List.generate(dayItems.length, (idx) {
-              final item = dayItems[idx];
-              final isLast = idx == dayItems.length - 1;
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TimelineDayBadge(dayNumber: idx + 1, isLast: isLast),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildTimelineCard(item),
-                      ),
-                    ),
-                  ],
-                ),
+  Future<void> _handleUnifiedReorder(
+    int oldIndex,
+    int newIndex,
+    List<_TimelineRow> rows,
+    List<TripDay> days,
+    List<ItineraryItem> allItems,
+  ) async {
+    if (oldIndex < 0 || oldIndex >= rows.length) return;
+    final movedRow = rows[oldIndex];
+    if (movedRow is! _ActivityRow) return;
+
+    final mutableRows = List<_TimelineRow>.from(rows);
+    // ReorderableList.onReorderItem already adjusts newIndex for removal at oldIndex.
+    // Clamp so an item never drops above the very first Day/Unscheduled header (index 0).
+    final clampedIndex = newIndex.clamp(1, mutableRows.length - 1);
+    mutableRows.removeAt(oldIndex);
+    mutableRows.insert(clampedIndex, movedRow);
+
+    String? currentDayId;
+    final newVisibleBuckets = <String?, List<ItineraryItem>>{};
+    final dayAssignments = <String, String?>{};
+
+    for (final row in mutableRows) {
+      switch (row) {
+        case _DayHeaderRow(:final day):
+          currentDayId = day.id;
+          newVisibleBuckets.putIfAbsent(currentDayId, () => []);
+        case _UnscheduledHeaderRow():
+          currentDayId = null;
+          newVisibleBuckets.putIfAbsent(null, () => []);
+        case _EmptyDayRow():
+          break;
+        case _ActivityRow(:final item):
+          TripDay? targetDay;
+          if (currentDayId != null) {
+            for (final d in days) {
+              if (d.id == currentDayId) {
+                targetDay = d;
+                break;
+              }
+            }
+          }
+          final updatedItem = item.copyWith(
+            tripDayId: currentDayId,
+            clearTripDay: currentDayId == null,
+            day: targetDay,
+          );
+          if (updatedItem.tripDayId != item.tripDayId) {
+            dayAssignments[updatedItem.id] = updatedItem.tripDayId;
+          }
+          newVisibleBuckets
+              .putIfAbsent(currentDayId, () => [])
+              .add(updatedItem);
+      }
+    }
+
+    final finalCompleteItems = <ItineraryItem>[
+      for (final d in days)
+        if (newVisibleBuckets.containsKey(d.id))
+          ...newVisibleBuckets[d.id]!
+        else
+          ...allItems.where((it) => it.tripDayId == d.id),
+      if (newVisibleBuckets.containsKey(null))
+        ...newVisibleBuckets[null]!
+      else if (_selectedDayFilterId != null)
+        ...allItems.where(
+          (it) =>
+              it.tripDayId == null || !days.any((d) => d.id == it.tripDayId),
+        ),
+    ];
+
+    final ok = await ref
+        .read(itineraryListProvider(widget.tripId).notifier)
+        .applyReorderedItems(
+          finalCompleteItems,
+          dayAssignments: dayAssignments.isNotEmpty ? dayAssignments : null,
+        );
+
+    if (!ok && mounted) {
+      _showReorderErrorSnackBar();
+    }
+  }
+
+  void _showReorderErrorSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Unable to save new stop order. Reverted changes.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _openMoveStopPositionSheet(
+    ItineraryItem item, {
+    required List<ItineraryItem> allItems,
+    required List<TripDay> days,
+  }) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _MoveStopPositionSheet(
+        item: item,
+        allItems: allItems,
+        days: days,
+        onConfirm: (targetDayId, targetOrdinalIndex) async {
+          final ok = await ref
+              .read(itineraryListProvider(widget.tripId).notifier)
+              .moveItemToOrdinal(
+                item: item,
+                targetDayId: targetDayId,
+                targetOrdinalIndex: targetOrdinalIndex,
+                knownDays: days,
               );
-            }),
-        ],
+          if (!ok && mounted) {
+            _showReorderErrorSnackBar();
+          }
+        },
       ),
     );
   }
 
-  Widget _buildUnscheduledSection(
-    List<dynamic> unscheduledItems,
+  Widget _buildDayHeader(
+    TripDay day,
     ThemeData theme,
     ColorScheme colorScheme,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
+          Icon(
+            Icons.calendar_today_rounded,
+            size: 16,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.schedule_rounded,
-                  size: 16,
-                  color: colorScheme.secondary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Unscheduled / Flexible Activities (${unscheduledItems.length})',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                Text(
+                  day.displayHeader,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
                   ),
                 ),
+                if (day.notes != null &&
+                    day.notes!.isNotEmpty &&
+                    !day.notes!.startsWith('Day '))
+                  Text(
+                    day.notes!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          ...List.generate(unscheduledItems.length, (idx) {
-            final item = unscheduledItems[idx];
-            final isLast = idx == unscheduledItems.length - 1;
-            return IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TimelineDayBadge(dayNumber: idx + 1, isLast: isLast),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildTimelineCard(item),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+          TextButton.icon(
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: const Text('Add Stop', style: TextStyle(fontSize: 12)),
+            onPressed: () => _openAddActivitySheet(preselectedDayId: day.id),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTimelineCard(dynamic item) {
+  Widget _buildEmptyDayPlaceholder(
+    TripDay day,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.add_location_alt_outlined,
+            size: 20,
+            color: colorScheme.outline,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No activities planned for ${day.displayTitle} yet.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+            onPressed: () => _openAddActivitySheet(preselectedDayId: day.id),
+            child: const Text('Add Stop'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUnscheduledHeader(
+    int count,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.schedule_rounded, size: 16, color: colorScheme.secondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Unscheduled / Flexible Activities ($count)',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineCard(
+    ItineraryItem item, {
+    Widget? dragHandle,
+    bool highlightDrag = false,
+  }) {
     return LiveWeatherActivityTimelineCard(
       tripId: widget.tripId,
       item: item,
+      dragHandle: dragHandle,
+      highlightDrag: highlightDrag,
       onWeatherTap: () => setState(() => _selectedTabIndex = 3),
       onToggleVisited: () {
         ref
@@ -1265,6 +1508,237 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
             .read(itineraryListProvider(widget.tripId).notifier)
             .deleteItem(item.id);
       },
+    );
+  }
+}
+
+sealed class _TimelineRow {
+  const _TimelineRow();
+}
+
+final class _DayHeaderRow extends _TimelineRow {
+  const _DayHeaderRow(this.day);
+  final TripDay day;
+}
+
+final class _EmptyDayRow extends _TimelineRow {
+  const _EmptyDayRow(this.day);
+  final TripDay day;
+}
+
+final class _UnscheduledHeaderRow extends _TimelineRow {
+  const _UnscheduledHeaderRow(this.count);
+  final int count;
+}
+
+final class _ActivityRow extends _TimelineRow {
+  const _ActivityRow({
+    required this.item,
+    required this.ordinal,
+    required this.isFirstInDay,
+    required this.isLastInDay,
+    required this.dayId,
+  });
+
+  final ItineraryItem item;
+  final int ordinal;
+  final bool isFirstInDay;
+  final bool isLastInDay;
+  final String? dayId;
+}
+
+class _MoveStopPositionSheet extends StatefulWidget {
+  const _MoveStopPositionSheet({
+    required this.item,
+    required this.allItems,
+    required this.days,
+    required this.onConfirm,
+  });
+
+  final ItineraryItem item;
+  final List<ItineraryItem> allItems;
+  final List<TripDay> days;
+  final Future<void> Function(String? targetDayId, int targetOrdinalIndex)
+  onConfirm;
+
+  @override
+  State<_MoveStopPositionSheet> createState() => _MoveStopPositionSheetState();
+}
+
+class _MoveStopPositionSheetState extends State<_MoveStopPositionSheet> {
+  late String? _selectedDayId;
+  late int _selectedPositionIndex; // 0-based
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDayId = widget.item.tripDayId;
+    if (widget.days.isNotEmpty &&
+        _selectedDayId != null &&
+        !widget.days.any((d) => d.id == _selectedDayId)) {
+      _selectedDayId = null;
+    }
+    _selectedPositionIndex = _currentIndexInDay(_selectedDayId);
+  }
+
+  List<ItineraryItem> _itemsInDay(String? dayId) {
+    if (widget.days.isEmpty) {
+      return widget.allItems;
+    }
+    if (dayId == null) {
+      return widget.allItems
+          .where(
+            (it) =>
+                it.tripDayId == null ||
+                !widget.days.any((d) => d.id == it.tripDayId),
+          )
+          .toList();
+    }
+    return widget.allItems.where((it) => it.tripDayId == dayId).toList();
+  }
+
+  int _currentIndexInDay(String? dayId) {
+    final dayItems = _itemsInDay(dayId);
+    final idx = dayItems.indexWhere((it) => it.id == widget.item.id);
+    return idx >= 0 ? idx : dayItems.length;
+  }
+
+  int _maxPositionCount(String? dayId) {
+    final withoutItem = _itemsInDay(dayId)
+        .where((it) => it.id != widget.item.id)
+        .length;
+    return withoutItem + 1;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final positionCount = _maxPositionCount(_selectedDayId);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Change Stop Order',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.item.title,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (widget.days.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Day',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ...widget.days.map((day) {
+                      final selected = _selectedDayId == day.id;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(day.displayTitle),
+                          selected: selected,
+                          onSelected: (_) {
+                            setState(() {
+                              _selectedDayId = day.id;
+                              _selectedPositionIndex = _currentIndexInDay(
+                                day.id,
+                              ).clamp(0, _maxPositionCount(day.id) - 1);
+                            });
+                          },
+                        ),
+                      );
+                    }),
+                    ChoiceChip(
+                      label: const Text('Flexible'),
+                      selected: _selectedDayId == null,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedDayId = null;
+                          _selectedPositionIndex = _currentIndexInDay(null)
+                              .clamp(0, _maxPositionCount(null) - 1);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Text(
+              'Stop Position (Ordinal)',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(positionCount, (idx) {
+                final selected = _selectedPositionIndex == idx;
+                return ChoiceChip(
+                  label: Text('#${idx + 1}'),
+                  selected: selected,
+                  onSelected: (_) =>
+                      setState(() => _selectedPositionIndex = idx),
+                );
+              }),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _isSaving
+                  ? null
+                  : () async {
+                      final navigator = Navigator.of(context);
+                      setState(() => _isSaving = true);
+                      await widget.onConfirm(
+                        _selectedDayId,
+                        _selectedPositionIndex,
+                      );
+                      if (mounted) {
+                        navigator.pop();
+                      }
+                    },
+              child: Text(
+                _isSaving
+                    ? 'Saving...'
+                    : 'Move to Stop #${_selectedPositionIndex + 1}',
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

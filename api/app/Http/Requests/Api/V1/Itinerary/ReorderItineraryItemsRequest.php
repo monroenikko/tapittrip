@@ -20,7 +20,9 @@ final class ReorderItineraryItemsRequest extends FormRequest
     {
         return [
             'item_ids' => ['required', 'array', 'min:1'],
-            'item_ids.*' => ['required', 'uuid'],
+            'item_ids.*' => ['required', 'uuid', 'distinct'],
+            'day_assignments' => ['sometimes', 'array'],
+            'day_assignments.*' => ['nullable', 'uuid'],
         ];
     }
 }

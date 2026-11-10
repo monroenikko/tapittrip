@@ -204,27 +204,40 @@ class ItineraryRepository {
     return ItineraryItem.fromJson(Map<String, dynamic>.from(response as Map));
   }
 
-  /// Reorder itinerary items in bulk.
+  /// Reorder itinerary items in bulk, optionally reassigning trip days.
   Future<List<ItineraryItem>> reorderItems(
     String tripId,
-    List<String> orderedItemIds,
-  ) async {
+    List<String> orderedItemIds, {
+    Map<String, String?>? dayAssignments,
+  }) async {
+    final payload = <String, dynamic>{
+      'item_ids': orderedItemIds,
+      if (dayAssignments != null && dayAssignments.isNotEmpty)
+        'day_assignments': dayAssignments,
+    };
+
     final response = await apiClient.post(
       '/trips/$tripId/itinerary-items/reorder',
-      data: {'item_ids': orderedItemIds},
+      data: payload,
     );
 
+    final List<dynamic> list;
     if (response is List) {
-      await _storage.write(key: _cacheKey(tripId), value: jsonEncode(response));
-
-      return response
-          .whereType<Map>()
-          .map(
-            (json) => ItineraryItem.fromJson(Map<String, dynamic>.from(json)),
-          )
-          .toList();
+      list = response;
+    } else if (response is Map && response['data'] is List) {
+      list = response['data'] as List<dynamic>;
+    } else {
+      list = const [];
     }
-    return [];
+
+    if (list.isNotEmpty) {
+      await _storage.write(key: _cacheKey(tripId), value: jsonEncode(list));
+    }
+
+    return list
+        .whereType<Map>()
+        .map((json) => ItineraryItem.fromJson(Map<String, dynamic>.from(json)))
+        .toList();
   }
 
   /// Delete an itinerary item.

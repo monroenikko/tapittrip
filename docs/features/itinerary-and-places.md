@@ -22,9 +22,11 @@ Travelers can easily create stops (attractions, meals, transport, hotels, flight
    - Supports 6 activity kinds: `attraction`, `meal`, `transport`, `flight`, `hotel`, `custom`.
    - Items track start/end times in UTC (`starts_at_utc`, `ends_at_utc`), local timezone, notes, status (`planned`, `visited`, `skipped`), and sort order.
    - When items are created without explicit `sort_order`, they are appended automatically to the end of the day or trip sequence (`max(sort_order) + 1`).
-4. **Bulk Reordering**:
-   - The `/api/v1/trips/{trip}/itinerary-items/reorder` endpoint allows clients to submit an array of UUIDs (`item_ids`) to reorder activities transactionally.
-   - Verifies trip tenancy and updates sort order and version atomically.
+4. **Bulk Reordering & Drag-and-Drop Card Ordinals**:
+   - The `/api/v1/trips/{trip}/itinerary-items/reorder` endpoint allows clients to submit an array of UUIDs (`item_ids`) plus optional `day_assignments` (`item_id => trip_day_id|null`) to reorder activities and reassign days transactionally.
+   - Verifies trip tenancy for both item IDs and target trip day IDs (`422` on cross-trip IDs), and updates `sort_order`, `trip_day_id`, and `version` atomically.
+   - On the Flutter client (`TripItineraryPage`), every stop card renders an interactive `⋮⋮` drag handle (`ReorderableDragStartListener`) and long-press drag (`ReorderableDelayedDragStartListener`) directly inside the day-grouped or dateless timeline—updating ordinal numbers (`1`, `2`, `3`...) immediately and supporting cross-day card dragging.
+   - Tapping the numbered ordinal badge circle (`TimelineDayBadge`) opens a quick "Change Stop Order" picker sheet for accessible exact position & day reassignment.
 5. **Soft Deletes**:
    - Deleting an itinerary item marks it soft-deleted to support offline tombstone synchronization.
 

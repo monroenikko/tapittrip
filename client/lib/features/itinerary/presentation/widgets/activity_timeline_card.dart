@@ -17,6 +17,8 @@ class ActivityTimelineCard extends StatelessWidget {
     this.onEdit,
     this.onDelete,
     this.onWeatherTap,
+    this.dragHandle,
+    this.highlightDrag = false,
   });
 
   final ItineraryItem item;
@@ -26,6 +28,8 @@ class ActivityTimelineCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onWeatherTap;
+  final Widget? dragHandle;
+  final bool highlightDrag;
 
   IconData _iconForKind(String kind) {
     switch (kind.toLowerCase()) {
@@ -70,9 +74,12 @@ class ActivityTimelineCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isVisited
-              ? colorScheme.outlineVariant.withValues(alpha: 0.3)
-              : colorScheme.outlineVariant.withValues(alpha: 0.7),
+          color: highlightDrag
+              ? colorScheme.primary.withValues(alpha: 0.55)
+              : (isVisited
+                    ? colorScheme.outlineVariant.withValues(alpha: 0.3)
+                    : colorScheme.outlineVariant.withValues(alpha: 0.7)),
+          width: highlightDrag ? 1.5 : 1.0,
         ),
       ),
       color: isVisited
@@ -148,6 +155,10 @@ class ActivityTimelineCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
+                            if (dragHandle != null) ...[
+                              const SizedBox(width: 4),
+                              dragHandle!,
+                            ],
                           ],
                         ),
                         if (item.place?.name != null) ...[
@@ -383,6 +394,8 @@ class LiveWeatherActivityTimelineCard extends ConsumerWidget {
     this.onEdit,
     this.onDelete,
     this.onWeatherTap,
+    this.dragHandle,
+    this.highlightDrag = false,
   });
 
   final String tripId;
@@ -392,6 +405,8 @@ class LiveWeatherActivityTimelineCard extends ConsumerWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onWeatherTap;
+  final Widget? dragHandle;
+  final bool highlightDrag;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -405,6 +420,8 @@ class LiveWeatherActivityTimelineCard extends ConsumerWidget {
       onEdit: onEdit,
       onDelete: onDelete,
       onWeatherTap: onWeatherTap,
+      dragHandle: dragHandle,
+      highlightDrag: highlightDrag,
     );
   }
 }

@@ -84,6 +84,7 @@ class ItineraryItem {
     String? id,
     String? tripId,
     String? tripDayId,
+    bool clearTripDay = false,
     String? placeId,
     String? kind,
     String? title,
@@ -100,7 +101,7 @@ class ItineraryItem {
     return ItineraryItem(
       id: id ?? this.id,
       tripId: tripId ?? this.tripId,
-      tripDayId: tripDayId ?? this.tripDayId,
+      tripDayId: clearTripDay ? null : (tripDayId ?? this.tripDayId),
       placeId: placeId ?? this.placeId,
       kind: kind ?? this.kind,
       title: title ?? this.title,
@@ -112,7 +113,7 @@ class ItineraryItem {
       status: status ?? this.status,
       version: version ?? this.version,
       place: place ?? this.place,
-      day: day ?? this.day,
+      day: clearTripDay ? null : (day ?? this.day),
     );
   }
 }

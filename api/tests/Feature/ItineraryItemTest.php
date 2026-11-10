@@ -291,4 +291,108 @@ final class ItineraryItemTest extends TestCase
             ->assertJsonPath('data.kind', 'attraction')
             ->assertJsonPath('data.place', null);
     }
+
+    public function test_user_can_reorder_and_reassign_items_across_days(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+
+        $day1 = TripDay::factory()->create(['trip_id' => $trip->id, 'local_date' => '2026-06-01']);
+        $day2 = TripDay::factory()->create(['trip_id' => $trip->id, 'local_date' => '2026-06-02']);
+
+        $item1 = ItineraryItem::factory()->create([
+            'trip_id' => $trip->id,
+            'trip_day_id' => $day1->id,
+            'title' => 'Morning Walk',
+            'sort_order' => 0,
+            'version' => 1,
+        ]);
+        $item2 = ItineraryItem::factory()->create([
+            'trip_id' => $trip->id,
+            'trip_day_id' => $day1->id,
+            'title' => 'Sushi Lunch',
+            'sort_order' => 1,
+            'version' => 1,
+        ]);
+        $item3 = ItineraryItem::factory()->create([
+            'trip_id' => $trip->id,
+            'trip_day_id' => $day2->id,
+            'title' => 'Museum Tour',
+            'sort_order' => 2,
+            'version' => 1,
+        ]);
+
+        // Move item3 from Day 2 -> Day 1 position 0, and move item1 from Day 1 -> Day 2
+        $response = $this->postJson("/api/v1/trips/{$trip->id}/itinerary-items/reorder", [
+            'item_ids' => [$item3->id, $item2->id, $item1->id],
+            'day_assignments' => [
+                $item3->id => $day1->id,
+                $item2->id => $day1->id,
+                $item1->id => $day2->id,
+            ],
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $item3->id)
+            ->assertJsonPath('data.0.trip_day_id', $day1->id)
+            ->assertJsonPath('data.0.sort_order', 0)
+            ->assertJsonPath('data.1.id', $item2->id)
+            ->assertJsonPath('data.1.trip_day_id', $day1->id)
+            ->assertJsonPath('data.1.sort_order', 1)
+            ->assertJsonPath('data.2.id', $item1->id)
+            ->assertJsonPath('data.2.trip_day_id', $day2->id)
+            ->assertJsonPath('data.2.sort_order', 2);
+
+        $this->assertDatabaseHas('itinerary_items', [
+            'id' => $item3->id,
+            'trip_day_id' => $day1->id,
+            'sort_order' => 0,
+            'version' => 2,
+        ]);
+        $this->assertDatabaseHas('itinerary_items', [
+            'id' => $item1->id,
+            'trip_day_id' => $day2->id,
+            'sort_order' => 2,
+            'version' => 2,
+        ]);
+    }
+
+    public function test_reorder_rejects_target_trip_day_belonging_to_another_trip(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+        /** @var Trip $otherTrip */
+        $otherTrip = Trip::factory()->create(['owner_id' => $user->id]);
+
+        $foreignDay = TripDay::factory()->create(['trip_id' => $otherTrip->id, 'local_date' => '2026-06-01']);
+        $item = ItineraryItem::factory()->create(['trip_id' => $trip->id, 'sort_order' => 0]);
+
+        $this->postJson("/api/v1/trips/{$trip->id}/itinerary-items/reorder", [
+            'item_ids' => [$item->id],
+            'day_assignments' => [
+                $item->id => $foreignDay->id,
+            ],
+        ])->assertUnprocessable();
+    }
+
+    public function test_reorder_rejects_duplicate_item_ids(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+        $item = ItineraryItem::factory()->create(['trip_id' => $trip->id, 'sort_order' => 0]);
+
+        $this->postJson("/api/v1/trips/{$trip->id}/itinerary-items/reorder", [
+            'item_ids' => [$item->id, $item->id],
+        ])->assertUnprocessable();
+    }
 }

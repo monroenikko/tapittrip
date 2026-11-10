@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tapittrip/core/network/api_client.dart';
+import 'package:tapittrip/core/storage/token_storage.dart';
 import 'package:tapittrip/core/theme/app_theme.dart';
+import 'package:tapittrip/features/itinerary/data/itinerary_repository.dart';
 import 'package:tapittrip/features/itinerary/domain/models/itinerary_item.dart';
 import 'package:tapittrip/features/itinerary/domain/models/place.dart';
 import 'package:tapittrip/features/itinerary/domain/models/trip_day.dart';
@@ -652,6 +656,8 @@ void main() {
       },
     );
   });
+
+  mainReorderTests();
 }
 
 class _FakeItineraryListNotifier extends ItineraryListNotifier {
@@ -670,4 +676,508 @@ class _FailingItineraryListNotifier extends ItineraryListNotifier {
   Future<List<ItineraryItem>> build() async {
     throw Exception(List.filled(1000, 'private provider payload').join('\n'));
   }
+}
+
+class _FakeReorderApiClient extends ApiClient {
+  _FakeReorderApiClient(this.initialItems, this.days)
+    : super(tokenStorage: InMemoryTokenStorage());
+
+  List<Map<String, dynamic>> initialItems;
+  final List<TripDay> days;
+  String? lastPostPath;
+  Map<String, dynamic>? lastPostData;
+  bool failReorder = false;
+
+  @override
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    if (path.endsWith('/days')) {
+      return days
+          .map(
+            (d) => {
+              'id': d.id,
+              'trip_id': d.tripId,
+              'day_number': d.dayNumber,
+              'title': d.title,
+              'local_date': d.localDate,
+              'notes': d.notes,
+            },
+          )
+          .toList();
+    }
+    return initialItems;
+  }
+
+  @override
+  Future<dynamic> post(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    lastPostPath = path;
+    lastPostData = data is Map ? Map<String, dynamic>.from(data) : null;
+
+    if (path.endsWith('/reorder')) {
+      if (failReorder) {
+        throw Exception('Network timeout');
+      }
+      final itemIds = List<String>.from(lastPostData?['item_ids'] as List);
+      final dayAssignments = lastPostData?['day_assignments'] is Map
+          ? Map<String, dynamic>.from(lastPostData!['day_assignments'] as Map)
+          : <String, dynamic>{};
+
+      final byId = {for (final m in initialItems) m['id'] as String: m};
+      final reordered = <Map<String, dynamic>>[];
+      for (var i = 0; i < itemIds.length; i++) {
+        final id = itemIds[i];
+        final copy = Map<String, dynamic>.from(byId[id]!);
+        copy['sort_order'] = i;
+        copy['version'] = ((copy['version'] as int?) ?? 1) + 1;
+        if (dayAssignments.containsKey(id)) {
+          copy['trip_day_id'] = dayAssignments[id];
+        }
+        reordered.add(copy);
+      }
+      initialItems = reordered;
+      return reordered;
+    }
+
+    return const {};
+  }
+}
+
+void mainReorderTests() {
+  group('Drag & Drop Ordinal Reordering', () {
+    const day1 = TripDay(
+      id: 'day-1',
+      tripId: 'trip-1',
+      dayNumber: 1,
+      title: 'Day 1',
+      localDate: '2026-06-01',
+      notes: 'Day 1',
+    );
+    const day2 = TripDay(
+      id: 'day-2',
+      tripId: 'trip-1',
+      dayNumber: 2,
+      title: 'Day 2',
+      localDate: '2026-06-02',
+      notes: 'Day 2',
+    );
+
+    List<Map<String, dynamic>> buildInitialRawItems() => [
+      {
+        'id': 'item-a',
+        'trip_id': 'trip-1',
+        'trip_day_id': 'day-1',
+        'title': 'Stop A (Senso-ji)',
+        'kind': 'attraction',
+        'sort_order': 0,
+        'status': 'planned',
+        'version': 1,
+      },
+      {
+        'id': 'item-b',
+        'trip_id': 'trip-1',
+        'trip_day_id': 'day-1',
+        'title': 'Stop B (Sushi Lunch)',
+        'kind': 'meal',
+        'sort_order': 1,
+        'status': 'planned',
+        'version': 1,
+      },
+      {
+        'id': 'item-c',
+        'trip_id': 'trip-1',
+        'trip_day_id': 'day-2',
+        'title': 'Stop C (Tokyo Tower)',
+        'kind': 'attraction',
+        'sort_order': 2,
+        'status': 'planned',
+        'version': 1,
+      },
+    ];
+
+    setUp(() {
+      FlutterSecureStorage.setMockInitialValues({});
+    });
+
+    test(
+      'ItineraryRepository.reorderItems sends item_ids and day_assignments',
+      () async {
+        final api = _FakeReorderApiClient(buildInitialRawItems(), [day1, day2]);
+        final repo = ItineraryRepository(
+          apiClient: api,
+          storage: const FlutterSecureStorage(),
+        );
+
+        final result = await repo.reorderItems(
+          'trip-1',
+          ['item-b', 'item-c', 'item-a'],
+          dayAssignments: {'item-c': 'day-1'},
+        );
+
+        expect(api.lastPostPath, '/trips/trip-1/itinerary-items/reorder');
+        expect(api.lastPostData?['item_ids'], ['item-b', 'item-c', 'item-a']);
+        expect(api.lastPostData?['day_assignments'], {'item-c': 'day-1'});
+        expect(result.length, 3);
+        expect(result[0].id, 'item-b');
+        expect(result[1].id, 'item-c');
+        expect(result[1].tripDayId, 'day-1');
+      },
+    );
+
+    testWidgets(
+      'dragging a card by its drag handle reorders stops within Day 1 and updates ordinals',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final api = _FakeReorderApiClient(buildInitialRawItems(), [day1, day2]);
+        final repo = ItineraryRepository(
+          apiClient: api,
+          storage: const FlutterSecureStorage(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [itineraryRepositoryProvider.overrideWithValue(repo)],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripItineraryPage(
+                tripId: 'trip-1',
+                initialTrip: sampleTrip,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final stopAYBefore = tester
+            .getTopLeft(find.text('Stop A (Senso-ji)'))
+            .dy;
+        final stopBYBefore = tester
+            .getTopLeft(find.text('Stop B (Sushi Lunch)'))
+            .dy;
+        expect(stopAYBefore, lessThan(stopBYBefore));
+
+        // Find drag handle on Stop B (second drag handle in Day 1)
+        final handles = find.byIcon(Icons.drag_indicator_rounded);
+        expect(handles, findsNWidgets(3));
+
+        final handleBPos = tester.getCenter(handles.at(1));
+        final dragDeltaY = stopAYBefore - stopBYBefore - 40;
+
+        await tester.dragFrom(handleBPos, Offset(0, dragDeltaY));
+        await tester.pumpAndSettle();
+
+        final stopAYAfter = tester
+            .getTopLeft(find.text('Stop A (Senso-ji)'))
+            .dy;
+        final stopBYAfter = tester
+            .getTopLeft(find.text('Stop B (Sushi Lunch)'))
+            .dy;
+
+        // Stop B is now visually above Stop A!
+        expect(stopBYAfter, lessThan(stopAYAfter));
+        // Backend received reordered item IDs
+        expect(api.lastPostData?['item_ids'], ['item-b', 'item-a', 'item-c']);
+      },
+    );
+
+    testWidgets(
+      'dragging a card from Day 2 into Day 1 updates both ordinal order and day assignment',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final api = _FakeReorderApiClient(buildInitialRawItems(), [day1, day2]);
+        final repo = ItineraryRepository(
+          apiClient: api,
+          storage: const FlutterSecureStorage(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [itineraryRepositoryProvider.overrideWithValue(repo)],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripItineraryPage(
+                tripId: 'trip-1',
+                initialTrip: sampleTrip,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final stopAY = tester.getTopLeft(find.text('Stop A (Senso-ji)')).dy;
+        final stopCY = tester.getTopLeft(find.text('Stop C (Tokyo Tower)')).dy;
+
+        // Drag Stop C (3rd handle) all the way above Stop A (into Day 1 slot 1)
+        final handleC = find.byIcon(Icons.drag_indicator_rounded).at(2);
+        final dragDeltaY = stopAY - stopCY - 50;
+
+        await tester.dragFrom(tester.getCenter(handleC), Offset(0, dragDeltaY));
+        await tester.pumpAndSettle();
+
+        // Day 1 chip should now show count 3, Day 2 count 0
+        expect(find.text('Day 1 (3)'), findsOneWidget);
+        expect(find.text('Day 2 (0)'), findsOneWidget);
+        expect(api.lastPostData?['day_assignments'], {'item-c': 'day-1'});
+        expect(api.lastPostData?['item_ids'], ['item-c', 'item-a', 'item-b']);
+      },
+    );
+
+    testWidgets(
+      'tapping ordinal badge opens Change Stop Order sheet and moves stop to selected ordinal',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final api = _FakeReorderApiClient(buildInitialRawItems(), [day1, day2]);
+        final repo = ItineraryRepository(
+          apiClient: api,
+          storage: const FlutterSecureStorage(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [itineraryRepositoryProvider.overrideWithValue(repo)],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripItineraryPage(
+                tripId: 'trip-1',
+                initialTrip: sampleTrip,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Tap Stop B's ordinal badge ('2')
+        final badges = find.byType(TimelineDayBadge);
+        expect(badges, findsNWidgets(3));
+
+        final badge2Text = find.descendant(
+          of: badges.at(1),
+          matching: find.text('2'),
+        );
+        await tester.tap(badge2Text);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Change Stop Order'), findsOneWidget);
+        expect(find.text('Stop Position (Ordinal)'), findsOneWidget);
+
+        // Select #1 chip
+        await tester.tap(find.text('#1'));
+        await tester.pumpAndSettle();
+
+        // Confirm
+        await tester.tap(find.text('Move to Stop #1'));
+        await tester.pumpAndSettle();
+
+        // Stop B is now ordered before Stop A
+        expect(api.lastPostData?['item_ids'], ['item-b', 'item-a', 'item-c']);
+        final stopAY = tester.getTopLeft(find.text('Stop A (Senso-ji)')).dy;
+        final stopBY = tester.getTopLeft(find.text('Stop B (Sushi Lunch)')).dy;
+        expect(stopBY, lessThan(stopAY));
+      },
+    );
+
+    testWidgets(
+      'reverts order and shows snackbar if reorder request fails offline',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final api = _FakeReorderApiClient(buildInitialRawItems(), [day1, day2])
+          ..failReorder = true;
+        final repo = ItineraryRepository(
+          apiClient: api,
+          storage: const FlutterSecureStorage(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [itineraryRepositoryProvider.overrideWithValue(repo)],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripItineraryPage(
+                tripId: 'trip-1',
+                initialTrip: sampleTrip,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final stopAYBefore = tester
+            .getTopLeft(find.text('Stop A (Senso-ji)'))
+            .dy;
+        final stopBYBefore = tester
+            .getTopLeft(find.text('Stop B (Sushi Lunch)'))
+            .dy;
+
+        final handleBPos = tester.getCenter(
+          find.byIcon(Icons.drag_indicator_rounded).at(1),
+        );
+        await tester.dragFrom(
+          handleBPos,
+          Offset(0, stopAYBefore - stopBYBefore - 40),
+        );
+        await tester.pumpAndSettle();
+
+        // Reverted back to original order
+        final stopAYAfter = tester
+            .getTopLeft(find.text('Stop A (Senso-ji)'))
+            .dy;
+        final stopBYAfter = tester
+            .getTopLeft(find.text('Stop B (Sushi Lunch)'))
+            .dy;
+        expect(stopAYAfter, lessThan(stopBYAfter));
+        expect(
+          find.text('Unable to save new stop order. Reverted changes.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'reordering while filtered to a single day preserves items in other days',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final api = _FakeReorderApiClient(buildInitialRawItems(), [day1, day2]);
+        final repo = ItineraryRepository(
+          apiClient: api,
+          storage: const FlutterSecureStorage(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [itineraryRepositoryProvider.overrideWithValue(repo)],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripItineraryPage(
+                tripId: 'trip-1',
+                initialTrip: sampleTrip,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Filter to Day 1 only
+        await tester.tap(find.text('Day 1 (2)'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Stop C (Tokyo Tower)'), findsNothing);
+
+        final stopAY = tester.getTopLeft(find.text('Stop A (Senso-ji)')).dy;
+        final stopBY = tester.getTopLeft(find.text('Stop B (Sushi Lunch)')).dy;
+
+        final handleBPos = tester.getCenter(
+          find.byIcon(Icons.drag_indicator_rounded).at(1),
+        );
+        await tester.dragFrom(handleBPos, Offset(0, stopAY - stopBY - 40));
+        await tester.pumpAndSettle();
+
+        // Day 2 item C must remain preserved in complete ordered payload
+        expect(api.lastPostData?['item_ids'], ['item-b', 'item-a', 'item-c']);
+
+        // Switch back to All Days and confirm Stop C is still present
+        await tester.tap(find.text('All Days (3)'));
+        await tester.pumpAndSettle();
+        expect(find.text('Stop C (Tokyo Tower)'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'dragging a card in a dateless itinerary (days empty) updates ordinal order',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final rawNoDays = [
+          {
+            'id': 'item-1',
+            'trip_id': 'trip-1',
+            'title': 'First Dateless Stop',
+            'kind': 'attraction',
+            'sort_order': 0,
+            'status': 'planned',
+            'version': 1,
+          },
+          {
+            'id': 'item-2',
+            'trip_id': 'trip-1',
+            'title': 'Second Dateless Stop',
+            'kind': 'meal',
+            'sort_order': 1,
+            'status': 'planned',
+            'version': 1,
+          },
+        ];
+
+        final api = _FakeReorderApiClient(rawNoDays, const []);
+        final repo = ItineraryRepository(
+          apiClient: api,
+          storage: const FlutterSecureStorage(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [itineraryRepositoryProvider.overrideWithValue(repo)],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripItineraryPage(
+                tripId: 'trip-1',
+                initialTrip: sampleTrip,
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final y1 = tester.getTopLeft(find.text('First Dateless Stop')).dy;
+        final y2 = tester.getTopLeft(find.text('Second Dateless Stop')).dy;
+        expect(y1, lessThan(y2));
+
+        final handle2 = find.byIcon(Icons.drag_indicator_rounded).at(1);
+        await tester.timedDragFrom(
+          tester.getCenter(handle2),
+          Offset(0, y1 - y2 - 20),
+          const Duration(milliseconds: 300),
+        );
+        await tester.pumpAndSettle();
+
+        final y1After = tester.getTopLeft(find.text('First Dateless Stop')).dy;
+        final y2After = tester.getTopLeft(find.text('Second Dateless Stop')).dy;
+        expect(y2After, lessThan(y1After));
+        expect(api.lastPostData?['item_ids'], ['item-2', 'item-1']);
+      },
+    );
+  });
 }
