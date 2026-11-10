@@ -10,6 +10,32 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-10 — Architecture Simplification: Feature 11 (Weather) & Feature 12 (Identity) — Complete Backend Migration
+
+### Completed
+
+- **Feature 11 (Weather)**:
+  - **DTOs (`app/DTOs/Weather/`)**: Created typed `TripWeatherData`, `DailyForecastData`, and `WeatherConditionData`.
+  - **Services (`app/Services/Weather/`)**: Migrated `GetTripWeatherService` to `WeatherService` (`getWeather`, `getCurrentWeather`).
+  - **Externalized Reference Data**: Extracted 70+ global city/destination coordinates to `database/data/city_coordinates.json`, loaded with `Cache::rememberForever`.
+  - **Controllers (`app/Http/Controllers/Api/V1/`)**: Updated `TripWeatherController` with constructor DI.
+  - **Cleanup**: Removed `app/Application/Weather/`.
+
+- **Feature 12 (Identity / Auth & Profile) & Legacy Removal**:
+  - **DTOs (`app/DTOs/Identity/`)**: Created `AuthTokenResult`, `RegisterUserData`, `LoginUserData`, and `UpdateProfileData`.
+  - **Exceptions (`app/Exceptions/`)**: Moved `InvalidCredentials` to `app/Exceptions/InvalidCredentials.php`, updated `ApiExceptionResponse`.
+  - **Services (`app/Services/Identity/`)**:
+    - `AuthService` (`register`, `login`, `logout`).
+    - `ProfileService` (`update`, `deleteAccount`).
+  - **Controllers (`app/Http/Controllers/Api/V1/`)**: Refactored `AuthController` and `ProfileController` to use constructor dependency injection.
+  - **Legacy Removal**: Fully purged `app/Application/` and `app/Domain/` directories. All 12 domain features now run on the unified Service-Model-DTO architecture.
+
+- **Verification**:
+  - 100% test pass rate across the entire test suite: 137 tests passed (1,896 assertions) in 14.35s.
+  - Auth and Profile test suite: 15 passed (97 assertions).
+  - Weather test suite: 7 passed (125 assertions).
+  - Formatting: Laravel Pint passed with 0 style errors.
+
 ## 2026-11-10 — Architecture Simplification: Feature 3 (Stays) to Service-Model-DTO Pattern
 
 ### Completed

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Identity\Exceptions;
+namespace App\Exceptions;
 
 use Illuminate\Contracts\Debug\ShouldntReport;
 use RuntimeException;

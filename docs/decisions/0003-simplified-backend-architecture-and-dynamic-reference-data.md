@@ -41,6 +41,9 @@ Data that can change, expand, or be updated in the future must not be hardcoded 
 3. **Checklist Starter Templates**:
    - Starter template definitions are stored in seed data (`database/data/checklist_templates.json`), allowing easy expansion and customization without modifying core service classes.
 
+4. **Weather City Coordinates Catalog**:
+   - Coordinates and destination names for global cities are stored in `database/data/city_coordinates.json` and cached via `Cache::rememberForever`, removing hardcoded arrays from `WeatherService`.
+
 ## Consequences
 
 - **Readability & Maintainability**: Reduced code sprawl and eliminated dozens of single-action classes.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Identity\Data;
+namespace App\DTOs\Identity;
 
 final readonly class RegisterUserData
 {

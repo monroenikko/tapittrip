@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Http;
 
-use App\Application\Identity\Exceptions\InvalidCredentials;
+use App\Exceptions\InvalidCredentials;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
