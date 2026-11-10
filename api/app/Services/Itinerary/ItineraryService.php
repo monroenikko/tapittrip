@@ -7,11 +7,13 @@ namespace App\Services\Itinerary;
 use App\DTOs\Itinerary\CreateItineraryItemData;
 use App\DTOs\Itinerary\RecordVisitEventData;
 use App\DTOs\Itinerary\UpdateItineraryItemData;
+use App\Exceptions\VersionConflictException;
 use App\Models\ItineraryItem;
 use App\Models\Trip;
 use App\Models\TripDay;
 use App\Models\User;
 use App\Models\VisitEvent;
+use App\Services\Notifications\NotificationService;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -155,6 +157,32 @@ final class ItineraryService
     public function updateItem(ItineraryItem $item, UpdateItineraryItemData $data): ItineraryItem
     {
         return DB::transaction(function () use ($item, $data): ItineraryItem {
+            /** @var ItineraryItem $locked */
+            $locked = ItineraryItem::query()
+                ->whereKey($item->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($data->baseVersion !== null && $data->baseVersion !== $locked->version) {
+                throw new VersionConflictException(
+                    serverVersion: (int) $locked->version,
+                    serverPayload: [
+                        'id' => $locked->id,
+                        'trip_id' => $locked->trip_id,
+                        'trip_day_id' => $locked->trip_day_id,
+                        'kind' => $locked->kind,
+                        'title' => $locked->title,
+                        'notes' => $locked->notes,
+                        'starts_at_utc' => $locked->starts_at_utc?->toIso8601String(),
+                        'ends_at_utc' => $locked->ends_at_utc?->toIso8601String(),
+                        'timezone' => $locked->timezone,
+                        'sort_order' => $locked->sort_order,
+                        'status' => $locked->status,
+                        'version' => (int) $locked->version,
+                    ],
+                );
+            }
+
             $updates = [];
 
             if ($data->title !== null) {
@@ -211,11 +239,12 @@ final class ItineraryService
             }
 
             if ($updates !== []) {
-                $updates['version'] = $item->version + 1;
-                $item->update($updates);
+                $updates['version'] = $locked->version + 1;
+                $locked->update($updates);
+                app(NotificationService::class)->syncRemindersForItineraryItem($locked);
             }
 
-            return $item->load(['place', 'day']);
+            return $locked->load(['place', 'day']);
         });
     }
 
@@ -225,6 +254,7 @@ final class ItineraryService
     public function deleteItem(ItineraryItem $item): void
     {
         DB::transaction(function () use ($item): void {
+            app(NotificationService::class)->cancelRemindersForItineraryItem($item);
             $item->delete();
         });
     }
@@ -234,15 +264,21 @@ final class ItineraryService
      *
      * @param  array<int, string>  $orderedItemIds
      * @param  array<string, string|null>  $dayAssignments
+     * @param  array<string, int>  $expectedVersions
      * @return Collection<int, ItineraryItem>
      */
-    public function reorderItems(Trip $trip, array $orderedItemIds, array $dayAssignments = []): Collection
-    {
-        return DB::transaction(function () use ($trip, $orderedItemIds, $dayAssignments): Collection {
+    public function reorderItems(
+        Trip $trip,
+        array $orderedItemIds,
+        array $dayAssignments = [],
+        array $expectedVersions = [],
+    ): Collection {
+        return DB::transaction(function () use ($trip, $orderedItemIds, $dayAssignments, $expectedVersions): Collection {
             /** @var Collection<string, ItineraryItem> $items */
             $items = ItineraryItem::query()
                 ->where('trip_id', $trip->id)
                 ->whereIn('id', $orderedItemIds)
+                ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
 
@@ -250,6 +286,24 @@ final class ItineraryService
                 throw ValidationException::withMessages([
                     'item_ids' => ['One or more itinerary item IDs do not belong to this trip.'],
                 ]);
+            }
+
+            foreach ($expectedVersions as $itemId => $expectedVersion) {
+                $lockedItem = $items->get((string) $itemId);
+                if ($lockedItem !== null && (int) $lockedItem->version !== (int) $expectedVersion) {
+                    throw new VersionConflictException(
+                        serverVersion: (int) $lockedItem->version,
+                        serverPayload: [
+                            'id' => $lockedItem->id,
+                            'trip_id' => $lockedItem->trip_id,
+                            'trip_day_id' => $lockedItem->trip_day_id,
+                            'title' => $lockedItem->title,
+                            'sort_order' => $lockedItem->sort_order,
+                            'version' => (int) $lockedItem->version,
+                        ],
+                        message: 'Itinerary ordering changed on another device. Refresh and review the latest order.',
+                    );
+                }
             }
 
             if ($dayAssignments !== []) {

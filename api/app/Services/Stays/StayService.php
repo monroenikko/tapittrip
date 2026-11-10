@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services\Stays;
 
+use App\Domain\Stays\StayPrivacy;
 use App\DTOs\Stays\CompareStayTransportData;
 use App\DTOs\Stays\CreateStayData;
 use App\DTOs\Stays\UpdateStayData;
+use App\Exceptions\VersionConflictException;
 use App\Models\ItineraryItem;
 use App\Models\Stay;
 use App\Models\Trip;
+use App\Models\User;
 use App\Services\Itinerary\ItineraryService;
 use App\Services\Itinerary\PlaceService;
+use App\Services\Notifications\NotificationService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,7 +35,7 @@ final class StayService
      */
     public function getTripStays(Trip $trip): Collection
     {
-        return $trip->stays()->with(['place', 'itineraryItems'])->get();
+        return $trip->stays()->with(['trip', 'place', 'itineraryItems'])->get();
     }
 
     /**
@@ -117,20 +121,34 @@ final class StayService
     /**
      * Update an existing stay.
      */
-    public function update(Stay $stay, UpdateStayData $data): Stay
+    public function update(Stay $stay, UpdateStayData $data, ?User $actor = null): Stay
     {
-        $newCheckIn = $data->checkInAt ?? $stay->check_in_at;
-        $newCheckOut = $data->checkOutAt ?? $stay->check_out_at;
+        return DB::transaction(function () use ($stay, $data, $actor): Stay {
+            /** @var Stay $locked */
+            $locked = Stay::query()
+                ->with(['trip', 'itineraryItems'])
+                ->whereKey($stay->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($newCheckIn !== null && $newCheckOut !== null && $newCheckIn >= $newCheckOut) {
-            throw ValidationException::withMessages([
-                'check_out_at' => ['Check-out time must be after check-in time.'],
-            ]);
-        }
+            if ($data->baseVersion !== null && $data->baseVersion !== $locked->version) {
+                throw new VersionConflictException(
+                    serverVersion: (int) $locked->version,
+                    serverPayload: StayPrivacy::redactServerPayload($locked, $actor),
+                );
+            }
 
-        return DB::transaction(function () use ($stay, $data): Stay {
+            $newCheckIn = $data->checkInAt ?? $locked->check_in_at;
+            $newCheckOut = $data->checkOutAt ?? $locked->check_out_at;
+
+            if ($newCheckIn !== null && $newCheckOut !== null && $newCheckIn >= $newCheckOut) {
+                throw ValidationException::withMessages([
+                    'check_out_at' => ['Check-out time must be after check-in time.'],
+                ]);
+            }
+
             $updates = [
-                'version' => $stay->version + 1,
+                'version' => $locked->version + 1,
             ];
 
             if ($data->name !== null) {
@@ -173,26 +191,33 @@ final class StayService
                 $updates['place_id'] = $data->placeId;
             }
 
-            $stay->update($updates);
+            $locked->update($updates);
 
             // Update linked check-in and check-out itinerary item titles/times if name or dates changed
             if ($data->name !== null || $data->checkInAt !== null || $data->checkOutAt !== null) {
-                foreach ($stay->itineraryItems as $item) {
+                foreach ($locked->itineraryItems as $item) {
                     if (str_starts_with($item->title, 'Check-in:')) {
                         $item->update([
-                            'title' => 'Check-in: '.$stay->name,
-                            'starts_at_utc' => $stay->check_in_at?->copy()->utc() ?? $item->starts_at_utc,
+                            'title' => 'Check-in: '.$locked->name,
+                            'starts_at_utc' => $locked->check_in_at?->copy()->utc() ?? $item->starts_at_utc,
+                            'version' => $item->version + 1,
                         ]);
                     } elseif (str_starts_with($item->title, 'Check-out:')) {
                         $item->update([
-                            'title' => 'Check-out: '.$stay->name,
-                            'starts_at_utc' => $stay->check_out_at?->copy()->utc() ?? $item->starts_at_utc,
+                            'title' => 'Check-out: '.$locked->name,
+                            'starts_at_utc' => $locked->check_out_at?->copy()->utc() ?? $item->starts_at_utc,
+                            'version' => $item->version + 1,
                         ]);
                     }
                 }
             }
 
-            return $stay->fresh(['place', 'itineraryItems']);
+            $fresh = $locked->fresh(['trip', 'place', 'itineraryItems']);
+            if ($fresh !== null) {
+                app(NotificationService::class)->syncRemindersForStay($fresh);
+            }
+
+            return $fresh ?? $locked;
         });
     }
 
@@ -202,6 +227,8 @@ final class StayService
     public function delete(Stay $stay): void
     {
         DB::transaction(function () use ($stay): void {
+            app(NotificationService::class)->cancelRemindersForStay($stay);
+
             // Decouple linked itinerary items so they are never orphaned or deleted
             $stay->itineraryItems()->update(['stay_id' => null]);
 

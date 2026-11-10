@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../circles/data/trip_circle_repository.dart';
 import '../../../lounges/presentation/providers/lounge_provider.dart';
 import '../../data/outbox_storage.dart';
 import '../../domain/models/outbox_operation.dart';
@@ -60,10 +61,12 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   final outboxStorage = ref.watch(outboxStorageProvider);
   final loungeRepo = ref.watch(loungeRepositoryProvider);
+  final circleRepo = ref.watch(tripCircleRepositoryProvider);
   return SyncService(
     apiClient: apiClient,
     outboxStorage: outboxStorage,
     loungeRepository: loungeRepo,
+    onTripAccessRevoked: (tripId) => circleRepo.purgeTripCircleCaches(tripId),
   );
 });
 
@@ -178,6 +181,9 @@ class SyncNotifier extends Notifier<SyncState> {
       await _syncService.resolveConflict(operationId, keepLocal: keepLocal);
       await refresh();
     } catch (e) {
+      try {
+        await refresh();
+      } catch (_) {}
       state = state.copyWith(errorMessage: e.toString());
     }
   }

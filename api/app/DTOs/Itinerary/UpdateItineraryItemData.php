@@ -26,6 +26,7 @@ final readonly class UpdateItineraryItemData
         public ?string $timezone = null,
         public ?int $sortOrder = null,
         public ?string $status = null,
+        public ?int $baseVersion = null,
     ) {}
 
     /**
@@ -54,6 +55,7 @@ final readonly class UpdateItineraryItemData
             timezone: isset($data['timezone']) ? (string) $data['timezone'] : null,
             sortOrder: isset($data['sort_order']) && $data['sort_order'] !== null ? (int) $data['sort_order'] : null,
             status: isset($data['status']) ? (string) $data['status'] : null,
+            baseVersion: isset($data['base_version']) && $data['base_version'] !== null ? (int) $data['base_version'] : null,
         );
     }
 }

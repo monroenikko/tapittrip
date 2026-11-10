@@ -7,7 +7,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exceptions.dart';
 import '../domain/models/notification_preference.dart';
+import '../domain/models/trip_notification.dart';
 import '../domain/models/trip_reminder.dart';
+import '../services/local_notification_service.dart';
 
 class NotificationRepository {
   NotificationRepository({
@@ -19,6 +21,7 @@ class NotificationRepository {
   final FlutterSecureStorage _storage;
 
   static const String _prefCacheKey = 'cached_notification_preferences';
+  static const String _userNotificationsCacheKey = 'cached_user_notifications';
   String _remindersCacheKey(String tripId) => 'cached_reminders_$tripId';
 
   /// Fetch user notification preferences with offline cache fallback.
@@ -102,11 +105,65 @@ class NotificationRepository {
             .toList();
       }
       return [];
-    } on ApiException {
+    } on ApiException catch (e) {
+      if (e.statusCode == 403 || e.code == 'forbidden') {
+        try {
+          await _storage.delete(key: _remindersCacheKey(tripId));
+        } catch (_) {}
+        try {
+          await LocalNotificationService(storage: _storage)
+              .cancelRemindersForTrip(tripId);
+        } catch (_) {}
+        return [];
+      }
       return _loadCachedReminders(tripId);
     } catch (_) {
       return _loadCachedReminders(tripId);
     }
+  }
+
+  /// Fetch member's non-cancelled circle/trip notifications with offline cache fallback.
+  Future<List<UserNotification>> fetchUserNotifications() async {
+    try {
+      final response = await apiClient.get('/me/notifications');
+      if (response is List) {
+        try {
+          await _storage.write(
+            key: _userNotificationsCacheKey,
+            value: jsonEncode(response),
+          );
+        } catch (_) {}
+        return response
+            .whereType<Map>()
+            .map((e) => UserNotification.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      try {
+        final raw = await _storage.read(key: _userNotificationsCacheKey);
+        if (raw != null && raw.isNotEmpty) {
+          final decoded = jsonDecode(raw) as List<dynamic>;
+          return decoded
+              .whereType<Map>()
+              .map(
+                (e) => UserNotification.fromJson(Map<String, dynamic>.from(e)),
+              )
+              .toList();
+        }
+      } catch (_) {}
+      return [];
+    }
+  }
+
+  Future<UserNotification> markNotificationRead(String notificationId) async {
+    final response = await apiClient.post(
+      '/me/notifications/$notificationId/read',
+      data: const <String, dynamic>{},
+    );
+    return UserNotification.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
   }
 
   Future<List<TripReminder>> _loadCachedReminders(String tripId) async {

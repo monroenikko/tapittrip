@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exceptions.dart';
+import '../../circles/data/trip_circle_repository.dart';
 import '../domain/models/itinerary_item.dart';
 import '../domain/models/place.dart';
 import '../domain/models/trip_day.dart';
@@ -38,7 +39,14 @@ class ItineraryRepository {
             .toList();
       }
       return [];
-    } on ApiException {
+    } on ApiException catch (e) {
+      if (e.statusCode == 403 || e.code == 'forbidden') {
+        await TripCircleRepository.purgeAllTripCachesForStorage(
+          storage: _storage,
+          tripId: tripId,
+        );
+        rethrow;
+      }
       final cached = await _storage.read(key: _daysCacheKey(tripId));
       if (cached != null) {
         final data = jsonDecode(cached) as List<dynamic>;
@@ -105,7 +113,14 @@ class ItineraryRepository {
             (json) => ItineraryItem.fromJson(Map<String, dynamic>.from(json)),
           )
           .toList();
-    } on ApiException {
+    } on ApiException catch (e) {
+      if (e.statusCode == 403 || e.code == 'forbidden') {
+        await TripCircleRepository.purgeAllTripCachesForStorage(
+          storage: _storage,
+          tripId: tripId,
+        );
+        rethrow;
+      }
       final cached = await _storage.read(key: _cacheKey(tripId));
       if (cached != null) {
         final data = jsonDecode(cached) as List<dynamic>;
@@ -173,6 +188,16 @@ class ItineraryRepository {
     return ItineraryItem.fromJson(Map<String, dynamic>.from(response as Map));
   }
 
+  /// Write updated items list into offline cache safely.
+  Future<void> cacheItems(String tripId, List<ItineraryItem> items) async {
+    try {
+      await _storage.write(
+        key: _cacheKey(tripId),
+        value: jsonEncode(items.map((e) => e.toJson()).toList()),
+      );
+    } catch (_) {}
+  }
+
   /// Update an itinerary item.
   Future<ItineraryItem> updateItem(
     String itemId, {
@@ -184,6 +209,7 @@ class ItineraryRepository {
     String? status,
     String? notes,
     int? sortOrder,
+    int? baseVersion,
   }) async {
     final payload = <String, dynamic>{
       if (title != null) 'title': title,
@@ -194,6 +220,7 @@ class ItineraryRepository {
       if (status != null) 'status': status,
       if (notes != null) 'notes': notes,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (baseVersion != null) 'base_version': baseVersion,
     };
 
     final response = await apiClient.patch(
@@ -209,11 +236,14 @@ class ItineraryRepository {
     String tripId,
     List<String> orderedItemIds, {
     Map<String, String?>? dayAssignments,
+    Map<String, int>? expectedVersions,
   }) async {
     final payload = <String, dynamic>{
       'item_ids': orderedItemIds,
       if (dayAssignments != null && dayAssignments.isNotEmpty)
         'day_assignments': dayAssignments,
+      if (expectedVersions != null && expectedVersions.isNotEmpty)
+        'expected_versions': expectedVersions,
     };
 
     final response = await apiClient.post(

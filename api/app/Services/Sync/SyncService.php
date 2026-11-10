@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Sync;
 
+use App\Domain\Stays\StayPrivacy;
 use App\DTOs\Sync\PullSyncChangesData;
 use App\DTOs\Sync\PullSyncResult;
 use App\DTOs\Sync\PushSyncOperationsData;
@@ -16,8 +17,11 @@ use App\Models\Stay;
 use App\Models\SyncCursor;
 use App\Models\SyncOperation;
 use App\Models\Trip;
+use App\Models\TripDay;
 use App\Models\TripMember;
 use App\Models\User;
+use App\Services\Notifications\NotificationService;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -295,17 +299,94 @@ final class SyncService
 
     private function handleItineraryItem(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult
     {
+        if ($op->tripId === null) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'trip_id is required for itinerary_item sync operations');
+        }
+
+        if ($op->operationType === 'create') {
+            $existing = ItineraryItem::withTrashed()->find($op->entityId);
+            if ($existing !== null) {
+                if ($existing->trip_id !== $op->tripId) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Itinerary item belongs to another trip');
+                }
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+
+                return $this->recordAccepted($user, $deviceKey, $op, $existing->version);
+            }
+
+            $payload = $op->payload ?? [];
+            $tripDayId = $payload['trip_day_id'] ?? null;
+            if (is_string($tripDayId) && $tripDayId !== '') {
+                $dayExists = TripDay::query()
+                    ->where('id', $tripDayId)
+                    ->where('trip_id', $op->tripId)
+                    ->exists();
+                if (! $dayExists) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Invalid trip_day_id for this trip');
+                }
+            } else {
+                $tripDayId = null;
+            }
+
+            $item = new ItineraryItem([
+                'trip_id' => $op->tripId,
+                'trip_day_id' => $tripDayId,
+                'place_id' => is_string($payload['place_id'] ?? null) ? $payload['place_id'] : null,
+                'stay_id' => is_string($payload['stay_id'] ?? null) ? $payload['stay_id'] : null,
+                'kind' => (string) ($payload['kind'] ?? 'activity'),
+                'title' => (string) ($payload['title'] ?? 'Untitled stop'),
+                'notes' => array_key_exists('notes', $payload) ? $payload['notes'] : null,
+                'starts_at_utc' => ! empty($payload['starts_at_utc'])
+                    ? CarbonImmutable::parse((string) $payload['starts_at_utc'])->utc()
+                    : null,
+                'ends_at_utc' => ! empty($payload['ends_at_utc'])
+                    ? CarbonImmutable::parse((string) $payload['ends_at_utc'])->utc()
+                    : null,
+                'timezone' => is_string($payload['timezone'] ?? null) ? $payload['timezone'] : null,
+                'sort_order' => (int) ($payload['sort_order'] ?? 0),
+                'status' => (string) ($payload['status'] ?? 'planned'),
+                'version' => 1,
+            ]);
+            $item->id = $op->entityId;
+            $item->save();
+
+            return $this->recordAccepted($user, $deviceKey, $op, $item->version);
+        }
+
         if ($op->operationType === 'update') {
             $item = ItineraryItem::find($op->entityId);
             if ($item === null) {
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Itinerary item not found');
             }
+            if ($item->trip_id !== $op->tripId) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Itinerary item does not belong to the specified trip');
+            }
 
             if ($op->baseVersion < $item->version) {
-                return $this->recordConflict($user, $deviceKey, $op, $item->version, $item->toArray());
+                return $this->recordConflict($user, $deviceKey, $op, $item->version, $this->serializeItineraryConflictPayload($item));
             }
 
             $payload = $op->payload ?? [];
+            if (array_key_exists('trip_day_id', $payload)) {
+                $tripDayId = $payload['trip_day_id'];
+                if (is_string($tripDayId) && $tripDayId !== '') {
+                    $dayExists = TripDay::query()
+                        ->where('id', $tripDayId)
+                        ->where('trip_id', $op->tripId)
+                        ->exists();
+                    if (! $dayExists) {
+                        return $this->rejectUnsupported($user, $deviceKey, $op, 'Invalid trip_day_id for this trip');
+                    }
+                    $item->trip_day_id = $tripDayId;
+                } else {
+                    $item->trip_day_id = null;
+                }
+            }
+            if (array_key_exists('kind', $payload)) {
+                $item->kind = (string) $payload['kind'];
+            }
             if (array_key_exists('title', $payload)) {
                 $item->title = (string) $payload['title'];
             }
@@ -318,22 +399,41 @@ final class SyncService
             if (array_key_exists('sort_order', $payload)) {
                 $item->sort_order = (int) $payload['sort_order'];
             }
-            if (array_key_exists('planned_start_time', $payload)) {
-                $item->planned_start_time = $payload['planned_start_time'];
+            if (array_key_exists('timezone', $payload)) {
+                $item->timezone = $payload['timezone'] !== null ? (string) $payload['timezone'] : null;
             }
-            if (array_key_exists('planned_end_time', $payload)) {
-                $item->planned_end_time = $payload['planned_end_time'];
+            if (array_key_exists('starts_at_utc', $payload)) {
+                $item->starts_at_utc = ! empty($payload['starts_at_utc'])
+                    ? CarbonImmutable::parse((string) $payload['starts_at_utc'])->utc()
+                    : null;
+            }
+            if (array_key_exists('ends_at_utc', $payload)) {
+                $item->ends_at_utc = ! empty($payload['ends_at_utc'])
+                    ? CarbonImmutable::parse((string) $payload['ends_at_utc'])->utc()
+                    : null;
             }
 
             $item->version = $item->version + 1;
             $item->save();
+
+            app(NotificationService::class)->syncRemindersForItineraryItem($item);
 
             return $this->recordAccepted($user, $deviceKey, $op, $item->version);
         }
 
         if ($op->operationType === 'delete') {
             $item = ItineraryItem::find($op->entityId);
-            $item?->delete();
+            if ($item !== null) {
+                if ($item->trip_id !== $op->tripId) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Itinerary item does not belong to the specified trip');
+                }
+                if ($op->baseVersion < $item->version) {
+                    return $this->recordConflict($user, $deviceKey, $op, $item->version, $this->serializeItineraryConflictPayload($item));
+                }
+
+                app(NotificationService::class)->cancelRemindersForItineraryItem($item);
+                $item->delete();
+            }
 
             return $this->recordAccepted($user, $deviceKey, $op, 0);
         }
@@ -341,38 +441,173 @@ final class SyncService
         return $this->rejectUnsupported($user, $deviceKey, $op, "Unsupported operation type: {$op->operationType}");
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeItineraryConflictPayload(ItineraryItem $item): array
+    {
+        return [
+            'id' => $item->id,
+            'trip_id' => $item->trip_id,
+            'trip_day_id' => $item->trip_day_id,
+            'kind' => $item->kind,
+            'title' => $item->title,
+            'notes' => $item->notes,
+            'starts_at_utc' => $item->starts_at_utc?->toIso8601String(),
+            'ends_at_utc' => $item->ends_at_utc?->toIso8601String(),
+            'timezone' => $item->timezone,
+            'sort_order' => $item->sort_order,
+            'status' => $item->status,
+            'version' => $item->version,
+            'updated_at' => $item->updated_at?->toIso8601String(),
+        ];
+    }
+
     private function handleStay(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult
     {
-        if ($op->operationType === 'update') {
-            $stay = Stay::find($op->entityId);
-            if ($stay === null) {
-                return $this->rejectUnsupported($user, $deviceKey, $op, 'Stay not found');
-            }
+        if ($op->tripId === null) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'trip_id is required for stay sync operations');
+        }
 
-            if ($op->baseVersion < $stay->version) {
-                return $this->recordConflict($user, $deviceKey, $op, $stay->version, $stay->toArray());
+        if ($op->operationType === 'create') {
+            $existing = Stay::withTrashed()->find($op->entityId);
+            if ($existing !== null) {
+                if ($existing->trip_id !== $op->tripId) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Stay does not belong to the specified trip');
+                }
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+
+                return $this->recordAccepted($user, $deviceKey, $op, $existing->version);
             }
 
             $payload = $op->payload ?? [];
-            if (array_key_exists('name', $payload)) {
-                $stay->name = (string) $payload['name'];
-            }
-            if (array_key_exists('address', $payload)) {
-                $stay->address = (string) $payload['address'];
-            }
-            if (array_key_exists('notes', $payload)) {
-                $stay->notes = $payload['notes'];
-            }
-
-            $stay->version = $stay->version + 1;
+            $trip = Trip::find($op->tripId);
+            $stay = new Stay([
+                'trip_id' => $op->tripId,
+                'place_id' => is_string($payload['place_id'] ?? null) ? $payload['place_id'] : null,
+                'name' => (string) ($payload['name'] ?? 'Untitled Stay'),
+                'stay_type' => (string) ($payload['stay_type'] ?? 'hotel'),
+                'address' => array_key_exists('address', $payload) ? $payload['address'] : null,
+                'latitude' => isset($payload['latitude']) && is_numeric($payload['latitude']) ? (float) $payload['latitude'] : null,
+                'longitude' => isset($payload['longitude']) && is_numeric($payload['longitude']) ? (float) $payload['longitude'] : null,
+                'check_in_at' => ! empty($payload['check_in_at'])
+                    ? CarbonImmutable::parse((string) $payload['check_in_at'])->utc()
+                    : null,
+                'check_out_at' => ! empty($payload['check_out_at'])
+                    ? CarbonImmutable::parse((string) $payload['check_out_at'])->utc()
+                    : null,
+                'timezone' => is_string($payload['timezone'] ?? null)
+                    ? $payload['timezone']
+                    : ($trip?->primary_timezone ?? 'UTC'),
+                'phone' => ($trip?->owner_id === $user->id && array_key_exists('phone', $payload)) ? $payload['phone'] : null,
+                'booking_reference' => ($trip?->owner_id === $user->id && array_key_exists('booking_reference', $payload))
+                    ? $payload['booking_reference']
+                    : null,
+                'notes' => array_key_exists('notes', $payload) ? $payload['notes'] : null,
+                'luggage_profile' => isset($payload['luggage_profile']) && is_array($payload['luggage_profile'])
+                    ? $payload['luggage_profile']
+                    : null,
+                'version' => 1,
+            ]);
+            $stay->id = $op->entityId;
             $stay->save();
 
             return $this->recordAccepted($user, $deviceKey, $op, $stay->version);
         }
 
+        if ($op->operationType === 'update') {
+            $stay = Stay::with('trip')->find($op->entityId);
+            if ($stay === null) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Stay not found');
+            }
+            if ($stay->trip_id !== $op->tripId) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Stay does not belong to the specified trip');
+            }
+
+            if ($op->baseVersion < $stay->version) {
+                return $this->recordConflict(
+                    $user,
+                    $deviceKey,
+                    $op,
+                    $stay->version,
+                    StayPrivacy::redactServerPayload($stay, $user),
+                );
+            }
+
+            $payload = $op->payload ?? [];
+            $isOwner = StayPrivacy::isOwner($stay, $user);
+
+            if (array_key_exists('name', $payload)) {
+                $stay->name = (string) $payload['name'];
+            }
+            if (array_key_exists('stay_type', $payload)) {
+                $stay->stay_type = (string) $payload['stay_type'];
+            }
+            if (array_key_exists('address', $payload)) {
+                $stay->address = $payload['address'] !== null ? (string) $payload['address'] : null;
+            }
+            if (array_key_exists('latitude', $payload)) {
+                $stay->latitude = $payload['latitude'] !== null ? (float) $payload['latitude'] : null;
+            }
+            if (array_key_exists('longitude', $payload)) {
+                $stay->longitude = $payload['longitude'] !== null ? (float) $payload['longitude'] : null;
+            }
+            if (array_key_exists('check_in_at', $payload)) {
+                $stay->check_in_at = ! empty($payload['check_in_at'])
+                    ? CarbonImmutable::parse((string) $payload['check_in_at'])->utc()
+                    : null;
+            }
+            if (array_key_exists('check_out_at', $payload)) {
+                $stay->check_out_at = ! empty($payload['check_out_at'])
+                    ? CarbonImmutable::parse((string) $payload['check_out_at'])->utc()
+                    : null;
+            }
+            if (array_key_exists('timezone', $payload) && $payload['timezone'] !== null) {
+                $stay->timezone = (string) $payload['timezone'];
+            }
+            if ($isOwner && array_key_exists('phone', $payload)) {
+                $stay->phone = $payload['phone'] !== null ? (string) $payload['phone'] : null;
+            }
+            if ($isOwner && array_key_exists('booking_reference', $payload)) {
+                $stay->booking_reference = $payload['booking_reference'] !== null ? (string) $payload['booking_reference'] : null;
+            }
+            if (array_key_exists('notes', $payload)) {
+                $stay->notes = $payload['notes'];
+            }
+            if (array_key_exists('luggage_profile', $payload) && is_array($payload['luggage_profile'])) {
+                $stay->luggage_profile = $payload['luggage_profile'];
+            }
+
+            $stay->version = $stay->version + 1;
+            $stay->save();
+
+            app(NotificationService::class)->syncRemindersForStay($stay);
+
+            return $this->recordAccepted($user, $deviceKey, $op, $stay->version);
+        }
+
         if ($op->operationType === 'delete') {
-            $stay = Stay::find($op->entityId);
-            $stay?->delete();
+            $stay = Stay::with('trip')->find($op->entityId);
+            if ($stay !== null) {
+                if ($stay->trip_id !== $op->tripId) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Stay does not belong to the specified trip');
+                }
+                if ($op->baseVersion < $stay->version) {
+                    return $this->recordConflict(
+                        $user,
+                        $deviceKey,
+                        $op,
+                        $stay->version,
+                        StayPrivacy::redactServerPayload($stay, $user),
+                    );
+                }
+
+                app(NotificationService::class)->cancelRemindersForStay($stay);
+                $stay->itineraryItems()->update(['stay_id' => null]);
+                $stay->delete();
+            }
 
             return $this->recordAccepted($user, $deviceKey, $op, 0);
         }
@@ -385,6 +620,9 @@ final class SyncService
         $trip = Trip::find($op->entityId);
         if ($trip === null) {
             return $this->rejectUnsupported($user, $deviceKey, $op, 'Trip not found');
+        }
+        if (! $trip->hasMember($user) || ! in_array($trip->memberRole($user), ['owner', 'editor'], true)) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'Forbidden: not authorized to modify trip');
         }
 
         if ($op->operationType === 'update') {

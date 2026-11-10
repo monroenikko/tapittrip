@@ -2,13 +2,58 @@
 
 ## Current milestone
 
-- Milestone: **Trip Circles Collaboration (Track 1 / M10 Slice 2)**
-- Status: **Completed (Steps 2–3 Core: Targeted Friend Code Invites, Circle Inbox, Two-Party Ownership Transfer, Account Orphan Guard & Sync Rejection Visibility)**
-- Basis: User-approved Trip Circles Slice 2 (`MASTER_PLAN.md` Section 14C `TC-2`, `TC-3` / ADR `0005-trip-circles-targeted-invites-and-ownership-transfer.md`). Privacy-safe `TRP-XXXXXX` friend codes, opt-out & sender blocking (`user_blocks`), anti-enumeration direct invitations & in-app `CircleInboxPage`, atomic two-party organizer ownership handovers (`trip_ownership_transfers`), `DELETE /me` shared-trip orphan guard, viewer/journal/sync access hardening, and non-silent outbox rejection visibility.
+- Milestone: **Trip Circles Collaboration (Track 1 / M10 Slice 3)**
+- Status: **Completed (Steps 4–5 Core: Multi-Device Conflict Resolution, Stay Privacy Redaction, Organizer Announcements, Timezone/Quiet-Hours Preferences & Removal Cleanup)**
+- Basis: User-approved Trip Circles Slice 3 (`MASTER_PLAN.md` Section 14C `TC-4`, `TC-5` / ADR `0006-trip-circles-sync-conflicts-and-announcements.md`). Added REST optimistic concurrency (`base_version` / `expected_versions` returning `409 version_conflict`), aligned sync handling (`itinerary_item`, `stay`) with schema & cross-trip isolation, non-owner `Stay` privacy redaction (`booking_reference`, `phone`, `friends_family` private location), organizer `trip_announcements` + companion `trip_notifications`, `circle_announcements_enabled` & `timezone_behavior`-aware quiet hours, auto reminder rescheduling/cancellation, and complete revoked-trip cache & local reminder purging.
 - Boundary:
   - Slice 1 (`TC-0`, `TC-1`, `TC-3.1`, `TC-8.2` UI): Shareable Invite Links, Member Roles, Leave Guard & Shared Activity Feed UI — **Completed**.
   - Slice 2 (`TC-2`, `TC-3.2`–`TC-3.4`): Targeted Friend Code Invites, Circle Inbox, Explicit Two-Party Ownership Transfer, Account Deletion Orphan Guard & Sync Hardening — **Completed**.
-- Next Boundary: Slice 2 complete (`daddbd7` + this Slice 2 commit); awaiting explicit approval before starting **Trip Circles Slice 3 (`TC-4` multi-device offline conflict UI & `TC-5` organizer announcements)** or moving to **M10: Voice & Camera Translation / Safety Intelligence** or **Flights & Booking Import**.
+  - Slice 3 (`TC-4`, `TC-5`): Multi-Device Sync Conflicts, Stay Privacy Redaction, Organizer Announcements & Notification Cleanup — **Completed**.
+- Next Boundary: Slice 3 complete; awaiting explicit approval before starting **Trip Circles Slice 4 (`TC-6` managed child/companion profiles, `TC-9` opt-in location sharing, or `TC-8` group expense splits)** or moving to **M10: Voice & Camera Translation / Safety Intelligence** or **Flights & Booking Import**.
+
+## 2026-11-10 — Trip Circles Slice 3: Conflict Resolution, Stay Privacy, Announcements & Notification Cleanup
+
+### Completed
+- **Architecture Decision & Schema (`docs/decisions/0006-trip-circles-sync-conflicts-and-announcements.md`)**:
+  - Accepted ADR 0006 specifying HTTP `409 version_conflict` envelopes (`VersionConflictException`), `StayPrivacy` owner-only redaction across REST and sync conflicts, organizer `trip_announcements` (`client_operation_id` idempotency), `trip_notifications` inbox deduplication, `circle_announcements_enabled`, `destination` vs `home` quiet-hours evaluation, automatic reminder rescheduling/cancellation on itinerary/stay edits, and removed-member notification + local cache purge.
+  - Added migration `2026_11_10_050000_add_trip_circles_slice3_tables.php` (applied cleanly to both `tapittrip` and `tapittrip_test`).
+- **Backend API, Sync & Notification Lifecycle (`api/`)**:
+  - Added `VersionConflictException`, mapped `409 version_conflict` in `ApiExceptionResponse`, and added `base_version` / `expected_versions` optimistic concurrency locking across `ItineraryService`, `StayService`, `TripAnnouncementService`, Form Requests, and controllers.
+  - Aligned `SyncService::handleItineraryItem()` and `handleStay()` with PostgreSQL columns (`create`/`update`/`delete`), enforced `trip_id` matching & `handleTrip()` authorization, and redacted sensitive `Stay` fields via `StayPrivacy` in both `StayResource` and sync conflict responses.
+  - Added `TripAnnouncement` / `TripNotification` models + factories, `TripAnnouncementService` / `TripAnnouncementController`, `TripNotificationController` (`/trips/{trip}/announcements`, `/announcements/{announcement}`, `/me/notifications`, `/me/notifications/{notification}/read`), and hooked `NotificationService` into `ItineraryService`, `StayService`, and `TripCircleService::removeMember()`.
+  - Updated `docs/api/openapi.yaml` and `docs/features/trip-circles.md`.
+- **Flutter Conflict UX, Cache Isolation & Announcements/Notices UI (`client/`)**:
+  - Added `ConflictException` (`409 version_conflict`) parsing in `api_exceptions.dart` and `ApiClient`.
+  - Updated `ItineraryRepository`/`ItineraryListNotifier` and `StayRepository`/`StayListNotifier` to pass `base_version` / `expected_versions`, queue offline mutations into `OutboxStorage`, capture `409` conflicts for manual resolution, and purge all per-trip local caches (`TripCircleRepository.purgeAllTripCachesForStorage` across 16 keys + `LocalNotificationService.cancelRemindersForTrip`) on `403` or `SyncService` removal rejection.
+  - Enhanced `ConflictResolutionDialog` (rich itinerary/stay fields) and `SyncStatusIndicator` (multi-conflict selector sheet + safe offline retry).
+  - Added `TripAnnouncement` & `UserNotification` models, `CircleAnnouncementsSection` in `TripCirclePage`, `CircleNoticesSection` in `CircleInboxPage`, and `Circle Announcements` switch + `Quiet Hours Timezone` (`destination`/`home`/`device`) dropdown in `NotificationPreferencesPage`.
+- **Verification**:
+  - Backend: `./vendor/bin/sail pint --test` passed; `./vendor/bin/sail --profile tools run --rm --no-deps contracts` passed; full `./vendor/bin/sail exec -e DB_CONNECTION=pgsql -e DB_DATABASE=tapittrip_test laravel.test php artisan test` passed **181/181 tests (2,351 assertions)** including 7 Slice 3 integration tests in `tests/Feature/TripCollaborationSlice3Test.php`.
+  - Mobile: targeted `dart format --output=none --set-exit-if-changed` across Slice 3 paths and `flutter analyze` (`0 issues`) passed; `flutter test test/trip_circle_slice3_test.dart test/trip_circle_test.dart test/sync_test.dart test/notification_test.dart test/stay_test.dart` passed **48/48 tests**. Running full `flutter test` passed **205 tests** with **5 pre-existing failures** strictly in `client/test/itinerary_test.dart` caused by uncommitted `recommendations_provider.dart` scheduling an uncancellable 600ms `Future.delayed` timer during widget disposal.
+
+## 2026-11-10 — Recommendation place links and directions
+
+- User-requested follow-up: added View place and Directions buttons to planned and suggested recommendation cards. Place/address/destination text feeds encoded map searches and the existing native-map/browser directions launcher. Launch failures show localized feedback; buttons wrap at narrow widths and large text sizes.
+- Changed the recommendation view/strings and itinerary-page destination handoff; added `recommendation_link_service.dart` and `recommendation_link_actions.dart`; extended `recommendations_test.dart`. No backend/API or persistence changes.
+- From `client/`, `dart format` passed on the six changed Dart files; `flutter analyze` passed with no issues; `flutter test test/recommendations_test.dart` passed (8 tests). Link tests cover planned/suggested actions, destination context, hostile query encoding, failure feedback, and 320 px/200% text layout. Native map launching was faked in tests.
+- Privacy/offline: external actions require a tap, transmit only destination search text, and use no arbitrary provider URL. No app location permission or new credentials required. Offline maps depend on the installed map app. Next smallest check: tap both actions on the user's device and confirm the destination result; no milestone expansion.
+
+## 2026-11-10 — Automatic itinerary recommendations
+
+- Scope authorized by the user's request: populate Recommendations from the saved itinerary and automatically fetch additional advisory AI suggestions. This is a narrow itinerary follow-up, not approval for other milestone work.
+- Added a Riverpod recommendations provider, responsive tab content, localized feature copy, and regression tests. Existing planned items render while suggestions load; edits refresh suggestions, duplicate stops are suppressed, failures expose manual retry, and empty itineraries need no AI request.
+- Extended existing assistant context to 50 stops with day/place context; added backward-compatible `context_summary.source` in OpenAPI. Removed private stay addresses from prompts and raw provider failures from logs. No migrations/new endpoints or environment variables.
+- Verification from `client/`: targeted `dart format` on the recommendations provider/view/strings, itinerary page, and test passed; `flutter analyze` passed; `flutter test test/recommendations_test.dart test/trip_assistant_test.dart test/activity_sheet_test.dart` passed (12 tests).
+- Verification from `api/`: `./vendor/bin/sail bin phpunit --configuration=phpunit.postgres.xml tests/Feature/TripAssistantTest.php` passed (10 tests, 38 assertions). The initial default `artisan test --filter=TripAssistantTest` run failed because SQLite had no application tables; the PostgreSQL test configuration resolved this. Existing PHPUnit conventions were retained; Pest/static-analysis binaries are not installed.
+- `./vendor/bin/sail bin pint --test app/Services/Itinerary/AskTapItTripService.php app/Services/Itinerary/GeminiAssistantService.php tests/Feature/TripAssistantTest.php` passed. OpenAPI YAML parsed successfully through Sail PHP with `Symfony\Component\Yaml\Yaml::parseFile('/var/www/docs/openapi.yaml')`; this is syntax validation, not a full OpenAPI semantic validator. `git diff --check` passed.
+- Limitations and next check: Gemini credentials/connectivity are required for AI output. Tests use fakes; device/live-provider verification remains manual. Suggestions are page-session state and do not persist across sessions or run in the background. Next smallest task: verify creating/editing a stop and opening Recommendations on device. Details: [AI planner feature](features/ai-smart-itinerary-planner.md#automatic-itinerary-recommendations-2026-11-10).
+
+## 2026-11-10 — Activity day dropdown overflow fix
+
+- Constrained the add/edit activity day selector to available width; selected labels ellipsize and open menu labels wrap with variable row heights.
+- Extended `client/test/activity_sheet_test.dart` with long day labels and day selection at 320 logical pixels / 200% text scaling in both themes, retaining keyboard coverage.
+- Verification from `client/`: `dart format lib/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart test/activity_sheet_test.dart` passed; `flutter analyze` passed with no issues; `flutter test test/activity_sheet_test.dart` passed (2 tests). SDK cache access required sandbox escalation.
+- Security/offline/API contracts unchanged. No credentials required. Device verification not performed; next smallest check is reopening the activity sheet on the reported device after hot reload. No milestone expansion.
 
 ## 2026-11-10 — Trip Circles Slice 2: Friend Code Invites, Circle Inbox, Ownership Transfer & Sync/Account Hardening
 

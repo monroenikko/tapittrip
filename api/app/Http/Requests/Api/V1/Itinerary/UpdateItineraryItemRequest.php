@@ -94,6 +94,7 @@ final class UpdateItineraryItemRequest extends FormRequest
             'timezone' => ['sometimes', 'string', 'timezone:all'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
             'status' => ['sometimes', 'string', 'in:planned,visited,skipped'],
+            'base_version' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }

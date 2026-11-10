@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'activity_reminder_lead_minutes',
     'checklist_reminders_enabled',
     'stay_reminders_enabled',
+    'circle_announcements_enabled',
     'quiet_hours_enabled',
     'quiet_hours_start',
     'quiet_hours_end',
@@ -52,6 +53,7 @@ final class NotificationPreference extends Model
             'activity_reminder_lead_minutes' => 'integer',
             'checklist_reminders_enabled' => 'boolean',
             'stay_reminders_enabled' => 'boolean',
+            'circle_announcements_enabled' => 'boolean',
             'quiet_hours_enabled' => 'boolean',
             'geofence_arrival_enabled' => 'boolean',
         ];

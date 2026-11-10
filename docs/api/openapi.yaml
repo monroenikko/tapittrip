@@ -903,6 +903,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Optimistic concurrency conflict (stale item version in expected_versions).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "422":
           description: Validation error.
           content:
@@ -1084,6 +1090,12 @@ paths:
                         enum: [dining, culture, transit, packing, itinerary, weather, safety, lounge, toddler_friendly, general, out_of_scope]
                       context_summary:
                         type: object
+                        properties:
+                          source:
+                            type: string
+                            enum: [gemini, local_fallback]
+                            example: gemini
+                            description: Generation source; Gemini suggestions are unverified, not live provider facts. Additive optional field for older clients.
                       suggested_actions:
                         type: array
                         items:
@@ -1168,6 +1180,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Optimistic concurrency conflict (`version_conflict`).
           content:
             application/json:
               schema:
@@ -1440,6 +1458,12 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Stay not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Optimistic concurrency conflict (`version_conflict`), with sensitive stay fields redacted for non-owners.
           content:
             application/json:
               schema:
@@ -2055,6 +2079,63 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "422":
           description: Validation error.
+
+  /me/notifications:
+    get:
+      operationId: listUserNotifications
+      summary: List non-cancelled circle and trip notifications for the authenticated user
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Notification list returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TripNotification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /me/notifications/{notification}/read:
+    post:
+      operationId: markUserNotificationRead
+      summary: Mark a notification as read
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notification
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Notification marked read.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripNotification"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
 
   /me/notification-preferences:
     get:
@@ -3004,6 +3085,141 @@ paths:
           description: Forbidden.
         "422":
           description: Validation error.
+
+  /trips/{trip}/announcements:
+    get:
+      operationId: listTripAnnouncements
+      summary: List organizer group announcements for a trip circle (TC-5.1)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of organizer announcements ordered by pin state and recency.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TripAnnouncement"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (Not a member of this trip).
+    post:
+      operationId: createTripAnnouncement
+      summary: Post an organizer group announcement idempotently (TC-5.1)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreAnnouncementRequest"
+      responses:
+        "201":
+          description: Announcement posted (or returned idempotently via client_operation_id).
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripAnnouncement"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (Only the trip organizer can post announcements).
+        "422":
+          description: Validation error.
+
+  /announcements/{announcement}:
+    patch:
+      operationId: updateTripAnnouncement
+      summary: Update an organizer announcement without duplicating notices or feed events
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: announcement
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAnnouncementRequest"
+      responses:
+        "200":
+          description: Updated announcement.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripAnnouncement"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (Only organizer).
+        "409":
+          description: Optimistic concurrency conflict.
+        "422":
+          description: Validation error.
+    delete:
+      operationId: deleteTripAnnouncement
+      summary: Soft delete an announcement and cancel pending companion notices
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: announcement
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Announcement deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (Only organizer).
 
   /trips/{trip}/feed:
     get:
@@ -4284,6 +4500,9 @@ components:
         status:
           type: string
           enum: [planned, visited, skipped]
+        base_version:
+          type: integer
+          nullable: true
     ReorderItineraryItemsRequest:
       type: object
       additionalProperties: false
@@ -4302,6 +4521,11 @@ components:
             type: string
             format: uuid
             nullable: true
+        expected_versions:
+          type: object
+          description: Optional map of item UUID to expected integer version for optimistic concurrency checks
+          additionalProperties:
+            type: integer
 
     Stay:
       type: object
@@ -4379,8 +4603,10 @@ components:
           type: integer
         google_maps_url:
           type: string
+          nullable: true
         google_maps_directions_url:
           type: string
+          nullable: true
         place:
           $ref: "#/components/schemas/Place"
         itinerary_items:
@@ -4532,6 +4758,9 @@ components:
         place_id:
           type: string
           format: uuid
+          nullable: true
+        base_version:
+          type: integer
           nullable: true
 
     CompareStayTransportRequest:
@@ -5134,6 +5363,7 @@ components:
         - activity_reminder_lead_minutes
         - checklist_reminders_enabled
         - stay_reminders_enabled
+        - circle_announcements_enabled
         - quiet_hours_enabled
         - geofence_arrival_enabled
         - timezone_behavior
@@ -5157,6 +5387,8 @@ components:
         checklist_reminders_enabled:
           type: boolean
         stay_reminders_enabled:
+          type: boolean
+        circle_announcements_enabled:
           type: boolean
         quiet_hours_enabled:
           type: boolean
@@ -5196,6 +5428,8 @@ components:
         checklist_reminders_enabled:
           type: boolean
         stay_reminders_enabled:
+          type: boolean
+        circle_announcements_enabled:
           type: boolean
         quiet_hours_enabled:
           type: boolean
@@ -6656,6 +6890,142 @@ components:
         status:
           type: string
           enum: [active, revoked, exhausted, expired]
+
+    TripAnnouncement:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - author_id
+        - author_name
+        - title
+        - body
+        - is_pinned
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        author_id:
+          type: string
+          format: uuid
+        author_name:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        is_pinned:
+          type: boolean
+        client_operation_id:
+          type: string
+          format: uuid
+          nullable: true
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    StoreAnnouncementRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - title
+        - body
+      properties:
+        title:
+          type: string
+          maxLength: 160
+        body:
+          type: string
+          maxLength: 4000
+        is_pinned:
+          type: boolean
+        client_operation_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    UpdateAnnouncementRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 160
+        body:
+          type: string
+          maxLength: 4000
+        is_pinned:
+          type: boolean
+        base_version:
+          type: integer
+          nullable: true
+
+    TripNotification:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - trip_title
+        - category
+        - title
+        - body
+        - timezone
+        - status
+        - is_read
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        trip_title:
+          type: string
+        announcement_id:
+          type: string
+          format: uuid
+          nullable: true
+        category:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        scheduled_for_utc:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+        trip_local_time_label:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, delivered, suppressed_quiet_hours, cancelled]
+        is_read:
+          type: boolean
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
 
 
 

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exceptions.dart';
 import '../../lounges/data/lounge_repository.dart';
 import '../data/outbox_storage.dart';
 import '../domain/models/outbox_operation.dart';
@@ -27,12 +28,14 @@ class SyncService {
     required this.apiClient,
     required this.outboxStorage,
     this.loungeRepository,
+    this.onTripAccessRevoked,
     String? deviceKey,
   }) : deviceKey = deviceKey ?? _generateDeviceKey();
 
   final ApiClient apiClient;
   final OutboxStorage outboxStorage;
   final LoungeRepository? loungeRepository;
+  final Future<void> Function(String tripId)? onTripAccessRevoked;
   final String deviceKey;
 
   dynamic _extractData(dynamic response) {
@@ -56,7 +59,7 @@ class SyncService {
     Map<String, dynamic>? payload,
     int baseVersion = 1,
   }) async {
-    final operationId = _generateUuid();
+    final operationId = generateUuid();
     final operation = OutboxOperation(
       operationId: operationId,
       tripId: tripId,
@@ -119,6 +122,14 @@ class SyncService {
             conflictDetails: result.conflictDetails,
           ),
         );
+        final reason =
+            result.conflictDetails?['reason']?.toString().toLowerCase() ?? '';
+        if (existing.tripId != null &&
+            (reason.contains('forbidden') ||
+                reason.contains('not a member') ||
+                reason.contains('not authorized'))) {
+          await onTripAccessRevoked?.call(existing.tripId!);
+        }
       }
     }
 
@@ -141,10 +152,18 @@ class SyncService {
       queryParams['trip_id'] = tripId;
     }
 
-    final response = await apiClient.get(
-      '/sync/pull',
-      queryParameters: queryParams,
-    );
+    final dynamic response;
+    try {
+      response = await apiClient.get(
+        '/sync/pull',
+        queryParameters: queryParams,
+      );
+    } on ApiException catch (e) {
+      if (tripId != null && (e.statusCode == 403 || e.code == 'forbidden')) {
+        await onTripAccessRevoked?.call(tripId);
+      }
+      rethrow;
+    }
     final data = _extractData(response) as Map<String, dynamic>;
     final pullResult = PullResult.fromJson(data);
 
@@ -221,7 +240,7 @@ class SyncService {
     }
   }
 
-  static String _generateUuid() {
+  static String generateUuid() {
     final rand = Random();
     String hex(int length) =>
         List.generate(length, (_) => rand.nextInt(16).toRadixString(16)).join();

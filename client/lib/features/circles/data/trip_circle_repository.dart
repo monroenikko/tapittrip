@@ -5,9 +5,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exceptions.dart';
+import '../../notifications/services/local_notification_service.dart';
 import '../../trips/domain/models/trip.dart';
 import '../domain/models/activity_event.dart';
 import '../domain/models/circle_member.dart';
+import '../domain/models/trip_announcement.dart';
 import '../domain/models/trip_invitation.dart';
 
 class TripCircleRepository {
@@ -68,14 +70,42 @@ class TripCircleRepository {
     return false;
   }
 
-  /// Clear cached circle, feed, journal, and recap artifacts when access is revoked (TC-1.7).
-  Future<void> purgeTripCircleCaches(String tripId) async {
-    await _storage.delete(key: _membersCacheKey(tripId));
-    await _storage.delete(key: _feedCacheKey(tripId));
-    await _storage.delete(key: 'cached_journal_$tripId');
-    await _storage.delete(key: 'cached_recap_$tripId');
-    await _storage.delete(key: 'cached_itinerary_$tripId');
-    await _storage.delete(key: 'cached_days_$tripId');
+  /// Clear all per-trip local caches and device reminders when access is revoked (TC-1.7, TC-4.4, TC-5.3).
+  Future<void> purgeTripCircleCaches(String tripId) =>
+      purgeAllTripCachesForStorage(storage: _storage, tripId: tripId);
+
+  /// Purge all cached trip collections and local reminders for a revoked trip.
+  static Future<void> purgeAllTripCachesForStorage({
+    required FlutterSecureStorage storage,
+    required String tripId,
+  }) async {
+    const prefixes = [
+      'cached_circle_members_',
+      'cached_activity_feed_',
+      'cached_announcements_',
+      'cached_journal_',
+      'cached_recap_',
+      'cached_today_',
+      'cached_budget_',
+      'cached_expenses_',
+      'cached_summary_',
+      'cached_settlements_',
+      'cached_checklists_',
+      'cached_stays_',
+      'cached_weather_',
+      'cached_itinerary_',
+      'cached_days_',
+      'cached_reminders_',
+    ];
+    for (final prefix in prefixes) {
+      try {
+        await storage.delete(key: '$prefix$tripId');
+      } catch (_) {}
+    }
+    try {
+      await LocalNotificationService(storage: storage)
+          .cancelRemindersForTrip(tripId);
+    } catch (_) {}
   }
 
   /// Clear user-scoped incoming inbox caches on logout or account deletion (TC-1.8, TC-2.4).
@@ -458,6 +488,100 @@ class TripCircleRepository {
       }
       rethrow;
     }
+  }
+
+  String _announcementsCacheKey(String tripId) =>
+      'cached_announcements_$tripId';
+
+  /// Fetch organizer announcements (works in-app without push permission, cached offline).
+  Future<({List<TripAnnouncement> items, bool fromCache})> getAnnouncements(
+    String tripId,
+  ) async {
+    try {
+      final response = await apiClient.get('/trips/$tripId/announcements');
+      final list = _extractList(response);
+
+      await _storage.write(
+        key: _announcementsCacheKey(tripId),
+        value: jsonEncode(list),
+      );
+
+      final items = list
+          .whereType<Map>()
+          .map((e) => TripAnnouncement.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      return (items: items, fromCache: false);
+    } catch (e) {
+      if (_isRevokedOrForbidden(e)) {
+        await purgeTripCircleCaches(tripId);
+        rethrow;
+      }
+      final cached = await getCachedAnnouncements(tripId);
+      if (cached.isNotEmpty) {
+        return (items: cached, fromCache: true);
+      }
+      if (e is NetworkException) {
+        return (items: const <TripAnnouncement>[], fromCache: true);
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<TripAnnouncement>> getCachedAnnouncements(String tripId) async {
+    try {
+      final raw = await _storage.read(key: _announcementsCacheKey(tripId));
+      if (raw == null || raw.isEmpty) return [];
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .whereType<Map>()
+          .map((e) => TripAnnouncement.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<TripAnnouncement> createAnnouncement(
+    String tripId, {
+    required String title,
+    required String body,
+    bool isPinned = false,
+    String? clientOperationId,
+  }) async {
+    final response = await apiClient.post(
+      '/trips/$tripId/announcements',
+      data: {
+        'title': title,
+        'body': body,
+        'is_pinned': isPinned,
+        if (clientOperationId != null && clientOperationId.isNotEmpty)
+          'client_operation_id': clientOperationId,
+      },
+    );
+    return TripAnnouncement.fromJson(_extractMap(response));
+  }
+
+  Future<TripAnnouncement> updateAnnouncement(
+    String announcementId, {
+    String? title,
+    String? body,
+    bool? isPinned,
+    int? baseVersion,
+  }) async {
+    final response = await apiClient.patch(
+      '/announcements/$announcementId',
+      data: {
+        'title': ?title,
+        'body': ?body,
+        'is_pinned': ?isPinned,
+        'base_version': ?baseVersion,
+      },
+    );
+    return TripAnnouncement.fromJson(_extractMap(response));
+  }
+
+  Future<void> deleteAnnouncement(String announcementId) async {
+    await apiClient.delete('/announcements/$announcementId');
   }
 }
 

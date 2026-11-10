@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../../data/notification_repository.dart';
 import '../../domain/models/notification_preference.dart';
+import '../../domain/models/trip_notification.dart';
 import '../../domain/models/trip_reminder.dart';
 import '../../services/local_notification_service.dart';
 
@@ -86,3 +87,33 @@ final tripRemindersProvider =
       List<TripReminder>,
       String
     >(TripRemindersNotifier.new);
+
+class UserNotificationsNotifier extends AsyncNotifier<List<UserNotification>> {
+  @override
+  Future<List<UserNotification>> build() async {
+    final repo = ref.watch(notificationRepositoryProvider);
+    return repo.fetchUserNotifications();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() {
+      final repo = ref.read(notificationRepositoryProvider);
+      return repo.fetchUserNotifications();
+    });
+  }
+
+  Future<void> markRead(String notificationId) async {
+    final repo = ref.read(notificationRepositoryProvider);
+    final updated = await repo.markNotificationRead(notificationId);
+    final current = state.asData?.value ?? [];
+    state = AsyncData(
+      current.map((n) => n.id == notificationId ? updated : n).toList(),
+    );
+  }
+}
+
+final userNotificationsProvider =
+    AsyncNotifierProvider<UserNotificationsNotifier, List<UserNotification>>(
+      UserNotificationsNotifier.new,
+    );

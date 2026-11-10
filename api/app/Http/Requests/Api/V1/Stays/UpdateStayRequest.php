@@ -38,6 +38,7 @@ final class UpdateStayRequest extends FormRequest
             'luggage_profile.oversized' => ['nullable', 'integer', 'min:0'],
             'luggage_profile.stroller' => ['nullable', 'boolean'],
             'place_id' => ['nullable', 'uuid', 'exists:places,id'],
+            'base_version' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }

@@ -83,11 +83,54 @@ class SyncStatusIndicator extends ConsumerWidget {
               '${syncState.conflictCount} version conflict(s) detected. Tap to resolve.',
           child: InkWell(
             onTap: () {
-              if (syncState.conflicts.isNotEmpty) {
+              if (syncState.conflicts.length == 1) {
                 showDialog<void>(
                   context: context,
                   builder: (ctx) => ConflictResolutionDialog(
                     conflict: syncState.conflicts.first,
+                  ),
+                );
+              } else if (syncState.conflicts.length > 1) {
+                showModalBottomSheet<void>(
+                  context: context,
+                  showDragHandle: true,
+                  builder: (sheetCtx) => ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text(
+                        '${syncState.conflicts.length} Sync Conflicts',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...syncState.conflicts.map(
+                        (conflict) => ListTile(
+                          leading: Icon(
+                            Icons.warning_amber_rounded,
+                            color: colorScheme.error,
+                          ),
+                          title: Text(
+                            conflict.payload?['title']?.toString() ??
+                                conflict.payload?['name']?.toString() ??
+                                conflict.entityType.replaceAll('_', ' '),
+                          ),
+                          subtitle: Text(
+                            'Local v${conflict.baseVersion} vs Server v${conflict.conflictDetails?['server_version'] ?? '?'}',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.of(sheetCtx).pop();
+                            showDialog<void>(
+                              context: context,
+                              builder: (ctx) =>
+                                  ConflictResolutionDialog(conflict: conflict),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }

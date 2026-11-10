@@ -211,6 +211,60 @@ class _NotificationPreferencesPageState
                             });
                       },
                     ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      title: const Text('Circle Announcements'),
+                      subtitle: const Text(
+                        'Notify when a trip organizer posts a group announcement',
+                      ),
+                      value: prefs.circleAnnouncementsEnabled,
+                      onChanged: (val) {
+                        ref
+                            .read(notificationPreferencesProvider.notifier)
+                            .updatePreferences({
+                              'circle_announcements_enabled': val,
+                            });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Timezone context for quiet hours and scheduling
+              _buildSectionHeader(context, 'Timezone Behavior'),
+              Card(
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.public_outlined),
+                      title: const Text('Quiet Hours Timezone'),
+                      subtitle: const Text(
+                        'Evaluate quiet hours against destination time or your home timezone while keeping trip-local event times',
+                      ),
+                      trailing: DropdownButton<String>(
+                        value: prefs.timezoneBehavior,
+                        onChanged: (val) {
+                          if (val != null) {
+                            ref
+                                .read(notificationPreferencesProvider.notifier)
+                                .updatePreferences({'timezone_behavior': val});
+                          }
+                        },
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'destination',
+                            child: Text('Destination'),
+                          ),
+                          DropdownMenuItem(value: 'home', child: Text('Home')),
+                          DropdownMenuItem(
+                            value: 'device',
+                            child: Text('Device'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

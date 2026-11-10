@@ -108,7 +108,10 @@ final class ItineraryItemController extends Controller
         /** @var array<string, string|null> $dayAssignments */
         $dayAssignments = $request->validated('day_assignments') ?? [];
 
-        $reordered = $this->itineraryService->reorderItems($trip, $itemIds, $dayAssignments);
+        /** @var array<string, int> $expectedVersions */
+        $expectedVersions = $request->validated('expected_versions') ?? [];
+
+        $reordered = $this->itineraryService->reorderItems($trip, $itemIds, $dayAssignments, $expectedVersions);
 
         return ItineraryItemResource::collection($reordered);
     }

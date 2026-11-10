@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exceptions.dart';
+import '../../circles/data/trip_circle_repository.dart';
 import '../domain/models/luggage_profile.dart';
 import '../domain/models/stay.dart';
 import '../domain/models/transport_option.dart';
@@ -35,7 +36,14 @@ class StayRepository {
             .toList();
       }
       return [];
-    } on ApiException {
+    } on ApiException catch (e) {
+      if (e.statusCode == 403 || e.code == 'forbidden') {
+        await TripCircleRepository.purgeAllTripCachesForStorage(
+          storage: _storage,
+          tripId: tripId,
+        );
+        rethrow;
+      }
       final cached = await _storage.read(key: _cacheKey(tripId));
       if (cached != null) {
         final data = jsonDecode(cached) as List<dynamic>;
@@ -94,6 +102,16 @@ class StayRepository {
     return Stay.fromJson(response as Map<String, dynamic>);
   }
 
+  /// Update local stay offline cache safely.
+  Future<void> cacheStays(String tripId, List<Stay> stays) async {
+    try {
+      await _storage.write(
+        key: _cacheKey(tripId),
+        value: jsonEncode(stays.map((e) => e.toJson()).toList()),
+      );
+    } catch (_) {}
+  }
+
   /// Update an existing stay.
   Future<Stay> updateStay(
     String stayId, {
@@ -109,6 +127,7 @@ class StayRepository {
     String? bookingReference,
     String? notes,
     LuggageProfile? luggageProfile,
+    int? baseVersion,
   }) async {
     final payload = <String, dynamic>{
       if (name != null) 'name': name,
@@ -123,6 +142,7 @@ class StayRepository {
       if (bookingReference != null) 'booking_reference': bookingReference,
       if (notes != null) 'notes': notes,
       if (luggageProfile != null) 'luggage_profile': luggageProfile.toJson(),
+      if (baseVersion != null) 'base_version': baseVersion,
     };
 
     final response = await apiClient.patch('/stays/$stayId', data: payload);

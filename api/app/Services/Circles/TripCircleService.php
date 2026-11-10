@@ -17,6 +17,7 @@ use App\Models\TripOwnershipTransfer;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Services\Activity\ActivityService;
+use App\Services\Notifications\NotificationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
@@ -131,6 +132,9 @@ final class TripCircleService
                     'status' => 'cancelled',
                     'responded_at' => CarbonImmutable::now('UTC'),
                 ]);
+
+            app(NotificationService::class)
+                ->cancelMemberTripNotifications($trip, $member->user_id);
 
             $member->delete();
         });

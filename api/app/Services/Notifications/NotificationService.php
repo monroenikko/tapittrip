@@ -6,14 +6,21 @@ namespace App\Services\Notifications;
 
 use App\DTOs\Notifications\RegisterDeviceData;
 use App\DTOs\Notifications\UpdateNotificationPreferencesData;
+use App\Models\ItineraryItem;
 use App\Models\NotificationPreference;
 use App\Models\Reminder;
+use App\Models\Stay;
 use App\Models\Trip;
+use App\Models\TripAnnouncement;
+use App\Models\TripNotification;
 use App\Models\User;
 use App\Models\UserDevice;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 final class NotificationService
 {
@@ -49,6 +56,7 @@ final class NotificationService
                 'activity_reminder_lead_minutes' => 30,
                 'checklist_reminders_enabled' => true,
                 'stay_reminders_enabled' => true,
+                'circle_announcements_enabled' => true,
                 'quiet_hours_enabled' => false,
                 'quiet_hours_start' => '22:00',
                 'quiet_hours_end' => '07:00',
@@ -109,8 +117,9 @@ final class NotificationService
             foreach ($days as $day) {
                 $triggerLocal = Carbon::parse($day->local_date, $tripTz)->setTime((int) $hour, (int) $minute);
                 $triggerUtc = $triggerLocal->copy()->utc();
+                $evalTz = $this->resolveQuietHoursTimezone($user, $preferences, $tripTz, $tripTz);
 
-                if ($this->isInQuietHours($triggerLocal, $preferences)) {
+                if ($this->isInQuietHours($triggerUtc->copy()->setTimezone($evalTz), $preferences)) {
                     continue;
                 }
 
@@ -149,37 +158,10 @@ final class NotificationService
             $leadMinutes = $preferences->activity_reminder_lead_minutes;
 
             foreach ($activities as $activity) {
-                /** @var Carbon $startsAt */
-                $startsAt = $activity->starts_at_utc;
-                $triggerUtc = $startsAt->copy()->subMinutes($leadMinutes);
-                $triggerLocal = $triggerUtc->copy()->setTimezone($activity->timezone ?: $tripTz);
-
-                if ($this->isInQuietHours($triggerLocal, $preferences)) {
-                    continue;
+                $dedupeKey = $this->scheduleActivityReminder($trip, $user, $preferences, $activity);
+                if ($dedupeKey !== null) {
+                    $activeDedupeKeys[] = $dedupeKey;
                 }
-
-                $formattedTime = $startsAt->copy()->setTimezone($activity->timezone ?: $tripTz)->format('H:i');
-                $dedupeKey = "{$trip->id}:activity_reminder:{$activity->id}:{$triggerUtc->timestamp}";
-                $activeDedupeKeys[] = $dedupeKey;
-
-                Reminder::updateOrCreate(
-                    [
-                        'trip_id' => $trip->id,
-                        'dedupe_key' => $dedupeKey,
-                    ],
-                    [
-                        'itinerary_item_id' => $activity->id,
-                        'checklist_id' => null,
-                        'type' => 'activity_reminder',
-                        'title' => "Upcoming: {$activity->title}",
-                        'body' => "Starts in {$leadMinutes} mins at {$formattedTime}.",
-                        'trigger_at_utc' => $triggerUtc,
-                        'timezone' => $activity->timezone ?: $tripTz,
-                        'delivery_channel' => 'local',
-                        'status' => 'scheduled',
-                        'source_version' => $activity->version ?? 1,
-                    ]
-                );
             }
         }
 
@@ -188,68 +170,8 @@ final class NotificationService
             $stays = $trip->stays;
 
             foreach ($stays as $stay) {
-                $stayTz = $stay->timezone ?: $tripTz;
-
-                if ($stay->check_in_at) {
-                    $checkInUtc = Carbon::parse($stay->check_in_at)->utc();
-                    $triggerUtc = $checkInUtc->copy()->subHour();
-                    $triggerLocal = $triggerUtc->copy()->setTimezone($stayTz);
-
-                    if (! $this->isInQuietHours($triggerLocal, $preferences)) {
-                        $dedupeKey = "{$trip->id}:stay_checkin:{$stay->id}:{$triggerUtc->timestamp}";
-                        $activeDedupeKeys[] = $dedupeKey;
-
-                        $timeStr = $checkInUtc->copy()->setTimezone($stayTz)->format('H:i');
-                        Reminder::updateOrCreate(
-                            [
-                                'trip_id' => $trip->id,
-                                'dedupe_key' => $dedupeKey,
-                            ],
-                            [
-                                'itinerary_item_id' => null,
-                                'checklist_id' => null,
-                                'type' => 'stay_checkin',
-                                'title' => "Check-in Today: {$stay->name}",
-                                'body' => "Check-in opens at {$timeStr} for {$stay->name}.",
-                                'trigger_at_utc' => $triggerUtc,
-                                'timezone' => $stayTz,
-                                'delivery_channel' => 'local',
-                                'status' => 'scheduled',
-                                'source_version' => $stay->version ?? 1,
-                            ]
-                        );
-                    }
-                }
-
-                if ($stay->check_out_at) {
-                    $checkOutUtc = Carbon::parse($stay->check_out_at)->utc();
-                    $triggerUtc = $checkOutUtc->copy()->subHours(2);
-                    $triggerLocal = $triggerUtc->copy()->setTimezone($stayTz);
-
-                    if (! $this->isInQuietHours($triggerLocal, $preferences)) {
-                        $dedupeKey = "{$trip->id}:stay_checkout:{$stay->id}:{$triggerUtc->timestamp}";
-                        $activeDedupeKeys[] = $dedupeKey;
-
-                        $timeStr = $checkOutUtc->copy()->setTimezone($stayTz)->format('H:i');
-                        Reminder::updateOrCreate(
-                            [
-                                'trip_id' => $trip->id,
-                                'dedupe_key' => $dedupeKey,
-                            ],
-                            [
-                                'itinerary_item_id' => null,
-                                'checklist_id' => null,
-                                'type' => 'stay_checkout',
-                                'title' => "Check-out Reminder: {$stay->name}",
-                                'body' => "Check-out is by {$timeStr}. Remember your room keys and belongings!",
-                                'trigger_at_utc' => $triggerUtc,
-                                'timezone' => $stayTz,
-                                'delivery_channel' => 'local',
-                                'status' => 'scheduled',
-                                'source_version' => $stay->version ?? 1,
-                            ]
-                        );
-                    }
+                foreach ($this->scheduleStayReminders($trip, $user, $preferences, $stay) as $dedupeKey) {
+                    $activeDedupeKeys[] = $dedupeKey;
                 }
             }
         }
@@ -262,8 +184,9 @@ final class NotificationService
                 if ($trip->start_date) {
                     $triggerLocal = Carbon::parse($trip->start_date, $tripTz)->subDay()->setTime(10, 0);
                     $triggerUtc = $triggerLocal->copy()->utc();
+                    $evalTz = $this->resolveQuietHoursTimezone($user, $preferences, $tripTz, $tripTz);
 
-                    if (! $this->isInQuietHours($triggerLocal, $preferences)) {
+                    if (! $this->isInQuietHours($triggerUtc->copy()->setTimezone($evalTz), $preferences)) {
                         $dedupeKey = "{$trip->id}:checklist_reminder:{$checklist->id}:{$triggerUtc->timestamp}";
                         $activeDedupeKeys[] = $dedupeKey;
 
@@ -323,5 +246,397 @@ final class NotificationService
 
         // Within same day, e.g. 13:00 to 15:00
         return $timeStr >= $start && $timeStr < $end;
+    }
+
+    /**
+     * Cancel and reschedule reminders for an updated itinerary item (TC-5.2).
+     */
+    public function syncRemindersForItineraryItem(ItineraryItem $item): void
+    {
+        $this->cancelRemindersForItineraryItem($item);
+
+        $trip = $item->trip()->with('owner')->first();
+        if ($trip === null || $trip->owner === null) {
+            return;
+        }
+
+        $preferences = $this->getPreferences($trip->owner);
+        if (! $preferences->activity_reminders_enabled || $item->status === 'visited' || $item->status === 'skipped' || $item->starts_at_utc === null) {
+            return;
+        }
+
+        $this->scheduleActivityReminder($trip, $trip->owner, $preferences, $item);
+    }
+
+    /**
+     * Cancel all scheduled reminders for an itinerary item (e.g. deletion).
+     */
+    public function cancelRemindersForItineraryItem(ItineraryItem $item): void
+    {
+        Reminder::query()
+            ->where('itinerary_item_id', $item->id)
+            ->where('status', 'scheduled')
+            ->update(['status' => 'cancelled']);
+    }
+
+    /**
+     * Cancel and reschedule reminders for an updated stay and its linked itinerary items (TC-5.2).
+     */
+    public function syncRemindersForStay(Stay $stay): void
+    {
+        $this->cancelRemindersForStay($stay);
+
+        foreach ($stay->itineraryItems as $linkedItem) {
+            $this->syncRemindersForItineraryItem($linkedItem);
+        }
+
+        $trip = $stay->trip()->with('owner')->first();
+        if ($trip === null || $trip->owner === null) {
+            return;
+        }
+
+        $preferences = $this->getPreferences($trip->owner);
+        if (! $preferences->stay_reminders_enabled) {
+            return;
+        }
+
+        $this->scheduleStayReminders($trip, $trip->owner, $preferences, $stay);
+    }
+
+    /**
+     * Cancel scheduled stay reminders when a stay changes or is deleted.
+     */
+    public function cancelRemindersForStay(Stay $stay): void
+    {
+        Reminder::query()
+            ->where('trip_id', $stay->trip_id)
+            ->whereIn('type', ['stay_checkin', 'stay_checkout'])
+            ->where('dedupe_key', 'like', "{$stay->trip_id}:stay_%:{$stay->id}:%")
+            ->where('status', 'scheduled')
+            ->update(['status' => 'cancelled']);
+    }
+
+    /**
+     * Dispatch or upsert companion notifications for a new organizer announcement (TC-5.1, TC-5.2).
+     */
+    public function dispatchAnnouncementNotifications(Trip $trip, TripAnnouncement $announcement, User $actor): void
+    {
+        $this->syncAnnouncementNotifications($trip, $announcement, $actor);
+    }
+
+    /**
+     * Synchronize companion notifications for an edited or retried announcement without duplicates.
+     */
+    public function syncAnnouncementNotifications(Trip $trip, TripAnnouncement $announcement, User $actor): void
+    {
+        $tripTz = $trip->primary_timezone ?: 'UTC';
+        $localTimeLabel = CarbonImmutable::now($tripTz)->format('M j, H:i T');
+        $dedupeKey = "announcement:{$announcement->id}";
+        $safeTitle = Str::limit(trim($announcement->title), 160);
+        $safeBody = Str::limit(trim($announcement->body), 500)." ({$localTimeLabel})";
+
+        $acceptedMembers = $trip->members()
+            ->where('invitation_status', 'accepted')
+            ->with('user')
+            ->get();
+
+        $eligibleUserIds = [];
+
+        foreach ($acceptedMembers as $member) {
+            if ($member->user === null || $member->user_id === $actor->id) {
+                continue;
+            }
+
+            $prefs = $this->getPreferences($member->user);
+            if (! $prefs->circle_announcements_enabled) {
+                continue;
+            }
+
+            $eligibleUserIds[] = $member->user_id;
+            $schedule = $this->computeAnnouncementSchedule(
+                $member->user,
+                $prefs,
+                CarbonImmutable::now('UTC'),
+                $tripTz,
+            );
+
+            /** @var TripNotification|null $existing */
+            $existing = TripNotification::query()
+                ->where('user_id', $member->user_id)
+                ->where('dedupe_key', $dedupeKey)
+                ->first();
+
+            if ($existing !== null) {
+                $existing->update([
+                    'title' => $safeTitle,
+                    'body' => $safeBody,
+                    'scheduled_for_utc' => $schedule['scheduled_for_utc'],
+                    'timezone' => $schedule['timezone'],
+                    'trip_local_time_label' => $localTimeLabel,
+                    'status' => $existing->status === 'delivered' ? 'delivered' : $schedule['status'],
+                ]);
+
+                continue;
+            }
+
+            TripNotification::create([
+                'trip_id' => $trip->id,
+                'user_id' => $member->user_id,
+                'announcement_id' => $announcement->id,
+                'category' => 'circle_announcement',
+                'title' => $safeTitle,
+                'body' => $safeBody,
+                'scheduled_for_utc' => $schedule['scheduled_for_utc'],
+                'timezone' => $schedule['timezone'],
+                'trip_local_time_label' => $localTimeLabel,
+                'status' => $schedule['status'],
+                'dedupe_key' => $dedupeKey,
+            ]);
+        }
+
+        // Cancel any previously created notices for users who opted out or left the circle
+        $cancelQuery = TripNotification::query()
+            ->where('announcement_id', $announcement->id)
+            ->whereIn('status', ['pending', 'suppressed_quiet_hours']);
+
+        if ($eligibleUserIds !== []) {
+            $cancelQuery->whereNotIn('user_id', $eligibleUserIds);
+        }
+
+        $cancelQuery->update(['status' => 'cancelled']);
+    }
+
+    /**
+     * Cancel pending or suppressed notifications for a deleted announcement.
+     */
+    public function cancelAnnouncementNotifications(TripAnnouncement $announcement): void
+    {
+        TripNotification::query()
+            ->where('announcement_id', $announcement->id)
+            ->whereIn('status', ['pending', 'suppressed_quiet_hours'])
+            ->update(['status' => 'cancelled']);
+    }
+
+    /**
+     * Immediately cancel pending notifications for a member removed from a trip (TC-5.3).
+     */
+    public function cancelMemberTripNotifications(Trip $trip, User|string $user): int
+    {
+        $userId = $user instanceof User ? $user->id : $user;
+
+        return TripNotification::query()
+            ->where('trip_id', $trip->id)
+            ->where('user_id', $userId)
+            ->whereIn('status', ['pending', 'suppressed_quiet_hours'])
+            ->update(['status' => 'cancelled']);
+    }
+
+    /**
+     * List non-cancelled notifications belonging strictly to trips the user is currently in.
+     *
+     * @return Collection<int, TripNotification>
+     */
+    public function listUserNotifications(User $user): Collection
+    {
+        return TripNotification::query()
+            ->where('user_id', $user->id)
+            ->where('status', '!=', 'cancelled')
+            ->whereHas('trip.members', function ($query) use ($user): void {
+                $query->where('user_id', $user->id)
+                    ->where('invitation_status', 'accepted')
+                    ->whereNull('deleted_at');
+            })
+            ->with(['trip'])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    /**
+     * Mark a notification as read for the owning recipient.
+     *
+     * @throws AuthorizationException
+     */
+    public function markNotificationRead(TripNotification $notification, User $user): TripNotification
+    {
+        if ($notification->user_id !== $user->id) {
+            throw new AuthorizationException('You do not have access to this notification.');
+        }
+
+        if ($notification->read_at === null) {
+            $notification->read_at = CarbonImmutable::now('UTC');
+            $notification->save();
+        }
+
+        return $notification->fresh(['trip']) ?? $notification;
+    }
+
+    private function resolveQuietHoursTimezone(
+        User $user,
+        NotificationPreference $preferences,
+        ?string $itemTimezone,
+        string $tripTimezone,
+    ): string {
+        if ($preferences->timezone_behavior === 'home' && ! empty($user->home_timezone)) {
+            return $user->home_timezone;
+        }
+
+        return $itemTimezone ?: $tripTimezone;
+    }
+
+    private function scheduleActivityReminder(
+        Trip $trip,
+        User $user,
+        NotificationPreference $preferences,
+        ItineraryItem $activity,
+    ): ?string {
+        if ($activity->starts_at_utc === null) {
+            return null;
+        }
+
+        $tripTz = $trip->primary_timezone ?: 'UTC';
+        $leadMinutes = $preferences->activity_reminder_lead_minutes;
+
+        /** @var Carbon $startsAt */
+        $startsAt = $activity->starts_at_utc;
+        $triggerUtc = $startsAt->copy()->subMinutes($leadMinutes);
+        $evalTz = $this->resolveQuietHoursTimezone($user, $preferences, $activity->timezone ?: $tripTz, $tripTz);
+
+        if ($this->isInQuietHours($triggerUtc->copy()->setTimezone($evalTz), $preferences)) {
+            return null;
+        }
+
+        $formattedTime = $startsAt->copy()->setTimezone($activity->timezone ?: $tripTz)->format('H:i');
+        $dedupeKey = "{$trip->id}:activity_reminder:{$activity->id}:{$triggerUtc->timestamp}";
+
+        Reminder::updateOrCreate(
+            [
+                'trip_id' => $trip->id,
+                'dedupe_key' => $dedupeKey,
+            ],
+            [
+                'itinerary_item_id' => $activity->id,
+                'checklist_id' => null,
+                'type' => 'activity_reminder',
+                'title' => "Upcoming: {$activity->title}",
+                'body' => "Starts in {$leadMinutes} mins at {$formattedTime}.",
+                'trigger_at_utc' => $triggerUtc,
+                'timezone' => $activity->timezone ?: $tripTz,
+                'delivery_channel' => 'local',
+                'status' => 'scheduled',
+                'source_version' => $activity->version ?? 1,
+            ]
+        );
+
+        return $dedupeKey;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function scheduleStayReminders(
+        Trip $trip,
+        User $user,
+        NotificationPreference $preferences,
+        Stay $stay,
+    ): array {
+        $tripTz = $trip->primary_timezone ?: 'UTC';
+        $stayTz = $stay->timezone ?: $tripTz;
+        $evalTz = $this->resolveQuietHoursTimezone($user, $preferences, $stayTz, $tripTz);
+        $keys = [];
+
+        if ($stay->check_in_at) {
+            $checkInUtc = Carbon::parse($stay->check_in_at)->utc();
+            $triggerUtc = $checkInUtc->copy()->subHour();
+
+            if (! $this->isInQuietHours($triggerUtc->copy()->setTimezone($evalTz), $preferences)) {
+                $dedupeKey = "{$trip->id}:stay_checkin:{$stay->id}:{$triggerUtc->timestamp}";
+                $keys[] = $dedupeKey;
+
+                $timeStr = $checkInUtc->copy()->setTimezone($stayTz)->format('H:i');
+                Reminder::updateOrCreate(
+                    [
+                        'trip_id' => $trip->id,
+                        'dedupe_key' => $dedupeKey,
+                    ],
+                    [
+                        'itinerary_item_id' => null,
+                        'checklist_id' => null,
+                        'type' => 'stay_checkin',
+                        'title' => "Check-in Today: {$stay->name}",
+                        'body' => "Check-in opens at {$timeStr} for {$stay->name}.",
+                        'trigger_at_utc' => $triggerUtc,
+                        'timezone' => $stayTz,
+                        'delivery_channel' => 'local',
+                        'status' => 'scheduled',
+                        'source_version' => $stay->version ?? 1,
+                    ]
+                );
+            }
+        }
+
+        if ($stay->check_out_at) {
+            $checkOutUtc = Carbon::parse($stay->check_out_at)->utc();
+            $triggerUtc = $checkOutUtc->copy()->subHours(2);
+
+            if (! $this->isInQuietHours($triggerUtc->copy()->setTimezone($evalTz), $preferences)) {
+                $dedupeKey = "{$trip->id}:stay_checkout:{$stay->id}:{$triggerUtc->timestamp}";
+                $keys[] = $dedupeKey;
+
+                $timeStr = $checkOutUtc->copy()->setTimezone($stayTz)->format('H:i');
+                Reminder::updateOrCreate(
+                    [
+                        'trip_id' => $trip->id,
+                        'dedupe_key' => $dedupeKey,
+                    ],
+                    [
+                        'itinerary_item_id' => null,
+                        'checklist_id' => null,
+                        'type' => 'stay_checkout',
+                        'title' => "Check-out Reminder: {$stay->name}",
+                        'body' => "Check-out is by {$timeStr}. Remember your room keys and belongings!",
+                        'trigger_at_utc' => $triggerUtc,
+                        'timezone' => $stayTz,
+                        'delivery_channel' => 'local',
+                        'status' => 'scheduled',
+                        'source_version' => $stay->version ?? 1,
+                    ]
+                );
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * @return array{status: string, scheduled_for_utc: CarbonImmutable, timezone: string}
+     */
+    private function computeAnnouncementSchedule(
+        User $recipient,
+        NotificationPreference $preferences,
+        CarbonImmutable $nowUtc,
+        string $tripTz,
+    ): array {
+        $evalTz = $this->resolveQuietHoursTimezone($recipient, $preferences, $tripTz, $tripTz);
+        $localNow = $nowUtc->setTimezone($evalTz);
+
+        if ($this->isInQuietHours($localNow, $preferences) && ! empty($preferences->quiet_hours_end)) {
+            [$endHour, $endMinute] = array_map('intval', explode(':', $preferences->quiet_hours_end));
+            $endLocal = $localNow->setTime($endHour, $endMinute, 0);
+            if ($endLocal->lessThanOrEqualTo($localNow)) {
+                $endLocal = $endLocal->addDay();
+            }
+
+            return [
+                'status' => 'suppressed_quiet_hours',
+                'scheduled_for_utc' => $endLocal->utc(),
+                'timezone' => $evalTz,
+            ];
+        }
+
+        return [
+            'status' => 'pending',
+            'scheduled_for_utc' => $nowUtc,
+            'timezone' => $evalTz,
+        ];
     }
 }

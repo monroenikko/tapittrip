@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Http;
 
 use App\Exceptions\InvalidCredentials;
+use App\Exceptions\VersionConflictException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
@@ -30,6 +31,15 @@ final class ApiExceptionResponse
                 code: 'invalid_credentials',
                 message: 'The provided credentials are incorrect.',
                 status: 422,
+            ),
+            $exception instanceof VersionConflictException => $this->response->error(
+                code: 'version_conflict',
+                message: $exception->getMessage(),
+                status: 409,
+                details: [
+                    'server_version' => $exception->serverVersion,
+                    'server_payload' => $exception->serverPayload,
+                ],
             ),
             $exception instanceof AuthenticationException => $this->response->error(
                 code: 'unauthenticated',

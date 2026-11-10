@@ -41,18 +41,24 @@ Enables trip organizers to invite friends, partners, and family into a single sh
 - ADRs:
   - [`docs/decisions/0004-trip-circles-invitations-and-membership.md`](../decisions/0004-trip-circles-invitations-and-membership.md)
   - [`docs/decisions/0005-trip-circles-targeted-invites-and-ownership-transfer.md`](../decisions/0005-trip-circles-targeted-invites-and-ownership-transfer.md)
-- OpenAPI: [`docs/api/openapi.yaml`](../api/openapi.yaml) (`listTripCircleMembers`, `updateTripCircleMemberRole`, `removeOrLeaveTripCircleMember`, `listTripInvitations`, `createTripInvitation`, `createDirectTripInvitation`, `revokeTripInvitation`, `previewTripInvitation`, `acceptTripInvitation`, `listIncomingInvitations`, `acceptDirectInvitation`, `declineDirectInvitation`, `getPendingOwnershipTransfer`, `initiateOwnershipTransfer`, `cancelOwnershipTransfer`, `listIncomingOwnershipTransfers`, `acceptOwnershipTransfer`, `declineOwnershipTransfer`, `regenerateFriendCode`, `getTripActivityFeed`)
+  - [`docs/decisions/0006-trip-circles-sync-conflicts-and-announcements.md`](../decisions/0006-trip-circles-sync-conflicts-and-announcements.md)
+- OpenAPI: [`docs/api/openapi.yaml`](../api/openapi.yaml) (`listTripCircleMembers`, `updateTripCircleMemberRole`, `removeOrLeaveTripCircleMember`, `listTripInvitations`, `createTripInvitation`, `createDirectTripInvitation`, `revokeTripInvitation`, `previewTripInvitation`, `acceptTripInvitation`, `listIncomingInvitations`, `acceptDirectInvitation`, `declineDirectInvitation`, `getPendingOwnershipTransfer`, `initiateOwnershipTransfer`, `cancelOwnershipTransfer`, `listIncomingOwnershipTransfers`, `acceptOwnershipTransfer`, `declineOwnershipTransfer`, `regenerateFriendCode`, `getTripActivityFeed`, `listTripAnnouncements`, `createTripAnnouncement`, `updateTripAnnouncement`, `deleteTripAnnouncement`, `listUserNotifications`, `markUserNotificationRead`, `409 version_conflict` on itinerary/reorder/stays/announcements)
 - Migrations:
   - [`2026_11_10_030000_create_trip_invitations_table.php`](../../api/database/migrations/2026_11_10_030000_create_trip_invitations_table.php)
   - [`2026_11_10_040000_add_trip_circles_slice2_tables.php`](../../api/database/migrations/2026_11_10_040000_add_trip_circles_slice2_tables.php)
+  - [`2026_11_10_050000_add_trip_circles_slice3_tables.php`](../../api/database/migrations/2026_11_10_050000_add_trip_circles_slice3_tables.php)
 
 ## Known limitations & next slices
 
-- Multi-device conflict resolution UX enhancements (`TC-4`), organizer announcements (`TC-5`), managed child profiles (`TC-6`), and live location sharing (`TC-9`) remain deferred to subsequent approved slices.
+- Managed child/companion profiles without personal accounts (`TC-6`) and live opt-in location sharing (`TC-9`) remain deferred to future approved slices.
 - OS universal links (`tapittrip.com` or custom app-link hosts) are intentionally omitted until domain ownership is approved; shareable invite codes work directly in-app and respect `INVITE_LINK_BASE_URL` when configured.
 
 ## Testing and verification
 
-- Backend Feature Tests: [`api/tests/Feature/TripCircleTest.php`](../../api/tests/Feature/TripCircleTest.php) — **9 tests passed (89 assertions)** covering organizer/editor/viewer/stranger isolation, SHA-256 token hashing, safe preview redaction, atomic concurrency/max-uses, idempotent retries, expired/revoked tokens, soft-delete rejoin, sole-owner leave block, and pending membership isolation.
-- Mobile Tests: [`client/test/trip_circle_test.dart`](../../client/test/trip_circle_test.dart) — model parsing, URL token extraction, 403 cache cleanup, `TripCirclePage` organizer & viewer flows, and `JoinTripSheet` lookup & join.
+- Backend Feature Tests:
+  - [`api/tests/Feature/TripCircleTest.php`](../../api/tests/Feature/TripCircleTest.php) — invite links, friend codes, ownership handovers, account orphan guard, and sync/journal role isolation.
+  - [`api/tests/Feature/TripCollaborationSlice3Test.php`](../../api/tests/Feature/TripCollaborationSlice3Test.php) — `TC-4` & `TC-5`: multi-editor propagation, idempotent itinerary/stay offline sync + cross-trip isolation, `409 version_conflict` on itinerary/reorder/stays, non-owner stay redaction (`booking_reference`, `phone`, `friends_family` private address), organizer announcements without push devices + edit/retry deduplication, `destination` vs `home` quiet-hours evaluation, automatic reminder rescheduling/cancellation, and removed-member notification cancellation.
+- Mobile Tests:
+  - [`client/test/trip_circle_test.dart`](../../client/test/trip_circle_test.dart) — model parsing, URL token extraction, 403 cache cleanup, `TripCirclePage`, `CircleInboxPage`, and `JoinTripSheet`.
+  - [`client/test/trip_circle_slice3_test.dart`](../../client/test/trip_circle_slice3_test.dart) — offline outbox queueing, `409` conflict recording, multi-conflict selector sheet & `ConflictResolutionDialog`, full per-trip cache + reminder purge isolation, redacted `StayCard`, `CircleAnnouncementsSection`, `CircleNoticesSection`, and `NotificationPreferencesPage` announcement/timezone controls.
 

@@ -29,6 +29,7 @@ final class NotificationPreferenceResource extends JsonResource
             'activity_reminder_lead_minutes' => $this->activity_reminder_lead_minutes,
             'checklist_reminders_enabled' => $this->checklist_reminders_enabled,
             'stay_reminders_enabled' => $this->stay_reminders_enabled,
+            'circle_announcements_enabled' => $this->circle_announcements_enabled ?? true,
             'quiet_hours_enabled' => $this->quiet_hours_enabled,
             'quiet_hours_start' => $this->quiet_hours_start,
             'quiet_hours_end' => $this->quiet_hours_end,

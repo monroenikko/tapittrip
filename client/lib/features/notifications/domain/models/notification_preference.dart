@@ -8,6 +8,7 @@ class NotificationPreference {
     this.activityReminderLeadMinutes = 30,
     this.checklistRemindersEnabled = true,
     this.stayRemindersEnabled = true,
+    this.circleAnnouncementsEnabled = true,
     this.quietHoursEnabled = false,
     this.quietHoursStart = '22:00',
     this.quietHoursEnd = '07:00',
@@ -25,6 +26,7 @@ class NotificationPreference {
   final int activityReminderLeadMinutes;
   final bool checklistRemindersEnabled;
   final bool stayRemindersEnabled;
+  final bool circleAnnouncementsEnabled;
   final bool quietHoursEnabled;
   final String? quietHoursStart;
   final String? quietHoursEnd;
@@ -42,6 +44,7 @@ class NotificationPreference {
     int? activityReminderLeadMinutes,
     bool? checklistRemindersEnabled,
     bool? stayRemindersEnabled,
+    bool? circleAnnouncementsEnabled,
     bool? quietHoursEnabled,
     String? quietHoursStart,
     String? quietHoursEnd,
@@ -63,6 +66,8 @@ class NotificationPreference {
       checklistRemindersEnabled:
           checklistRemindersEnabled ?? this.checklistRemindersEnabled,
       stayRemindersEnabled: stayRemindersEnabled ?? this.stayRemindersEnabled,
+      circleAnnouncementsEnabled:
+          circleAnnouncementsEnabled ?? this.circleAnnouncementsEnabled,
       quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
       quietHoursStart: quietHoursStart ?? this.quietHoursStart,
       quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
@@ -87,6 +92,8 @@ class NotificationPreference {
       checklistRemindersEnabled:
           json['checklist_reminders_enabled'] as bool? ?? true,
       stayRemindersEnabled: json['stay_reminders_enabled'] as bool? ?? true,
+      circleAnnouncementsEnabled:
+          json['circle_announcements_enabled'] as bool? ?? true,
       quietHoursEnabled: json['quiet_hours_enabled'] as bool? ?? false,
       quietHoursStart: json['quiet_hours_start'] as String? ?? '22:00',
       quietHoursEnd: json['quiet_hours_end'] as String? ?? '07:00',
@@ -111,6 +118,7 @@ class NotificationPreference {
       'activity_reminder_lead_minutes': activityReminderLeadMinutes,
       'checklist_reminders_enabled': checklistRemindersEnabled,
       'stay_reminders_enabled': stayRemindersEnabled,
+      'circle_announcements_enabled': circleAnnouncementsEnabled,
       'quiet_hours_enabled': quietHoursEnabled,
       'quiet_hours_start': quietHoursStart,
       'quiet_hours_end': quietHoursEnd,

@@ -61,7 +61,7 @@ final class StayController extends Controller
     {
         Gate::authorize('view', $stay->trip);
 
-        return (new StayResource($stay->load(['place', 'itineraryItems'])))
+        return (new StayResource($stay->load(['trip', 'place', 'itineraryItems'])))
             ->response();
     }
 
@@ -75,6 +75,7 @@ final class StayController extends Controller
         $updated = $this->stayService->update(
             $stay,
             UpdateStayData::from($request->validated()),
+            $request->user(),
         );
 
         return (new StayResource($updated))

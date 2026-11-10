@@ -22,12 +22,14 @@ use App\Http\Controllers\Api\V1\ReminderController;
 use App\Http\Controllers\Api\V1\StayController;
 use App\Http\Controllers\Api\V1\StayTransportController;
 use App\Http\Controllers\Api\V1\SyncController;
+use App\Http\Controllers\Api\V1\TripAnnouncementController;
 use App\Http\Controllers\Api\V1\TripBudgetController;
 use App\Http\Controllers\Api\V1\TripCircleController;
 use App\Http\Controllers\Api\V1\TripController;
 use App\Http\Controllers\Api\V1\TripDayController;
 use App\Http\Controllers\Api\V1\TripExpenseController;
 use App\Http\Controllers\Api\V1\TripJournalController;
+use App\Http\Controllers\Api\V1\TripNotificationController;
 use App\Http\Controllers\Api\V1\TripRecapController;
 use App\Http\Controllers\Api\V1\TripTodayController;
 use App\Http\Controllers\Api\V1\TripWeatherController;
@@ -110,6 +112,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/journal-entries/{entry}/photos', [TripJournalController::class, 'uploadPhoto'])->name('journal-entries.photos.upload');
 
         Route::get('/trips/{trip}/feed', [ActivityFeedController::class, 'index'])->name('trips.feed.index');
+        Route::get('/trips/{trip}/announcements', [TripAnnouncementController::class, 'index'])->name('trips.announcements.index');
+        Route::post('/trips/{trip}/announcements', [TripAnnouncementController::class, 'store'])->middleware('throttle:20,1')->name('trips.announcements.store');
+        Route::patch('/announcements/{announcement}', [TripAnnouncementController::class, 'update'])->name('announcements.update');
+        Route::delete('/announcements/{announcement}', [TripAnnouncementController::class, 'destroy'])->name('announcements.destroy');
         Route::get('/trips/{trip}/recap', [TripRecapController::class, 'show'])->name('trips.recap.show');
 
         Route::get('/trips/{trip}/members', [TripCircleController::class, 'members'])->name('trips.members.index');
@@ -142,6 +148,8 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/trips/{trip}/media/{media}', [MediaController::class, 'destroy'])->name('trips.media.destroy');
 
         Route::post('/devices/register', [DeviceController::class, 'register'])->name('devices.register');
+        Route::get('/me/notifications', [TripNotificationController::class, 'index'])->name('me.notifications.index');
+        Route::post('/me/notifications/{notification}/read', [TripNotificationController::class, 'markRead'])->name('me.notifications.read');
         Route::get('/me/notification-preferences', [NotificationPreferenceController::class, 'show'])->name('me.notification-preferences.show');
         Route::put('/me/notification-preferences', [NotificationPreferenceController::class, 'update'])->name('me.notification-preferences.update');
 

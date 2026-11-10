@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/network/api_exceptions.dart';
+import '../../../notifications/presentation/providers/notification_provider.dart';
+import '../../../notifications/presentation/widgets/circle_notices_section.dart';
 import '../../../trips/presentation/providers/trip_list_provider.dart';
 import '../../domain/models/trip_invitation.dart';
 import '../providers/trip_circle_provider.dart';
@@ -272,7 +274,9 @@ class _CircleInboxPageState extends ConsumerState<CircleInboxPage> {
           ),
         ),
         data: (inbox) {
-          if (inbox.isEmpty) {
+          final notices =
+              ref.watch(userNotificationsProvider).asData?.value ?? const [];
+          if (inbox.isEmpty && notices.isEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
@@ -316,10 +320,16 @@ class _CircleInboxPageState extends ConsumerState<CircleInboxPage> {
           }
 
           return RefreshIndicator(
-            onRefresh: () => ref.read(circleInboxProvider.notifier).refresh(),
+            onRefresh: () async {
+              await Future.wait([
+                ref.read(circleInboxProvider.notifier).refresh(),
+                ref.read(userNotificationsProvider.notifier).refresh(),
+              ]);
+            },
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                const CircleNoticesSection(),
                 if (inbox.isOffline) ...[
                   Container(
                     padding: const EdgeInsets.all(12),

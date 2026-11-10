@@ -18,7 +18,7 @@ Feature documents explain how TapItTrip behavior works across the traveler exper
 
 ## Per-feature documents
 
-- [`trip-circles.md`](trip-circles.md) — implemented Trip Circles private invite links, Friend Code direct invites, Circle Inbox, role management, two-party ownership transfer, and shared activity feed UI.
+- [`trip-circles.md`](trip-circles.md) — implemented Trip Circles private invite links, Friend Code direct invites, Circle Inbox, two-party ownership transfer, multi-device conflict resolution, stay privacy redaction, organizer announcements, timezone-aware quiet hours, and revocation cleanup.
 - [`api-health.md`](api-health.md) — implemented M0 Laravel liveness contract and security boundary.
 - [`identity-and-auth.md`](identity-and-auth.md) — implemented M1 Laravel identity, Sanctum auth, and profile lifecycle.
 - [`trip-management.md`](trip-management.md) — implemented M1 Laravel trips, planning modes, and membership policies.

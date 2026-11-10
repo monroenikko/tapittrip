@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_exceptions.dart';
+import '../../../sync/domain/models/outbox_operation.dart';
+import '../../../sync/presentation/providers/sync_provider.dart';
+import '../../../sync/services/sync_service.dart';
 import '../../data/ai_itinerary_repository.dart';
 import '../../data/itinerary_repository.dart';
 import '../../domain/models/itinerary_item.dart';
@@ -76,17 +80,78 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
     String? status,
     String? notes,
   }) async {
-    await _repository.updateItem(
-      itemId,
-      title: title,
-      kind: kind,
-      tripDayId: tripDayId,
-      placeId: placeId,
-      inlinePlace: inlinePlace,
-      status: status,
-      notes: notes,
-    );
-    await refresh();
+    final existing = state.asData?.value
+        .where((it) => it.id == itemId)
+        .firstOrNull;
+    final baseVersion = existing?.version ?? 1;
+    final payload = <String, dynamic>{
+      'title': ?title,
+      'kind': ?kind,
+      'trip_day_id': ?tripDayId,
+      'notes': ?notes,
+      'status': ?status,
+    };
+
+    try {
+      await _repository.updateItem(
+        itemId,
+        title: title,
+        kind: kind,
+        tripDayId: tripDayId,
+        placeId: placeId,
+        inlinePlace: inlinePlace,
+        status: status,
+        notes: notes,
+        baseVersion: existing?.version,
+      );
+      await refresh();
+    } on ConflictException catch (e) {
+      await _recordOutboxOperation(
+        OutboxOperation(
+          operationId: SyncService.generateUuid(),
+          tripId: tripId,
+          entityType: 'itinerary_item',
+          entityId: itemId,
+          operationType: 'update',
+          baseVersion: baseVersion,
+          payload: payload,
+          status: 'conflict',
+          conflictDetails: e.details,
+          createdAt: DateTime.now().toUtc(),
+        ),
+      );
+      await refresh();
+      rethrow;
+    } on NetworkException {
+      if (existing != null) {
+        final updatedLocal = existing.copyWith(
+          title: title,
+          kind: kind,
+          tripDayId: tripDayId,
+          notes: notes,
+          status: status,
+        );
+        final list = [
+          for (final item in state.asData?.value ?? const <ItineraryItem>[])
+            item.id == itemId ? updatedLocal : item,
+        ];
+        state = AsyncValue.data(list);
+        await _repository.cacheItems(tripId, list);
+      }
+      await _recordOutboxOperation(
+        OutboxOperation(
+          operationId: SyncService.generateUuid(),
+          tripId: tripId,
+          entityType: 'itinerary_item',
+          entityId: itemId,
+          operationType: 'update',
+          baseVersion: baseVersion,
+          payload: payload,
+          status: 'pending',
+          createdAt: DateTime.now().toUtc(),
+        ),
+      );
+    }
   }
 
   Future<void> toggleVisited(ItineraryItem item) async {
@@ -95,8 +160,31 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
   }
 
   Future<void> deleteItem(String itemId) async {
-    await _repository.deleteItem(itemId);
-    await refresh();
+    final existing = state.asData?.value
+        .where((it) => it.id == itemId)
+        .firstOrNull;
+    try {
+      await _repository.deleteItem(itemId);
+      await refresh();
+    } on NetworkException {
+      final list = (state.asData?.value ?? const <ItineraryItem>[])
+          .where((it) => it.id != itemId)
+          .toList();
+      state = AsyncValue.data(list);
+      await _repository.cacheItems(tripId, list);
+      await _recordOutboxOperation(
+        OutboxOperation(
+          operationId: SyncService.generateUuid(),
+          tripId: tripId,
+          entityType: 'itinerary_item',
+          entityId: itemId,
+          operationType: 'delete',
+          baseVersion: existing?.version ?? 1,
+          status: 'pending',
+          createdAt: DateTime.now().toUtc(),
+        ),
+      );
+    }
   }
 
   /// Reorder a flat list using ReorderableList.onReorderItem indices (newIndex already adjusted).
@@ -120,6 +208,10 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
   }) async {
     if (reorderedItems.isEmpty) return true;
 
+    final expectedVersions = <String, int>{
+      for (final item in reorderedItems) item.id: item.version,
+    };
+
     final normalized = [
       for (var i = 0; i < reorderedItems.length; i++)
         reorderedItems[i].copyWith(sortOrder: i),
@@ -135,6 +227,7 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
         tripId,
         orderedIds,
         dayAssignments: dayAssignments,
+        expectedVersions: expectedVersions,
       );
       if (updated.isNotEmpty) {
         final byId = {for (final item in updated) item.id: item};
@@ -142,10 +235,65 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
         state = AsyncValue.data(merged);
       }
       return true;
+    } on ConflictException catch (e) {
+      final conflictEntityId =
+          e.serverPayload['id']?.toString() ?? orderedIds.first;
+      final conflictIndex = orderedIds.indexOf(conflictEntityId);
+      await _recordOutboxOperation(
+        OutboxOperation(
+          operationId: SyncService.generateUuid(),
+          tripId: tripId,
+          entityType: 'itinerary_item',
+          entityId: conflictEntityId,
+          operationType: 'update',
+          baseVersion: expectedVersions[conflictEntityId] ?? 1,
+          payload: {
+            'sort_order': conflictIndex >= 0 ? conflictIndex : 0,
+            if (dayAssignments != null &&
+                dayAssignments.containsKey(conflictEntityId))
+              'trip_day_id': dayAssignments[conflictEntityId],
+          },
+          status: 'conflict',
+          conflictDetails: e.details,
+          createdAt: DateTime.now().toUtc(),
+        ),
+      );
+      await refresh();
+      return false;
+    } on NetworkException {
+      await _repository.cacheItems(tripId, normalized);
+      for (var i = 0; i < normalized.length; i++) {
+        final item = normalized[i];
+        await _recordOutboxOperation(
+          OutboxOperation(
+            operationId: SyncService.generateUuid(),
+            tripId: tripId,
+            entityType: 'itinerary_item',
+            entityId: item.id,
+            operationType: 'update',
+            baseVersion: item.version,
+            payload: {
+              'sort_order': i,
+              if (dayAssignments != null && dayAssignments.containsKey(item.id))
+                'trip_day_id': dayAssignments[item.id],
+            },
+            status: 'pending',
+            createdAt: DateTime.now().toUtc(),
+          ),
+        );
+      }
+      return true;
     } catch (_) {
       await refresh();
       return false;
     }
+  }
+
+  Future<void> _recordOutboxOperation(OutboxOperation operation) async {
+    try {
+      await ref.read(outboxStorageProvider).saveOperation(operation);
+      await ref.read(syncProvider.notifier).refresh();
+    } catch (_) {}
   }
 
   /// Move a single activity to an exact ordinal index (0-based) within a target day.

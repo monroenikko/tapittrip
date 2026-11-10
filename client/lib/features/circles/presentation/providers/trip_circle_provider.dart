@@ -4,6 +4,7 @@ import '../../../../core/network/api_exceptions.dart';
 import '../../data/trip_circle_repository.dart';
 import '../../domain/models/activity_event.dart';
 import '../../domain/models/circle_member.dart';
+import '../../domain/models/trip_announcement.dart';
 import '../../domain/models/trip_invitation.dart';
 
 class CircleMembersNotifier extends AsyncNotifier<List<CircleMember>> {
@@ -141,6 +142,94 @@ final tripActivityFeedProvider =
       final repo = ref.watch(tripCircleRepositoryProvider);
       return repo.getActivityFeed(tripId);
     });
+
+class TripAnnouncementsState {
+  const TripAnnouncementsState({required this.items, this.isOffline = false});
+
+  final List<TripAnnouncement> items;
+  final bool isOffline;
+}
+
+class TripAnnouncementsNotifier extends AsyncNotifier<TripAnnouncementsState> {
+  TripAnnouncementsNotifier(this.tripId);
+  final String tripId;
+
+  @override
+  Future<TripAnnouncementsState> build() async {
+    final repo = ref.watch(tripCircleRepositoryProvider);
+    final res = await repo.getAnnouncements(tripId);
+    return TripAnnouncementsState(items: res.items, isOffline: res.fromCache);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(tripCircleRepositoryProvider);
+      final res = await repo.getAnnouncements(tripId);
+      return TripAnnouncementsState(items: res.items, isOffline: res.fromCache);
+    });
+  }
+
+  Future<TripAnnouncement> createAnnouncement({
+    required String title,
+    required String body,
+    bool isPinned = false,
+    String? clientOperationId,
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final created = await repo.createAnnouncement(
+      tripId,
+      title: title,
+      body: body,
+      isPinned: isPinned,
+      clientOperationId: clientOperationId,
+    );
+    await refresh();
+    ref.invalidate(tripActivityFeedProvider(tripId));
+    return created;
+  }
+
+  Future<TripAnnouncement> updateAnnouncement(
+    String announcementId, {
+    String? title,
+    String? body,
+    bool? isPinned,
+    int? baseVersion,
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final updated = await repo.updateAnnouncement(
+      announcementId,
+      title: title,
+      body: body,
+      isPinned: isPinned,
+      baseVersion: baseVersion,
+    );
+    await refresh();
+    ref.invalidate(tripActivityFeedProvider(tripId));
+    return updated;
+  }
+
+  Future<void> deleteAnnouncement(String announcementId) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    await repo.deleteAnnouncement(announcementId);
+    final current = state.asData?.value;
+    if (current != null) {
+      state = AsyncData(
+        TripAnnouncementsState(
+          items: current.items.where((a) => a.id != announcementId).toList(),
+          isOffline: current.isOffline,
+        ),
+      );
+    }
+  }
+}
+
+final tripAnnouncementsProvider =
+    AsyncNotifierProvider.family<
+      TripAnnouncementsNotifier,
+      TripAnnouncementsState,
+      String
+    >((tripId) => TripAnnouncementsNotifier(tripId));
 
 class PendingOwnershipTransferNotifier
     extends AsyncNotifier<TripOwnershipTransfer?> {

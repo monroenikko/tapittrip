@@ -26,6 +26,7 @@ final readonly class UpdateStayData
         public ?string $notes = null,
         public ?array $luggageProfile = null,
         public ?string $placeId = null,
+        public ?int $baseVersion = null,
     ) {}
 
     /**
@@ -51,6 +52,7 @@ final readonly class UpdateStayData
             notes: array_key_exists('notes', $data) ? ($data['notes'] !== null ? (string) $data['notes'] : null) : null,
             luggageProfile: isset($data['luggage_profile']) && is_array($data['luggage_profile']) ? $data['luggage_profile'] : null,
             placeId: array_key_exists('place_id', $data) ? ($data['place_id'] !== null ? (string) $data['place_id'] : null) : null,
+            baseVersion: isset($data['base_version']) && $data['base_version'] !== null ? (int) $data['base_version'] : null,
         );
     }
 }

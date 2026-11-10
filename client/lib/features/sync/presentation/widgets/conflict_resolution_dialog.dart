@@ -122,10 +122,22 @@ class ConflictResolutionDialog extends ConsumerWidget {
   }
 
   static String _formatPayloadSummary(Map<String, dynamic> payload) {
-    final keys = ['title', 'name', 'is_packed', 'notes', 'status'];
+    const keys = [
+      'title',
+      'name',
+      'status',
+      'sort_order',
+      'trip_day_id',
+      'starts_at_utc',
+      'ends_at_utc',
+      'check_in_at',
+      'check_out_at',
+      'is_packed',
+      'notes',
+    ];
     final buffer = StringBuffer();
     for (final key in keys) {
-      if (payload.containsKey(key)) {
+      if (payload.containsKey(key) && payload[key] != null) {
         buffer.writeln('$key: ${payload[key]}');
       }
     }

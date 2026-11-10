@@ -11,6 +11,7 @@ import '../../domain/models/activity_event.dart';
 import '../../domain/models/circle_member.dart';
 import '../../domain/models/trip_invitation.dart';
 import '../providers/trip_circle_provider.dart';
+import '../widgets/circle_announcements_section.dart';
 
 class TripCirclePage extends ConsumerStatefulWidget {
   const TripCirclePage({super.key, required this.tripId});
@@ -306,6 +307,9 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
               onPressed: () {
                 ref.invalidate(tripActivityFeedProvider(widget.tripId));
                 ref
+                    .read(tripAnnouncementsProvider(widget.tripId).notifier)
+                    .refresh();
+                ref
                     .read(circleMembersProvider(widget.tripId).notifier)
                     .refresh();
                 ref
@@ -334,7 +338,20 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
         ),
         body: TabBarView(
           children: [
-            _buildFeedTab(context),
+            _buildFeedTab(
+              context,
+              isOwner:
+                  (ref
+                          .watch(circleMembersProvider(widget.tripId))
+                          .asData
+                          ?.value
+                          .any(
+                            (m) =>
+                                m.userId == currentUserId && m.role == 'owner',
+                          ) ??
+                      false) ||
+                  (currentUserId != null && trip?.ownerId == currentUserId),
+            ),
             _buildMembersTab(context, currentUserId, trip?.ownerId),
           ],
         ),
@@ -342,7 +359,7 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
     );
   }
 
-  Widget _buildFeedTab(BuildContext context) {
+  Widget _buildFeedTab(BuildContext context, {required bool isOwner}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final feedAsync = ref.watch(tripActivityFeedProvider(widget.tripId));
@@ -367,8 +384,12 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
               ),
               const SizedBox(height: 12),
               FilledButton(
-                onPressed: () =>
-                    ref.invalidate(tripActivityFeedProvider(widget.tripId)),
+                onPressed: () {
+                  ref.invalidate(tripActivityFeedProvider(widget.tripId));
+                  ref
+                      .read(tripAnnouncementsProvider(widget.tripId).notifier)
+                      .refresh();
+                },
                 child: const Text('Retry'),
               ),
             ],
@@ -376,45 +397,56 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
         ),
       ),
       data: (events) {
-        if (events.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('✨', style: TextStyle(fontSize: 40)),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No circle activity yet',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'When companions join or share travel moments from their journal, updates appear here.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
         return RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(tripActivityFeedProvider(widget.tripId));
+            await ref
+                .read(tripAnnouncementsProvider(widget.tripId).notifier)
+                .refresh();
           },
-          child: ListView.separated(
+          child: ListView(
             padding: const EdgeInsets.all(16),
-            itemCount: events.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, idx) =>
-                _buildEventCard(context, events[idx]),
+            children: [
+              CircleAnnouncementsSection(
+                tripId: widget.tripId,
+                isOwner: isOwner,
+              ),
+              if (events.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 28,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('✨', style: TextStyle(fontSize: 40)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No circle activity yet',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'When companions join or share travel moments from their journal, updates appear here.',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...events.map(
+                  (event) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildEventCard(context, event),
+                  ),
+                ),
+            ],
           ),
         );
       },

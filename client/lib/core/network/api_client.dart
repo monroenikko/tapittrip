@@ -157,6 +157,13 @@ class ApiClient {
             statusCode: e.response?.statusCode ?? 422,
           );
         }
+        if (e.response?.statusCode == 409 || code == 'version_conflict') {
+          return ConflictException(
+            message: message,
+            details: details,
+            statusCode: e.response?.statusCode ?? 409,
+          );
+        }
         if (e.response?.statusCode == 401 || code == 'unauthenticated') {
           return UnauthenticatedException(message);
         }

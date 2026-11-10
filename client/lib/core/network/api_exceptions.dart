@@ -55,6 +55,24 @@ class UnauthenticatedException extends ApiException {
     : super(code: 'unauthenticated', message: message, statusCode: 401);
 }
 
+class ConflictException extends ApiException {
+  const ConflictException({
+    required super.message,
+    super.details = const {},
+    super.statusCode = 409,
+  }) : super(code: 'version_conflict');
+
+  int? get serverVersion => (details['server_version'] as num?)?.toInt();
+
+  Map<String, dynamic> get serverPayload {
+    final raw = details['server_payload'];
+    if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return const {};
+  }
+}
+
 class NetworkException extends ApiException {
   const NetworkException([
     String message =

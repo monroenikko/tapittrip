@@ -277,4 +277,16 @@ final class Trip extends Model
             ->orderByDesc('occurred_at')
             ->orderByDesc('created_at');
     }
+
+    /**
+     * Organizer group announcements posted for this trip circle.
+     *
+     * @return HasMany<TripAnnouncement, $this>
+     */
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(TripAnnouncement::class)
+            ->orderByDesc('is_pinned')
+            ->orderByDesc('created_at');
+    }
 }

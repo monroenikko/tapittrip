@@ -25,6 +25,7 @@ final class UpdateNotificationPreferencesRequest extends FormRequest
             'activity_reminder_lead_minutes' => ['sometimes', 'integer', 'min:0', 'max:1440'],
             'checklist_reminders_enabled' => ['sometimes', 'boolean'],
             'stay_reminders_enabled' => ['sometimes', 'boolean'],
+            'circle_announcements_enabled' => ['sometimes', 'boolean'],
             'quiet_hours_enabled' => ['sometimes', 'boolean'],
             'quiet_hours_start' => ['sometimes', 'nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
             'quiet_hours_end' => ['sometimes', 'nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
