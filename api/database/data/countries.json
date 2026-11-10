@@ -1,0 +1,1869 @@
+[
+    {
+        "code": "AD",
+        "name": "Andorra",
+        "currency_code": "EUR",
+        "flag_emoji": "🇦🇩",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "AE",
+        "name": "United Arab Emirates",
+        "currency_code": "AED",
+        "flag_emoji": "🇦🇪",
+        "is_zero_decimal": false,
+        "aliases": [
+            "united arab emirates",
+            "uae",
+            "dubai",
+            "abu dhabi"
+        ]
+    },
+    {
+        "code": "AF",
+        "name": "Afghanistan",
+        "currency_code": "AFN",
+        "flag_emoji": "🇦🇫",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "AG",
+        "name": "Antigua and Barbuda",
+        "currency_code": "XCD",
+        "flag_emoji": "🇦🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "AL",
+        "name": "Albania",
+        "currency_code": "ALL",
+        "flag_emoji": "🇦🇱",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "AM",
+        "name": "Armenia",
+        "currency_code": "AMD",
+        "flag_emoji": "🇦🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "AO",
+        "name": "Angola",
+        "currency_code": "AOA",
+        "flag_emoji": "🇦🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "AR",
+        "name": "Argentina",
+        "currency_code": "ARS",
+        "flag_emoji": "🇦🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "AT",
+        "name": "Austria",
+        "currency_code": "EUR",
+        "flag_emoji": "🇦🇹",
+        "is_zero_decimal": false,
+        "aliases": [
+            "austria",
+            "vienna"
+        ]
+    },
+    {
+        "code": "AU",
+        "name": "Australia",
+        "currency_code": "AUD",
+        "flag_emoji": "🇦🇺",
+        "is_zero_decimal": false,
+        "aliases": [
+            "australia",
+            "sydney",
+            "melbourne",
+            "brisbane",
+            "perth"
+        ]
+    },
+    {
+        "code": "AW",
+        "name": "Aruba",
+        "currency_code": "AWG",
+        "flag_emoji": "🇦🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "AZ",
+        "name": "Azerbaijan",
+        "currency_code": "AZN",
+        "flag_emoji": "🇦🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BA",
+        "name": "Bosnia and Herzegovina",
+        "currency_code": "BAM",
+        "flag_emoji": "🇧🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BB",
+        "name": "Barbados",
+        "currency_code": "BBD",
+        "flag_emoji": "🇧🇧",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BD",
+        "name": "Bangladesh",
+        "currency_code": "BDT",
+        "flag_emoji": "🇧🇩",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BE",
+        "name": "Belgium",
+        "currency_code": "EUR",
+        "flag_emoji": "🇧🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BF",
+        "name": "Burkina Faso",
+        "currency_code": "XOF",
+        "flag_emoji": "🇧🇫",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BG",
+        "name": "Bulgaria",
+        "currency_code": "BGN",
+        "flag_emoji": "🇧🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BH",
+        "name": "Bahrain",
+        "currency_code": "BHD",
+        "flag_emoji": "🇧🇭",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BI",
+        "name": "Burundi",
+        "currency_code": "BIF",
+        "flag_emoji": "🇧🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BJ",
+        "name": "Benin",
+        "currency_code": "XOF",
+        "flag_emoji": "🇧🇯",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BM",
+        "name": "Bermuda",
+        "currency_code": "BMD",
+        "flag_emoji": "🇧🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BN",
+        "name": "Brunei",
+        "currency_code": "BND",
+        "flag_emoji": "🇧🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BO",
+        "name": "Bolivia",
+        "currency_code": "BOB",
+        "flag_emoji": "🇧🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BR",
+        "name": "Brazil",
+        "currency_code": "BRL",
+        "flag_emoji": "🇧🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BS",
+        "name": "Bahamas",
+        "currency_code": "BSD",
+        "flag_emoji": "🇧🇸",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BT",
+        "name": "Bhutan",
+        "currency_code": "BTN",
+        "flag_emoji": "🇧🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BW",
+        "name": "Botswana",
+        "currency_code": "BWP",
+        "flag_emoji": "🇧🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BY",
+        "name": "Belarus",
+        "currency_code": "BYN",
+        "flag_emoji": "🇧🇾",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "BZ",
+        "name": "Belize",
+        "currency_code": "BZD",
+        "flag_emoji": "🇧🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CA",
+        "name": "Canada",
+        "currency_code": "CAD",
+        "flag_emoji": "🇨🇦",
+        "is_zero_decimal": false,
+        "aliases": [
+            "canada",
+            "toronto",
+            "vancouver"
+        ]
+    },
+    {
+        "code": "CD",
+        "name": "Congo (DRC)",
+        "currency_code": "CDF",
+        "flag_emoji": "🇨🇩",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CF",
+        "name": "Central African Republic",
+        "currency_code": "XAF",
+        "flag_emoji": "🇨🇫",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CG",
+        "name": "Congo (Republic)",
+        "currency_code": "XAF",
+        "flag_emoji": "🇨🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CH",
+        "name": "Switzerland",
+        "currency_code": "CHF",
+        "flag_emoji": "🇨🇭",
+        "is_zero_decimal": false,
+        "aliases": [
+            "switzerland",
+            "zurich",
+            "geneva"
+        ]
+    },
+    {
+        "code": "CI",
+        "name": "Ivory Coast",
+        "currency_code": "XOF",
+        "flag_emoji": "🇨🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CL",
+        "name": "Chile",
+        "currency_code": "CLP",
+        "flag_emoji": "🇨🇱",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CM",
+        "name": "Cameroon",
+        "currency_code": "XAF",
+        "flag_emoji": "🇨🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CN",
+        "name": "China",
+        "currency_code": "CNY",
+        "flag_emoji": "🇨🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CO",
+        "name": "Colombia",
+        "currency_code": "COP",
+        "flag_emoji": "🇨🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CR",
+        "name": "Costa Rica",
+        "currency_code": "CRC",
+        "flag_emoji": "🇨🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CU",
+        "name": "Cuba",
+        "currency_code": "CUP",
+        "flag_emoji": "🇨🇺",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CV",
+        "name": "Cabo Verde",
+        "currency_code": "CVE",
+        "flag_emoji": "🇨🇻",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CW",
+        "name": "Curaçao",
+        "currency_code": "ANG",
+        "flag_emoji": "🇨🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CY",
+        "name": "Cyprus",
+        "currency_code": "EUR",
+        "flag_emoji": "🇨🇾",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "CZ",
+        "name": "Czech Republic",
+        "currency_code": "CZK",
+        "flag_emoji": "🇨🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "DE",
+        "name": "Germany",
+        "currency_code": "EUR",
+        "flag_emoji": "🇩🇪",
+        "is_zero_decimal": false,
+        "aliases": [
+            "germany",
+            "berlin",
+            "munich",
+            "frankfurt"
+        ]
+    },
+    {
+        "code": "DJ",
+        "name": "Djibouti",
+        "currency_code": "DJF",
+        "flag_emoji": "🇩🇯",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "DK",
+        "name": "Denmark",
+        "currency_code": "DKK",
+        "flag_emoji": "🇩🇰",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "DM",
+        "name": "Dominica",
+        "currency_code": "XCD",
+        "flag_emoji": "🇩🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "DO",
+        "name": "Dominican Republic",
+        "currency_code": "DOP",
+        "flag_emoji": "🇩🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "DZ",
+        "name": "Algeria",
+        "currency_code": "DZD",
+        "flag_emoji": "🇩🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "EC",
+        "name": "Ecuador",
+        "currency_code": "USD",
+        "flag_emoji": "🇪🇨",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "EE",
+        "name": "Estonia",
+        "currency_code": "EUR",
+        "flag_emoji": "🇪🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "EG",
+        "name": "Egypt",
+        "currency_code": "EGP",
+        "flag_emoji": "🇪🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ER",
+        "name": "Eritrea",
+        "currency_code": "ERN",
+        "flag_emoji": "🇪🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ES",
+        "name": "Spain",
+        "currency_code": "EUR",
+        "flag_emoji": "🇪🇸",
+        "is_zero_decimal": false,
+        "aliases": [
+            "spain",
+            "madrid",
+            "barcelona"
+        ]
+    },
+    {
+        "code": "ET",
+        "name": "Ethiopia",
+        "currency_code": "ETB",
+        "flag_emoji": "🇪🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "FI",
+        "name": "Finland",
+        "currency_code": "EUR",
+        "flag_emoji": "🇫🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "FJ",
+        "name": "Fiji",
+        "currency_code": "FJD",
+        "flag_emoji": "🇫🇯",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "FM",
+        "name": "Micronesia",
+        "currency_code": "USD",
+        "flag_emoji": "🇫🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "FO",
+        "name": "Faroe Islands",
+        "currency_code": "DKK",
+        "flag_emoji": "🇫🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "FR",
+        "name": "France",
+        "currency_code": "EUR",
+        "flag_emoji": "🇫🇷",
+        "is_zero_decimal": false,
+        "aliases": [
+            "france",
+            "paris",
+            "nice",
+            "europe"
+        ]
+    },
+    {
+        "code": "GA",
+        "name": "Gabon",
+        "currency_code": "XAF",
+        "flag_emoji": "🇬🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GB",
+        "name": "United Kingdom",
+        "currency_code": "GBP",
+        "flag_emoji": "🇬🇧",
+        "is_zero_decimal": false,
+        "aliases": [
+            "united kingdom",
+            "great britain",
+            "england",
+            "london",
+            "scotland",
+            "edinburgh",
+            "manchester"
+        ]
+    },
+    {
+        "code": "GD",
+        "name": "Grenada",
+        "currency_code": "XCD",
+        "flag_emoji": "🇬🇩",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GE",
+        "name": "Georgia",
+        "currency_code": "GEL",
+        "flag_emoji": "🇬🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GG",
+        "name": "Guernsey",
+        "currency_code": "GBP",
+        "flag_emoji": "🇬🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GH",
+        "name": "Ghana",
+        "currency_code": "GHS",
+        "flag_emoji": "🇬🇭",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GI",
+        "name": "Gibraltar",
+        "currency_code": "GIP",
+        "flag_emoji": "🇬🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GL",
+        "name": "Greenland",
+        "currency_code": "DKK",
+        "flag_emoji": "🇬🇱",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GM",
+        "name": "Gambia",
+        "currency_code": "GMD",
+        "flag_emoji": "🇬🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GN",
+        "name": "Guinea",
+        "currency_code": "GNF",
+        "flag_emoji": "🇬🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GQ",
+        "name": "Equatorial Guinea",
+        "currency_code": "XAF",
+        "flag_emoji": "🇬🇶",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GR",
+        "name": "Greece",
+        "currency_code": "EUR",
+        "flag_emoji": "🇬🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GT",
+        "name": "Guatemala",
+        "currency_code": "GTQ",
+        "flag_emoji": "🇬🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GU",
+        "name": "Guam",
+        "currency_code": "USD",
+        "flag_emoji": "🇬🇺",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GW",
+        "name": "Guinea-Bissau",
+        "currency_code": "XOF",
+        "flag_emoji": "🇬🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "GY",
+        "name": "Guyana",
+        "currency_code": "GYD",
+        "flag_emoji": "🇬🇾",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "HK",
+        "name": "Hong Kong",
+        "currency_code": "HKD",
+        "flag_emoji": "🇭🇰",
+        "is_zero_decimal": false,
+        "aliases": [
+            "hong kong",
+            "hongkong",
+            "kowloon",
+            "tsim sha tsui",
+            "disneyland",
+            "disney",
+            "迪士尼",
+            "mong kok"
+        ]
+    },
+    {
+        "code": "HN",
+        "name": "Honduras",
+        "currency_code": "HNL",
+        "flag_emoji": "🇭🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "HR",
+        "name": "Croatia",
+        "currency_code": "EUR",
+        "flag_emoji": "🇭🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "HT",
+        "name": "Haiti",
+        "currency_code": "HTG",
+        "flag_emoji": "🇭🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "HU",
+        "name": "Hungary",
+        "currency_code": "HUF",
+        "flag_emoji": "🇭🇺",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ID",
+        "name": "Indonesia",
+        "currency_code": "IDR",
+        "flag_emoji": "🇮🇩",
+        "is_zero_decimal": false,
+        "aliases": [
+            "indonesia",
+            "bali",
+            "jakarta",
+            "ubud",
+            "seminyak",
+            "canggu"
+        ]
+    },
+    {
+        "code": "IE",
+        "name": "Ireland",
+        "currency_code": "EUR",
+        "flag_emoji": "🇮🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "IL",
+        "name": "Israel",
+        "currency_code": "ILS",
+        "flag_emoji": "🇮🇱",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "IM",
+        "name": "Isle of Man",
+        "currency_code": "GBP",
+        "flag_emoji": "🇮🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "IN",
+        "name": "India",
+        "currency_code": "INR",
+        "flag_emoji": "🇮🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "IQ",
+        "name": "Iraq",
+        "currency_code": "IQD",
+        "flag_emoji": "🇮🇶",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "IR",
+        "name": "Iran",
+        "currency_code": "IRR",
+        "flag_emoji": "🇮🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "IS",
+        "name": "Iceland",
+        "currency_code": "ISK",
+        "flag_emoji": "🇮🇸",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "IT",
+        "name": "Italy",
+        "currency_code": "EUR",
+        "flag_emoji": "🇮🇹",
+        "is_zero_decimal": false,
+        "aliases": [
+            "italy",
+            "rome",
+            "milan",
+            "florence",
+            "venice"
+        ]
+    },
+    {
+        "code": "JE",
+        "name": "Jersey",
+        "currency_code": "GBP",
+        "flag_emoji": "🇯🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "JM",
+        "name": "Jamaica",
+        "currency_code": "JMD",
+        "flag_emoji": "🇯🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "JO",
+        "name": "Jordan",
+        "currency_code": "JOD",
+        "flag_emoji": "🇯🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "JP",
+        "name": "Japan",
+        "currency_code": "JPY",
+        "flag_emoji": "🇯🇵",
+        "is_zero_decimal": true,
+        "aliases": [
+            "japan",
+            "tokyo",
+            "osaka",
+            "kyoto",
+            "hokkaido",
+            "sapporo",
+            "fukuoka",
+            "hakone",
+            "okinawa",
+            "shibuya",
+            "shinjuku",
+            "asakusa"
+        ]
+    },
+    {
+        "code": "KE",
+        "name": "Kenya",
+        "currency_code": "KES",
+        "flag_emoji": "🇰🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KG",
+        "name": "Kyrgyzstan",
+        "currency_code": "KGS",
+        "flag_emoji": "🇰🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KH",
+        "name": "Cambodia",
+        "currency_code": "KHR",
+        "flag_emoji": "🇰🇭",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KI",
+        "name": "Kiribati",
+        "currency_code": "AUD",
+        "flag_emoji": "🇰🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KM",
+        "name": "Comoros",
+        "currency_code": "KMF",
+        "flag_emoji": "🇰🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KN",
+        "name": "Saint Kitts and Nevis",
+        "currency_code": "XCD",
+        "flag_emoji": "🇰🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KP",
+        "name": "North Korea",
+        "currency_code": "KPW",
+        "flag_emoji": "🇰🇵",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KR",
+        "name": "South Korea",
+        "currency_code": "KRW",
+        "flag_emoji": "🇰🇷",
+        "is_zero_decimal": true,
+        "aliases": [
+            "south korea",
+            "korea",
+            "seoul",
+            "busan",
+            "incheon",
+            "jeju",
+            "myeongdong",
+            "gangnam",
+            "hongdae",
+            "itaewon"
+        ]
+    },
+    {
+        "code": "KW",
+        "name": "Kuwait",
+        "currency_code": "KWD",
+        "flag_emoji": "🇰🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KY",
+        "name": "Cayman Islands",
+        "currency_code": "KYD",
+        "flag_emoji": "🇰🇾",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "KZ",
+        "name": "Kazakhstan",
+        "currency_code": "KZT",
+        "flag_emoji": "🇰🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LA",
+        "name": "Laos",
+        "currency_code": "LAK",
+        "flag_emoji": "🇱🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LB",
+        "name": "Lebanon",
+        "currency_code": "LBP",
+        "flag_emoji": "🇱🇧",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LC",
+        "name": "Saint Lucia",
+        "currency_code": "XCD",
+        "flag_emoji": "🇱🇨",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LI",
+        "name": "Liechtenstein",
+        "currency_code": "CHF",
+        "flag_emoji": "🇱🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LK",
+        "name": "Sri Lanka",
+        "currency_code": "LKR",
+        "flag_emoji": "🇱🇰",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LR",
+        "name": "Liberia",
+        "currency_code": "LRD",
+        "flag_emoji": "🇱🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LS",
+        "name": "Lesotho",
+        "currency_code": "LSL",
+        "flag_emoji": "🇱🇸",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LT",
+        "name": "Lithuania",
+        "currency_code": "EUR",
+        "flag_emoji": "🇱🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LU",
+        "name": "Luxembourg",
+        "currency_code": "EUR",
+        "flag_emoji": "🇱🇺",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LV",
+        "name": "Latvia",
+        "currency_code": "EUR",
+        "flag_emoji": "🇱🇻",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "LY",
+        "name": "Libya",
+        "currency_code": "LYD",
+        "flag_emoji": "🇱🇾",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MA",
+        "name": "Morocco",
+        "currency_code": "MAD",
+        "flag_emoji": "🇲🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MC",
+        "name": "Monaco",
+        "currency_code": "EUR",
+        "flag_emoji": "🇲🇨",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MD",
+        "name": "Moldova",
+        "currency_code": "MDL",
+        "flag_emoji": "🇲🇩",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ME",
+        "name": "Montenegro",
+        "currency_code": "EUR",
+        "flag_emoji": "🇲🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MG",
+        "name": "Madagascar",
+        "currency_code": "MGA",
+        "flag_emoji": "🇲🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MH",
+        "name": "Marshall Islands",
+        "currency_code": "USD",
+        "flag_emoji": "🇲🇭",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MK",
+        "name": "North Macedonia",
+        "currency_code": "MKD",
+        "flag_emoji": "🇲🇰",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ML",
+        "name": "Mali",
+        "currency_code": "XOF",
+        "flag_emoji": "🇲🇱",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MM",
+        "name": "Myanmar",
+        "currency_code": "MMK",
+        "flag_emoji": "🇲🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MN",
+        "name": "Mongolia",
+        "currency_code": "MNT",
+        "flag_emoji": "🇲🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MO",
+        "name": "Macau",
+        "currency_code": "MOP",
+        "flag_emoji": "🇲🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MR",
+        "name": "Mauritania",
+        "currency_code": "MRU",
+        "flag_emoji": "🇲🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MT",
+        "name": "Malta",
+        "currency_code": "EUR",
+        "flag_emoji": "🇲🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MU",
+        "name": "Mauritius",
+        "currency_code": "MUR",
+        "flag_emoji": "🇲🇺",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MV",
+        "name": "Maldives",
+        "currency_code": "MVR",
+        "flag_emoji": "🇲🇻",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MW",
+        "name": "Malawi",
+        "currency_code": "MWK",
+        "flag_emoji": "🇲🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MX",
+        "name": "Mexico",
+        "currency_code": "MXN",
+        "flag_emoji": "🇲🇽",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "MY",
+        "name": "Malaysia",
+        "currency_code": "MYR",
+        "flag_emoji": "🇲🇾",
+        "is_zero_decimal": false,
+        "aliases": [
+            "malaysia",
+            "kuala lumpur",
+            "penang"
+        ]
+    },
+    {
+        "code": "MZ",
+        "name": "Mozambique",
+        "currency_code": "MZN",
+        "flag_emoji": "🇲🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NA",
+        "name": "Namibia",
+        "currency_code": "NAD",
+        "flag_emoji": "🇳🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NC",
+        "name": "New Caledonia",
+        "currency_code": "XPF",
+        "flag_emoji": "🇳🇨",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NE",
+        "name": "Niger",
+        "currency_code": "XOF",
+        "flag_emoji": "🇳🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NG",
+        "name": "Nigeria",
+        "currency_code": "NGN",
+        "flag_emoji": "🇳🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NI",
+        "name": "Nicaragua",
+        "currency_code": "NIO",
+        "flag_emoji": "🇳🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NL",
+        "name": "Netherlands",
+        "currency_code": "EUR",
+        "flag_emoji": "🇳🇱",
+        "is_zero_decimal": false,
+        "aliases": [
+            "netherlands",
+            "amsterdam"
+        ]
+    },
+    {
+        "code": "NO",
+        "name": "Norway",
+        "currency_code": "NOK",
+        "flag_emoji": "🇳🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NP",
+        "name": "Nepal",
+        "currency_code": "NPR",
+        "flag_emoji": "🇳🇵",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NR",
+        "name": "Nauru",
+        "currency_code": "AUD",
+        "flag_emoji": "🇳🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "NZ",
+        "name": "New Zealand",
+        "currency_code": "NZD",
+        "flag_emoji": "🇳🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "OM",
+        "name": "Oman",
+        "currency_code": "OMR",
+        "flag_emoji": "🇴🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PA",
+        "name": "Panama",
+        "currency_code": "PAB",
+        "flag_emoji": "🇵🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PE",
+        "name": "Peru",
+        "currency_code": "PEN",
+        "flag_emoji": "🇵🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PF",
+        "name": "French Polynesia",
+        "currency_code": "XPF",
+        "flag_emoji": "🇵🇫",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PG",
+        "name": "Papua New Guinea",
+        "currency_code": "PGK",
+        "flag_emoji": "🇵🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PH",
+        "name": "Philippines",
+        "currency_code": "PHP",
+        "flag_emoji": "🇵🇭",
+        "is_zero_decimal": false,
+        "aliases": [
+            "philippines",
+            "manila",
+            "taguig",
+            "bgc",
+            "bonifacio",
+            "makati",
+            "cebu",
+            "boracay",
+            "palawan",
+            "el nido",
+            "coron",
+            "davao",
+            "siargao",
+            "bohol",
+            "panglao",
+            "baguio",
+            "pasig",
+            "quezon city"
+        ]
+    },
+    {
+        "code": "PK",
+        "name": "Pakistan",
+        "currency_code": "PKR",
+        "flag_emoji": "🇵🇰",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PL",
+        "name": "Poland",
+        "currency_code": "PLN",
+        "flag_emoji": "🇵🇱",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PR",
+        "name": "Puerto Rico",
+        "currency_code": "USD",
+        "flag_emoji": "🇵🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PS",
+        "name": "Palestine",
+        "currency_code": "ILS",
+        "flag_emoji": "🇵🇸",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PT",
+        "name": "Portugal",
+        "currency_code": "EUR",
+        "flag_emoji": "🇵🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PW",
+        "name": "Palau",
+        "currency_code": "USD",
+        "flag_emoji": "🇵🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "PY",
+        "name": "Paraguay",
+        "currency_code": "PYG",
+        "flag_emoji": "🇵🇾",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "QA",
+        "name": "Qatar",
+        "currency_code": "QAR",
+        "flag_emoji": "🇶🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "RO",
+        "name": "Romania",
+        "currency_code": "RON",
+        "flag_emoji": "🇷🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "RS",
+        "name": "Serbia",
+        "currency_code": "RSD",
+        "flag_emoji": "🇷🇸",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "RU",
+        "name": "Russia",
+        "currency_code": "RUB",
+        "flag_emoji": "🇷🇺",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "RW",
+        "name": "Rwanda",
+        "currency_code": "RWF",
+        "flag_emoji": "🇷🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SA",
+        "name": "Saudi Arabia",
+        "currency_code": "SAR",
+        "flag_emoji": "🇸🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SB",
+        "name": "Solomon Islands",
+        "currency_code": "SBD",
+        "flag_emoji": "🇸🇧",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SC",
+        "name": "Seychelles",
+        "currency_code": "SCR",
+        "flag_emoji": "🇸🇨",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SD",
+        "name": "Sudan",
+        "currency_code": "SDG",
+        "flag_emoji": "🇸🇩",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SE",
+        "name": "Sweden",
+        "currency_code": "SEK",
+        "flag_emoji": "🇸🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SG",
+        "name": "Singapore",
+        "currency_code": "SGD",
+        "flag_emoji": "🇸🇬",
+        "is_zero_decimal": false,
+        "aliases": [
+            "singapore",
+            "changi",
+            "sentosa"
+        ]
+    },
+    {
+        "code": "SI",
+        "name": "Slovenia",
+        "currency_code": "EUR",
+        "flag_emoji": "🇸🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SK",
+        "name": "Slovakia",
+        "currency_code": "EUR",
+        "flag_emoji": "🇸🇰",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SL",
+        "name": "Sierra Leone",
+        "currency_code": "SLE",
+        "flag_emoji": "🇸🇱",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SM",
+        "name": "San Marino",
+        "currency_code": "EUR",
+        "flag_emoji": "🇸🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SN",
+        "name": "Senegal",
+        "currency_code": "XOF",
+        "flag_emoji": "🇸🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SO",
+        "name": "Somalia",
+        "currency_code": "SOS",
+        "flag_emoji": "🇸🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SR",
+        "name": "Suriname",
+        "currency_code": "SRD",
+        "flag_emoji": "🇸🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SS",
+        "name": "South Sudan",
+        "currency_code": "SSP",
+        "flag_emoji": "🇸🇸",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ST",
+        "name": "Sao Tome and Principe",
+        "currency_code": "STN",
+        "flag_emoji": "🇸🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SV",
+        "name": "El Salvador",
+        "currency_code": "USD",
+        "flag_emoji": "🇸🇻",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SY",
+        "name": "Syria",
+        "currency_code": "SYP",
+        "flag_emoji": "🇸🇾",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "SZ",
+        "name": "Eswatini",
+        "currency_code": "SZL",
+        "flag_emoji": "🇸🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TD",
+        "name": "Chad",
+        "currency_code": "XAF",
+        "flag_emoji": "🇹🇩",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TG",
+        "name": "Togo",
+        "currency_code": "XOF",
+        "flag_emoji": "🇹🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TH",
+        "name": "Thailand",
+        "currency_code": "THB",
+        "flag_emoji": "🇹🇭",
+        "is_zero_decimal": false,
+        "aliases": [
+            "thailand",
+            "bangkok",
+            "phuket",
+            "chiang mai",
+            "pattaya",
+            "krabi"
+        ]
+    },
+    {
+        "code": "TJ",
+        "name": "Tajikistan",
+        "currency_code": "TJS",
+        "flag_emoji": "🇹🇯",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TL",
+        "name": "Timor-Leste",
+        "currency_code": "USD",
+        "flag_emoji": "🇹🇱",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TM",
+        "name": "Turkmenistan",
+        "currency_code": "TMT",
+        "flag_emoji": "🇹🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TN",
+        "name": "Tunisia",
+        "currency_code": "TND",
+        "flag_emoji": "🇹🇳",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TO",
+        "name": "Tonga",
+        "currency_code": "TOP",
+        "flag_emoji": "🇹🇴",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TR",
+        "name": "Turkey",
+        "currency_code": "TRY",
+        "flag_emoji": "🇹🇷",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TT",
+        "name": "Trinidad and Tobago",
+        "currency_code": "TTD",
+        "flag_emoji": "🇹🇹",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TV",
+        "name": "Tuvalu",
+        "currency_code": "AUD",
+        "flag_emoji": "🇹🇻",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "TW",
+        "name": "Taiwan",
+        "currency_code": "TWD",
+        "flag_emoji": "🇹🇼",
+        "is_zero_decimal": false,
+        "aliases": [
+            "taiwan",
+            "taipei",
+            "kaohsiung"
+        ]
+    },
+    {
+        "code": "TZ",
+        "name": "Tanzania",
+        "currency_code": "TZS",
+        "flag_emoji": "🇹🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "UA",
+        "name": "Ukraine",
+        "currency_code": "UAH",
+        "flag_emoji": "🇺🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "UG",
+        "name": "Uganda",
+        "currency_code": "UGX",
+        "flag_emoji": "🇺🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "US",
+        "name": "United States",
+        "currency_code": "USD",
+        "flag_emoji": "🇺🇸",
+        "is_zero_decimal": false,
+        "aliases": [
+            "united states",
+            "usa",
+            "new york",
+            "los angeles",
+            "san francisco",
+            "hawaii",
+            "california",
+            "las vegas",
+            "orlando"
+        ]
+    },
+    {
+        "code": "UY",
+        "name": "Uruguay",
+        "currency_code": "UYU",
+        "flag_emoji": "🇺🇾",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "UZ",
+        "name": "Uzbekistan",
+        "currency_code": "UZS",
+        "flag_emoji": "🇺🇿",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "VA",
+        "name": "Vatican City",
+        "currency_code": "EUR",
+        "flag_emoji": "🇻🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "VC",
+        "name": "Saint Vincent and the Grenadines",
+        "currency_code": "XCD",
+        "flag_emoji": "🇻🇨",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "VE",
+        "name": "Venezuela",
+        "currency_code": "VES",
+        "flag_emoji": "🇻🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "VG",
+        "name": "Virgin Islands (British)",
+        "currency_code": "USD",
+        "flag_emoji": "🇻🇬",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "VI",
+        "name": "Virgin Islands (U.S.)",
+        "currency_code": "USD",
+        "flag_emoji": "🇻🇮",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "VN",
+        "name": "Vietnam",
+        "currency_code": "VND",
+        "flag_emoji": "🇻🇳",
+        "is_zero_decimal": true,
+        "aliases": [
+            "vietnam",
+            "hanoi",
+            "ho chi minh",
+            "saigon",
+            "da nang"
+        ]
+    },
+    {
+        "code": "VU",
+        "name": "Vanuatu",
+        "currency_code": "VUV",
+        "flag_emoji": "🇻🇺",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "WS",
+        "name": "Samoa",
+        "currency_code": "WST",
+        "flag_emoji": "🇼🇸",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "XK",
+        "name": "Kosovo",
+        "currency_code": "EUR",
+        "flag_emoji": "🇽🇰",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "YE",
+        "name": "Yemen",
+        "currency_code": "YER",
+        "flag_emoji": "🇾🇪",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ZA",
+        "name": "South Africa",
+        "currency_code": "ZAR",
+        "flag_emoji": "🇿🇦",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ZM",
+        "name": "Zambia",
+        "currency_code": "ZMW",
+        "flag_emoji": "🇿🇲",
+        "is_zero_decimal": false,
+        "aliases": []
+    },
+    {
+        "code": "ZW",
+        "name": "Zimbabwe",
+        "currency_code": "ZWG",
+        "flag_emoji": "🇿🇼",
+        "is_zero_decimal": false,
+        "aliases": []
+    }
+]

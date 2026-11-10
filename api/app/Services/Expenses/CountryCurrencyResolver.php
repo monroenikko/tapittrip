@@ -4,396 +4,90 @@ declare(strict_types=1);
 
 namespace App\Services\Expenses;
 
+use App\Models\Country;
+use Illuminate\Support\Facades\Cache;
+
 final class CountryCurrencyResolver
 {
     /**
-     * Map of ISO 3166-1 alpha-2 country codes to primary ISO 4217 currencies.
+     * Get the cached lookup map of countries, currencies, and destination aliases.
      *
-     * @var array<string, string>
+     * @return array{
+     *     codes: array<string, string>,
+     *     names: array<string, string>,
+     *     aliases: array<string, string>,
+     *     zero_decimals: list<string>
+     * }
      */
-    private const COUNTRY_CODE_TO_CURRENCY = [
-        'AF' => 'AFN',
-        'AL' => 'ALL',
-        'DZ' => 'DZD',
-        'AD' => 'EUR',
-        'AO' => 'AOA',
-        'AG' => 'XCD',
-        'AR' => 'ARS',
-        'AM' => 'AMD',
-        'AW' => 'AWG',
-        'AU' => 'AUD',
-        'AT' => 'EUR',
-        'AZ' => 'AZN',
-        'BS' => 'BSD',
-        'BH' => 'BHD',
-        'BD' => 'BDT',
-        'BB' => 'BBD',
-        'BY' => 'BYN',
-        'BE' => 'EUR',
-        'BZ' => 'BZD',
-        'BJ' => 'XOF',
-        'BM' => 'BMD',
-        'BT' => 'BTN',
-        'BO' => 'BOB',
-        'BA' => 'BAM',
-        'BW' => 'BWP',
-        'BR' => 'BRL',
-        'BN' => 'BND',
-        'BG' => 'BGN',
-        'BF' => 'XOF',
-        'BI' => 'BIF',
-        'CV' => 'CVE',
-        'KH' => 'KHR',
-        'CM' => 'XAF',
-        'CA' => 'CAD',
-        'KY' => 'KYD',
-        'CF' => 'XAF',
-        'TD' => 'XAF',
-        'CL' => 'CLP',
-        'CN' => 'CNY',
-        'CO' => 'COP',
-        'KM' => 'KMF',
-        'CD' => 'CDF',
-        'CG' => 'XAF',
-        'CR' => 'CRC',
-        'HR' => 'EUR',
-        'CU' => 'CUP',
-        'CW' => 'ANG',
-        'CY' => 'EUR',
-        'CZ' => 'CZK',
-        'DK' => 'DKK',
-        'DJ' => 'DJF',
-        'DM' => 'XCD',
-        'DO' => 'DOP',
-        'EC' => 'USD',
-        'EG' => 'EGP',
-        'SV' => 'USD',
-        'GQ' => 'XAF',
-        'ER' => 'ERN',
-        'EE' => 'EUR',
-        'SZ' => 'SZL',
-        'ET' => 'ETB',
-        'FO' => 'DKK',
-        'FJ' => 'FJD',
-        'FI' => 'EUR',
-        'FR' => 'EUR',
-        'PF' => 'XPF',
-        'GA' => 'XAF',
-        'GM' => 'GMD',
-        'GE' => 'GEL',
-        'DE' => 'EUR',
-        'GH' => 'GHS',
-        'GI' => 'GIP',
-        'GR' => 'EUR',
-        'GL' => 'DKK',
-        'GD' => 'XCD',
-        'GU' => 'USD',
-        'GT' => 'GTQ',
-        'GG' => 'GBP',
-        'GN' => 'GNF',
-        'GW' => 'XOF',
-        'GY' => 'GYD',
-        'HT' => 'HTG',
-        'HN' => 'HNL',
-        'HK' => 'HKD',
-        'HU' => 'HUF',
-        'IS' => 'ISK',
-        'IN' => 'INR',
-        'ID' => 'IDR',
-        'IR' => 'IRR',
-        'IQ' => 'IQD',
-        'IE' => 'EUR',
-        'IM' => 'GBP',
-        'IL' => 'ILS',
-        'IT' => 'EUR',
-        'CI' => 'XOF',
-        'JM' => 'JMD',
-        'JP' => 'JPY',
-        'JE' => 'GBP',
-        'JO' => 'JOD',
-        'KZ' => 'KZT',
-        'KE' => 'KES',
-        'KI' => 'AUD',
-        'XK' => 'EUR',
-        'KW' => 'KWD',
-        'KG' => 'KGS',
-        'LA' => 'LAK',
-        'LV' => 'EUR',
-        'LB' => 'LBP',
-        'LS' => 'LSL',
-        'LR' => 'LRD',
-        'LY' => 'LYD',
-        'LI' => 'CHF',
-        'LT' => 'EUR',
-        'LU' => 'EUR',
-        'MO' => 'MOP',
-        'MG' => 'MGA',
-        'MW' => 'MWK',
-        'MY' => 'MYR',
-        'MV' => 'MVR',
-        'ML' => 'XOF',
-        'MT' => 'EUR',
-        'MH' => 'USD',
-        'MR' => 'MRU',
-        'MU' => 'MUR',
-        'MX' => 'MXN',
-        'FM' => 'USD',
-        'MD' => 'MDL',
-        'MC' => 'EUR',
-        'MN' => 'MNT',
-        'ME' => 'EUR',
-        'MA' => 'MAD',
-        'MZ' => 'MZN',
-        'MM' => 'MMK',
-        'NA' => 'NAD',
-        'NR' => 'AUD',
-        'NP' => 'NPR',
-        'NL' => 'EUR',
-        'NC' => 'XPF',
-        'NZ' => 'NZD',
-        'NI' => 'NIO',
-        'NE' => 'XOF',
-        'NG' => 'NGN',
-        'KP' => 'KPW',
-        'MK' => 'MKD',
-        'NO' => 'NOK',
-        'OM' => 'OMR',
-        'PK' => 'PKR',
-        'PW' => 'USD',
-        'PS' => 'ILS',
-        'PA' => 'PAB',
-        'PG' => 'PGK',
-        'PY' => 'PYG',
-        'PE' => 'PEN',
-        'PH' => 'PHP',
-        'PL' => 'PLN',
-        'PT' => 'EUR',
-        'PR' => 'USD',
-        'QA' => 'QAR',
-        'RO' => 'RON',
-        'RU' => 'RUB',
-        'RW' => 'RWF',
-        'KN' => 'XCD',
-        'LC' => 'XCD',
-        'VC' => 'XCD',
-        'WS' => 'WST',
-        'SM' => 'EUR',
-        'ST' => 'STN',
-        'SA' => 'SAR',
-        'SN' => 'XOF',
-        'RS' => 'RSD',
-        'SC' => 'SCR',
-        'SL' => 'SLE',
-        'SG' => 'SGD',
-        'SK' => 'EUR',
-        'SI' => 'EUR',
-        'SB' => 'SBD',
-        'SO' => 'SOS',
-        'ZA' => 'ZAR',
-        'KR' => 'KRW',
-        'SS' => 'SSP',
-        'ES' => 'EUR',
-        'LK' => 'LKR',
-        'SD' => 'SDG',
-        'SR' => 'SRD',
-        'SE' => 'SEK',
-        'CH' => 'CHF',
-        'SY' => 'SYP',
-        'TW' => 'TWD',
-        'TJ' => 'TJS',
-        'TZ' => 'TZS',
-        'TH' => 'THB',
-        'TL' => 'USD',
-        'TG' => 'XOF',
-        'TO' => 'TOP',
-        'TT' => 'TTD',
-        'TN' => 'TND',
-        'TR' => 'TRY',
-        'TM' => 'TMT',
-        'TV' => 'AUD',
-        'UG' => 'UGX',
-        'UA' => 'UAH',
-        'AE' => 'AED',
-        'GB' => 'GBP',
-        'US' => 'USD',
-        'UY' => 'UYU',
-        'UZ' => 'UZS',
-        'VU' => 'VUV',
-        'VA' => 'EUR',
-        'VE' => 'VES',
-        'VN' => 'VND',
-        'VG' => 'USD',
-        'VI' => 'USD',
-        'YE' => 'YER',
-        'ZM' => 'ZMW',
-        'ZW' => 'ZWG',
-    ];
+    public static function getLookupMap(): array
+    {
+        return Cache::rememberForever(Country::CACHE_KEY, function (): array {
+            $codes = [];
+            $names = [];
+            $aliases = [];
+            $zeroDecimals = ['JPY', 'KRW', 'VND'];
 
-    /**
-     * Map of common location keywords and destination strings to currencies.
-     *
-     * @var array<string, string>
-     */
-    private const KEYWORD_TO_CURRENCY = [
-        // Philippines
-        'philippines' => 'PHP',
-        'manila' => 'PHP',
-        'taguig' => 'PHP',
-        'bgc' => 'PHP',
-        'bonifacio' => 'PHP',
-        'makati' => 'PHP',
-        'cebu' => 'PHP',
-        'boracay' => 'PHP',
-        'palawan' => 'PHP',
-        'el nido' => 'PHP',
-        'coron' => 'PHP',
-        'davao' => 'PHP',
-        'siargao' => 'PHP',
-        'bohol' => 'PHP',
-        'panglao' => 'PHP',
-        'baguio' => 'PHP',
-        'pasig' => 'PHP',
-        'quezon city' => 'PHP',
+            try {
+                $countries = Country::query()->get();
+            } catch (\Throwable) {
+                $countries = collect();
+            }
 
-        // Japan
-        'japan' => 'JPY',
-        'tokyo' => 'JPY',
-        'osaka' => 'JPY',
-        'kyoto' => 'JPY',
-        'hokkaido' => 'JPY',
-        'sapporo' => 'JPY',
-        'fukuoka' => 'JPY',
-        'hakone' => 'JPY',
-        'okinawa' => 'JPY',
-        'shibuya' => 'JPY',
-        'shinjuku' => 'JPY',
-        'asakusa' => 'JPY',
+            if ($countries->isEmpty()) {
+                $path = database_path('data/countries.json');
+                if (file_exists($path)) {
+                    $json = json_decode((string) file_get_contents($path), true);
+                    if (is_array($json)) {
+                        foreach ($json as $item) {
+                            $code = strtoupper((string) ($item['code'] ?? ''));
+                            $curr = strtoupper((string) ($item['currency_code'] ?? ''));
+                            $name = strtolower(trim((string) ($item['name'] ?? '')));
+                            if ($code !== '' && $curr !== '') {
+                                $codes[$code] = $curr;
+                            }
+                            if ($name !== '' && $curr !== '') {
+                                $names[$name] = $curr;
+                            }
+                            if (! empty($item['is_zero_decimal']) && ! in_array($curr, $zeroDecimals, true)) {
+                                $zeroDecimals[] = $curr;
+                            }
+                            if (! empty($item['aliases']) && is_array($item['aliases'])) {
+                                foreach ($item['aliases'] as $alias) {
+                                    $aliases[strtolower(trim((string) $alias))] = $curr;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                foreach ($countries as $country) {
+                    $code = strtoupper($country->code);
+                    $curr = strtoupper($country->currency_code);
+                    $name = strtolower(trim($country->name));
 
-        // South Korea
-        'south korea' => 'KRW',
-        'korea' => 'KRW',
-        'seoul' => 'KRW',
-        'busan' => 'KRW',
-        'incheon' => 'KRW',
-        'jeju' => 'KRW',
-        'myeongdong' => 'KRW',
-        'gangnam' => 'KRW',
-        'hongdae' => 'KRW',
-        'itaewon' => 'KRW',
+                    $codes[$code] = $curr;
+                    $names[$name] = $curr;
 
-        // Hong Kong
-        'hong kong' => 'HKD',
-        'hongkong' => 'HKD',
-        'kowloon' => 'HKD',
-        'tsim sha tsui' => 'HKD',
-        'disneyland' => 'HKD',
-        'disney' => 'HKD',
-        '迪士尼' => 'HKD',
-        'mong kok' => 'HKD',
+                    if ($country->is_zero_decimal && ! in_array($curr, $zeroDecimals, true)) {
+                        $zeroDecimals[] = $curr;
+                    }
 
-        // Singapore
-        'singapore' => 'SGD',
-        'changi' => 'SGD',
-        'sentosa' => 'SGD',
+                    if (! empty($country->aliases) && is_array($country->aliases)) {
+                        foreach ($country->aliases as $alias) {
+                            $aliases[strtolower(trim((string) $alias))] = $curr;
+                        }
+                    }
+                }
+            }
 
-        // Taiwan
-        'taiwan' => 'TWD',
-        'taipei' => 'TWD',
-        'kaohsiung' => 'TWD',
-
-        // Thailand
-        'thailand' => 'THB',
-        'bangkok' => 'THB',
-        'phuket' => 'THB',
-        'chiang mai' => 'THB',
-        'pattaya' => 'THB',
-        'krabi' => 'THB',
-
-        // Indonesia
-        'indonesia' => 'IDR',
-        'bali' => 'IDR',
-        'jakarta' => 'IDR',
-        'ubud' => 'IDR',
-        'seminyak' => 'IDR',
-        'canggu' => 'IDR',
-
-        // Malaysia
-        'malaysia' => 'MYR',
-        'kuala lumpur' => 'MYR',
-        'penang' => 'MYR',
-
-        // United States
-        'united states' => 'USD',
-        'usa' => 'USD',
-        'new york' => 'USD',
-        'los angeles' => 'USD',
-        'san francisco' => 'USD',
-        'hawaii' => 'USD',
-        'california' => 'USD',
-        'las vegas' => 'USD',
-        'orlando' => 'USD',
-
-        // United Kingdom
-        'united kingdom' => 'GBP',
-        'great britain' => 'GBP',
-        'england' => 'GBP',
-        'london' => 'GBP',
-        'scotland' => 'GBP',
-        'edinburgh' => 'GBP',
-        'manchester' => 'GBP',
-
-        // Australia
-        'australia' => 'AUD',
-        'sydney' => 'AUD',
-        'melbourne' => 'AUD',
-        'brisbane' => 'AUD',
-        'perth' => 'AUD',
-
-        // UAE
-        'united arab emirates' => 'AED',
-        'uae' => 'AED',
-        'dubai' => 'AED',
-        'abu dhabi' => 'AED',
-
-        // Vietnam
-        'vietnam' => 'VND',
-        'hanoi' => 'VND',
-        'ho chi minh' => 'VND',
-        'saigon' => 'VND',
-        'da nang' => 'VND',
-
-        // Europe
-        'france' => 'EUR',
-        'paris' => 'EUR',
-        'nice' => 'EUR',
-        'germany' => 'EUR',
-        'berlin' => 'EUR',
-        'munich' => 'EUR',
-        'frankfurt' => 'EUR',
-        'italy' => 'EUR',
-        'rome' => 'EUR',
-        'milan' => 'EUR',
-        'florence' => 'EUR',
-        'venice' => 'EUR',
-        'spain' => 'EUR',
-        'madrid' => 'EUR',
-        'barcelona' => 'EUR',
-        'netherlands' => 'EUR',
-        'amsterdam' => 'EUR',
-        'europe' => 'EUR',
-        'austria' => 'EUR',
-        'vienna' => 'EUR',
-
-        // Switzerland
-        'switzerland' => 'CHF',
-        'zurich' => 'CHF',
-        'geneva' => 'CHF',
-
-        // Canada
-        'canada' => 'CAD',
-        'toronto' => 'CAD',
-        'vancouver' => 'CAD',
-    ];
+            return [
+                'codes' => $codes,
+                'names' => $names,
+                'aliases' => $aliases,
+                'zero_decimals' => $zeroDecimals,
+            ];
+        });
+    }
 
     /**
      * Resolve currency for a country code, destination name, or location query.
@@ -406,21 +100,35 @@ final class CountryCurrencyResolver
 
         $trimmed = trim($locationOrCountryCode);
         $upper = strtoupper($trimmed);
+        $map = self::getLookupMap();
 
-        // Check direct 2-letter ISO country code
-        if (isset(self::COUNTRY_CODE_TO_CURRENCY[$upper])) {
-            return self::COUNTRY_CODE_TO_CURRENCY[$upper];
+        // 1. Direct 2-letter ISO country code
+        if (isset($map['codes'][$upper])) {
+            return $map['codes'][$upper];
         }
 
-        // If it's already a 3-letter currency code, return it
-        if (strlen($upper) === 3 && in_array($upper, array_values(self::COUNTRY_CODE_TO_CURRENCY), true)) {
+        // 2. Direct 3-letter currency code
+        if (strlen($upper) === 3 && in_array($upper, $map['codes'], true)) {
             return $upper;
         }
 
-        // Check substring keyword matches
         $lower = strtolower($trimmed);
-        foreach (self::KEYWORD_TO_CURRENCY as $keyword => $currency) {
+
+        // 3. Exact full country name match
+        if (isset($map['names'][$lower])) {
+            return $map['names'][$lower];
+        }
+
+        // 4. Keyword / Alias substring match
+        foreach ($map['aliases'] as $keyword => $currency) {
             if (str_contains($lower, $keyword)) {
+                return $currency;
+            }
+        }
+
+        // 5. Country name substring match
+        foreach ($map['names'] as $name => $currency) {
+            if (str_contains($lower, $name)) {
                 return $currency;
             }
         }
@@ -456,8 +164,9 @@ final class CountryCurrencyResolver
     public static function isZeroDecimal(string $currency): bool
     {
         $cur = strtoupper(trim($currency));
+        $map = self::getLookupMap();
 
-        return in_array($cur, ['JPY', 'KRW', 'VND'], true);
+        return in_array($cur, $map['zero_decimals'], true);
     }
 
     /**
