@@ -15,6 +15,7 @@ import 'package:tapittrip/features/circles/data/trip_circle_repository.dart';
 import 'package:tapittrip/features/circles/domain/models/activity_event.dart';
 import 'package:tapittrip/features/circles/domain/models/circle_member.dart';
 import 'package:tapittrip/features/circles/domain/models/trip_invitation.dart';
+import 'package:tapittrip/features/circles/presentation/pages/circle_inbox_page.dart';
 import 'package:tapittrip/features/circles/presentation/pages/trip_circle_page.dart';
 import 'package:tapittrip/features/circles/presentation/widgets/join_trip_sheet.dart';
 import 'package:tapittrip/features/trips/data/trip_repository.dart';
@@ -24,6 +25,9 @@ class _FakeCircleApiClient extends ApiClient {
 
   bool throwForbiddenOnMembers = false;
   bool throwForbiddenOnInvitations = false;
+  bool throwOfflineOnInbox = false;
+  bool emptyInbox = false;
+  Map<String, dynamic>? pendingTransferPayload;
   String previewStatus = 'active';
   String? lastGetPath;
   String? lastPostPath;
@@ -81,6 +85,27 @@ class _FakeCircleApiClient extends ApiClient {
       ];
     }
 
+    if (path == '/me/invitations') {
+      if (throwOfflineOnInbox) {
+        throw const NetworkException();
+      }
+      if (emptyInbox) return const [];
+      return [
+        {
+          'id': 'direct-inv-1',
+          'trip_id': 'trip-paris',
+          'trip_title': 'Paris Museum Week',
+          'destination_country': 'FR',
+          'proposed_role': 'editor',
+          'status': 'pending',
+          'inviter_name': 'Host Claire',
+          'expires_at': DateTime.now()
+              .add(const Duration(days: 5))
+              .toIso8601String(),
+        },
+      ];
+    }
+
     if (path.endsWith('/invitations')) {
       if (throwForbiddenOnInvitations) {
         throw const ApiException(
@@ -124,6 +149,33 @@ class _FakeCircleApiClient extends ApiClient {
       ];
     }
 
+    if (path.endsWith('/ownership-transfer')) {
+      return pendingTransferPayload;
+    }
+
+    if (path == '/me/ownership-transfers') {
+      if (throwOfflineOnInbox) {
+        throw const NetworkException();
+      }
+      if (emptyInbox) return const [];
+      return [
+        {
+          'id': 'xfer-1',
+          'trip_id': 'trip-kyoto',
+          'trip_title': 'Kyoto Autumn',
+          'from_user_id': 'user-owner',
+          'from_user_name': 'Alice Organizer',
+          'to_user_id': 'user-viewer',
+          'to_user_name': 'Bob Viewer',
+          'former_owner_role': 'editor',
+          'status': 'pending',
+          'expires_at': DateTime.now()
+              .add(const Duration(days: 5))
+              .toIso8601String(),
+        },
+      ];
+    }
+
     if (path.startsWith('/invitations/')) {
       return {
         'trip_title': 'Osaka Food Trip',
@@ -148,6 +200,107 @@ class _FakeCircleApiClient extends ApiClient {
   }) async {
     lastPostPath = path;
     lastPostData = data;
+
+    if (path.endsWith('/invitations/direct')) {
+      return {
+        'id': 'inv-direct-new',
+        'trip_id': 'trip-1',
+        'invite_type': 'direct',
+        'target_display_name': 'Companion Leo',
+        'proposed_role':
+            (data is Map ? data['proposed_role'] : null) ?? 'viewer',
+        'status': 'pending',
+        'max_uses': 1,
+        'use_count': 0,
+        'expires_at': DateTime.now()
+            .add(const Duration(days: 7))
+            .toIso8601String(),
+        'inviter_name': 'Alice Organizer',
+        'already_pending': false,
+      };
+    }
+
+    if (path.endsWith('/ownership-transfer')) {
+      pendingTransferPayload = {
+        'id': 'xfer-new',
+        'trip_id': 'trip-1',
+        'trip_title': 'Kyoto Autumn',
+        'from_user_id': 'user-owner',
+        'from_user_name': 'Alice Organizer',
+        'to_user_id': 'user-viewer',
+        'to_user_name': 'Bob Viewer',
+        'former_owner_role':
+            (data is Map ? data['former_owner_role'] : null) ?? 'editor',
+        'status': 'pending',
+        'expires_at': DateTime.now()
+            .add(const Duration(days: 7))
+            .toIso8601String(),
+      };
+      return {...pendingTransferPayload!, 'already_pending': false};
+    }
+
+    if (path.startsWith('/me/ownership-transfers/') &&
+        path.endsWith('/accept')) {
+      return {
+        'trip': {
+          'id': 'trip-kyoto',
+          'owner_id': 'user-viewer',
+          'title': 'Kyoto Autumn',
+          'trip_type': 'leisure',
+          'planning_mode': 'diy',
+          'status': 'planned',
+          'version': 2,
+          'role': 'owner',
+        },
+        'transfer': {
+          'id': 'xfer-1',
+          'trip_id': 'trip-kyoto',
+          'trip_title': 'Kyoto Autumn',
+          'from_user_id': 'user-owner',
+          'from_user_name': 'Alice Organizer',
+          'to_user_id': 'user-viewer',
+          'to_user_name': 'Bob Viewer',
+          'former_owner_role': 'editor',
+          'status': 'accepted',
+          'expires_at': DateTime.now()
+              .add(const Duration(days: 5))
+              .toIso8601String(),
+        },
+      };
+    }
+
+    if (path.startsWith('/me/ownership-transfers/') &&
+        path.endsWith('/decline')) {
+      return {
+        'id': 'xfer-1',
+        'trip_id': 'trip-kyoto',
+        'trip_title': 'Kyoto Autumn',
+        'from_user_id': 'user-owner',
+        'from_user_name': 'Alice Organizer',
+        'to_user_id': 'user-viewer',
+        'to_user_name': 'Bob Viewer',
+        'former_owner_role': 'editor',
+        'status': 'declined',
+        'expires_at': DateTime.now()
+            .add(const Duration(days: 5))
+            .toIso8601String(),
+      };
+    }
+
+    if (path.endsWith('/decline')) {
+      return {
+        'id': 'direct-inv-1',
+        'trip_id': 'trip-paris',
+        'trip_title': 'Paris Museum Week',
+        'destination_country': 'FR',
+        'proposed_role': 'editor',
+        'status': 'declined',
+        'inviter_name': 'Host Claire',
+        'expires_at': DateTime.now()
+            .add(const Duration(days: 5))
+            .toIso8601String(),
+      };
+    }
 
     if (path.endsWith('/invitations')) {
       return {
@@ -483,6 +636,158 @@ void main() {
 
         expect(api.lastPostPath, '/invitations/tok_abc123/accept');
         expect(joinedTripId, 'trip-osaka');
+      },
+    );
+
+    testWidgets(
+      'organizer sends direct Friend Code invite and initiates ownership transfer',
+      (tester) async {
+        final api = _FakeCircleApiClient();
+        const storage = FlutterSecureStorage();
+        final circleRepo = TripCircleRepository(
+          apiClient: api,
+          storage: storage,
+        );
+        final tripRepo = RemoteTripRepository(api);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authProvider.overrideWith(() => _FakeAuthNotifier('user-owner')),
+              tripCircleRepositoryProvider.overrideWithValue(circleRepo),
+              tripRepositoryProvider.overrideWithValue(tripRepo),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const TripCirclePage(tripId: 'trip-1'),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Members & Invites'));
+        await tester.pumpAndSettle();
+
+        // Toggle to Friend Code mode and send targeted invite
+        await tester.tap(find.text('Friend Code'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'TRP-LEO222');
+        await tester.tap(find.text('Send Direct Invite'));
+        await tester.pumpAndSettle();
+
+        expect(api.lastPostPath, '/trips/trip-1/invitations/direct');
+        expect((api.lastPostData as Map)['friend_code'], 'TRP-LEO222');
+
+        // Open companion menu and initiate ownership transfer
+        await tester.drag(find.byType(ListView), const Offset(0, -300));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(PopupMenuButton<String>));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Transfer Ownership'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Transfer Organizer Ownership?'), findsOneWidget);
+        await tester.tap(find.text('Send Handover Request'));
+        await tester.pumpAndSettle();
+
+        expect(api.lastPostPath, '/trips/trip-1/ownership-transfer');
+        expect((api.lastPostData as Map)['target_member_id'], 'mem-2');
+
+        await tester.drag(find.byType(ListView), const Offset(0, 300));
+        await tester.pumpAndSettle();
+        expect(find.text('Ownership Handover Pending'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'CircleInboxPage renders empty state when no pending invites exist',
+      (tester) async {
+        final api = _FakeCircleApiClient()..emptyInbox = true;
+        const storage = FlutterSecureStorage();
+        final circleRepo = TripCircleRepository(
+          apiClient: api,
+          storage: storage,
+        );
+        final tripRepo = RemoteTripRepository(api);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tripCircleRepositoryProvider.overrideWithValue(circleRepo),
+              tripRepositoryProvider.overrideWithValue(tripRepo),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const CircleInboxPage(),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('No pending circle invitations'), findsOneWidget);
+        expect(find.text('Join with Invite Link'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'CircleInboxPage renders direct invitations, handover offers, decline-with-block, and offline guard',
+      (tester) async {
+        final api = _FakeCircleApiClient();
+        const storage = FlutterSecureStorage();
+        final circleRepo = TripCircleRepository(
+          apiClient: api,
+          storage: storage,
+        );
+        final tripRepo = RemoteTripRepository(api);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tripCircleRepositoryProvider.overrideWithValue(circleRepo),
+              tripRepositoryProvider.overrideWithValue(tripRepo),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: const CircleInboxPage(),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        // Both organizer handover and direct invitation appear
+        expect(find.text('Organizer Handovers'), findsOneWidget);
+        expect(find.text('Direct Trip Invitations'), findsOneWidget);
+        expect(find.text('Paris Museum Week'), findsOneWidget);
+        expect(find.text('Kyoto Autumn'), findsOneWidget);
+
+        // Decline direct invite with sender block option
+        await tester.tap(find.text('Decline').last);
+        await tester.pumpAndSettle();
+        expect(find.text('Decline Invitation?'), findsOneWidget);
+        await tester.tap(
+          find.text('Block future direct invites from this organizer'),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Decline'));
+        await tester.pumpAndSettle();
+
+        expect(api.lastPostPath, '/me/invitations/direct-inv-1/decline');
+        expect((api.lastPostData as Map)['block_sender'], isTrue);
+        expect(find.text('Paris Museum Week'), findsNothing);
+
+        // Offline refresh falls back to cache and disables handover accept/decline actions
+        api.throwOfflineOnInbox = true;
+        await tester.tap(find.byTooltip('Refresh Inbox'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Offline cache shown'), findsOneWidget);
+        final acceptBtn = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Become Organizer'),
+        );
+        expect(acceptBtn.onPressed, isNull);
       },
     );
   });

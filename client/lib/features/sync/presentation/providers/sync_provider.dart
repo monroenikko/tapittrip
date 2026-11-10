@@ -6,40 +6,48 @@ import '../../data/outbox_storage.dart';
 import '../../domain/models/outbox_operation.dart';
 import '../../services/sync_service.dart';
 
-enum SyncStatus { synced, pending, syncing, conflict, offline }
+enum SyncStatus { synced, pending, syncing, conflict, rejected, offline }
 
 class SyncState {
   const SyncState({
     this.status = SyncStatus.synced,
     this.pendingCount = 0,
     this.conflictCount = 0,
+    this.rejectedCount = 0,
     this.lastSyncedAt,
     this.errorMessage,
     this.conflicts = const [],
+    this.rejectedOperations = const [],
   });
 
   final SyncStatus status;
   final int pendingCount;
   final int conflictCount;
+  final int rejectedCount;
   final DateTime? lastSyncedAt;
   final String? errorMessage;
   final List<OutboxOperation> conflicts;
+  final List<OutboxOperation> rejectedOperations;
 
   SyncState copyWith({
     SyncStatus? status,
     int? pendingCount,
     int? conflictCount,
+    int? rejectedCount,
     DateTime? lastSyncedAt,
     String? errorMessage,
     List<OutboxOperation>? conflicts,
+    List<OutboxOperation>? rejectedOperations,
   }) {
     return SyncState(
       status: status ?? this.status,
       pendingCount: pendingCount ?? this.pendingCount,
       conflictCount: conflictCount ?? this.conflictCount,
+      rejectedCount: rejectedCount ?? this.rejectedCount,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       errorMessage: errorMessage ?? this.errorMessage,
       conflicts: conflicts ?? this.conflicts,
+      rejectedOperations: rejectedOperations ?? this.rejectedOperations,
     );
   }
 }
@@ -79,14 +87,17 @@ class SyncNotifier extends Notifier<SyncState> {
   }
 
   Future<void> refresh() async {
-    final operations = await _outboxStorage.getPendingOperations();
+    final operations = await _outboxStorage.getAllOperations();
     final conflicts = operations
         .where((op) => op.status == 'conflict')
         .toList();
+    final rejected = operations.where((op) => op.status == 'rejected').toList();
     final pending = operations.where((op) => op.status == 'pending').toList();
 
     final status = conflicts.isNotEmpty
         ? SyncStatus.conflict
+        : rejected.isNotEmpty
+        ? SyncStatus.rejected
         : pending.isNotEmpty
         ? SyncStatus.pending
         : SyncStatus.synced;
@@ -95,7 +106,9 @@ class SyncNotifier extends Notifier<SyncState> {
       status: status,
       pendingCount: pending.length,
       conflictCount: conflicts.length,
+      rejectedCount: rejected.length,
       conflicts: conflicts,
+      rejectedOperations: rejected,
     );
   }
 
@@ -104,14 +117,19 @@ class SyncNotifier extends Notifier<SyncState> {
 
     try {
       await _syncService.syncAll(tripId: tripId);
-      final operations = await _outboxStorage.getPendingOperations();
+      final operations = await _outboxStorage.getAllOperations();
       final conflicts = operations
           .where((op) => op.status == 'conflict')
+          .toList();
+      final rejected = operations
+          .where((op) => op.status == 'rejected')
           .toList();
       final pending = operations.where((op) => op.status == 'pending').toList();
 
       final status = conflicts.isNotEmpty
           ? SyncStatus.conflict
+          : rejected.isNotEmpty
+          ? SyncStatus.rejected
           : pending.isNotEmpty
           ? SyncStatus.pending
           : SyncStatus.synced;
@@ -120,22 +138,33 @@ class SyncNotifier extends Notifier<SyncState> {
         status: status,
         pendingCount: pending.length,
         conflictCount: conflicts.length,
+        rejectedCount: rejected.length,
         conflicts: conflicts,
+        rejectedOperations: rejected,
         lastSyncedAt: DateTime.now(),
         errorMessage: null,
       );
     } catch (e) {
-      final operations = await _outboxStorage.getPendingOperations();
+      final operations = await _outboxStorage.getAllOperations();
       final conflicts = operations
           .where((op) => op.status == 'conflict')
+          .toList();
+      final rejected = operations
+          .where((op) => op.status == 'rejected')
           .toList();
       final pending = operations.where((op) => op.status == 'pending').toList();
 
       state = state.copyWith(
-        status: conflicts.isNotEmpty ? SyncStatus.conflict : SyncStatus.offline,
+        status: conflicts.isNotEmpty
+            ? SyncStatus.conflict
+            : rejected.isNotEmpty
+            ? SyncStatus.rejected
+            : SyncStatus.offline,
         pendingCount: pending.length,
         conflictCount: conflicts.length,
+        rejectedCount: rejected.length,
         conflicts: conflicts,
+        rejectedOperations: rejected,
         errorMessage: e.toString(),
       );
     }
@@ -151,6 +180,11 @@ class SyncNotifier extends Notifier<SyncState> {
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
     }
+  }
+
+  Future<void> dismissRejected(String operationId) async {
+    await _syncService.dismissRejectedOperation(operationId);
+    await refresh();
   }
 }
 

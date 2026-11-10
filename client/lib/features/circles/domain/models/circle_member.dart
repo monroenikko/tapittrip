@@ -55,4 +55,3 @@ class CircleMember {
     'joined_at': joinedAt?.toIso8601String(),
   };
 }
-

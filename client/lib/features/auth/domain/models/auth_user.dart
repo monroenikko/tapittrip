@@ -3,6 +3,8 @@ class AuthUser {
     required this.id,
     required this.name,
     required this.displayName,
+    this.friendCode,
+    this.acceptsDirectInvites = true,
     required this.email,
     this.avatarUrl,
     this.locale = 'en',
@@ -17,6 +19,8 @@ class AuthUser {
   final String id;
   final String name;
   final String displayName;
+  final String? friendCode;
+  final bool acceptsDirectInvites;
   final String email;
   final String? avatarUrl;
   final String locale;
@@ -31,6 +35,8 @@ class AuthUser {
     String? id,
     String? name,
     String? displayName,
+    String? friendCode,
+    bool? acceptsDirectInvites,
     String? email,
     String? avatarUrl,
     String? locale,
@@ -45,6 +51,8 @@ class AuthUser {
       id: id ?? this.id,
       name: name ?? this.name,
       displayName: displayName ?? this.displayName,
+      friendCode: friendCode ?? this.friendCode,
+      acceptsDirectInvites: acceptsDirectInvites ?? this.acceptsDirectInvites,
       email: email ?? this.email,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       locale: locale ?? this.locale,
@@ -63,7 +71,9 @@ class AuthUser {
       name: json['name'] as String,
       displayName:
           (json['display_name'] as String?) ?? (json['name'] as String),
-      email: json['email'] as String,
+      friendCode: json['friend_code'] as String?,
+      acceptsDirectInvites: (json['accepts_direct_invites'] as bool?) ?? true,
+      email: (json['email'] as String?) ?? '',
       avatarUrl: json['avatar_url'] as String?,
       locale: (json['locale'] as String?) ?? 'en',
       homeTimezone: (json['home_timezone'] as String?) ?? 'UTC',
@@ -83,6 +93,8 @@ class AuthUser {
     'id': id,
     'name': name,
     'display_name': displayName,
+    'friend_code': friendCode,
+    'accepts_direct_invites': acceptsDirectInvites,
     'email': email,
     'avatar_url': avatarUrl,
     'locale': locale,

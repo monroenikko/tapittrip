@@ -7,6 +7,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/profile_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/circles/presentation/pages/circle_inbox_page.dart';
 import '../../features/circles/presentation/pages/trip_circle_page.dart';
 import '../../features/expenses/presentation/pages/trip_expenses_page.dart';
 import '../../features/itinerary/presentation/pages/trip_itinerary_page.dart';
@@ -62,6 +63,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/invitations/inbox',
+        builder: (context, state) => const CircleInboxPage(),
       ),
       GoRoute(
         path: '/lounges',

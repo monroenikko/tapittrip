@@ -42,4 +42,11 @@ final class ProfileController extends Controller
 
         return $this->response->noContent();
     }
+
+    public function regenerateFriendCode(Request $request): JsonResponse
+    {
+        $user = $this->profileService->regenerateFriendCode($request->user());
+
+        return $this->response->success(new UserResource($user));
+    }
 }

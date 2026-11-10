@@ -29,6 +29,8 @@ class UserFactory extends Factory
         return [
             'name' => $name,
             'display_name' => $name,
+            'friend_code' => User::generateUniqueFriendCode(),
+            'accepts_direct_invites' => true,
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'avatar_url' => null,

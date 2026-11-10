@@ -123,6 +123,66 @@ class SyncStatusIndicator extends ConsumerWidget {
           ),
         );
 
+      case SyncStatus.rejected:
+        return Tooltip(
+          message:
+              '${syncState.rejectedCount} offline edit(s) rejected by server permissions. Tap for details.',
+          child: InkWell(
+            onTap: () {
+              final rejected = syncState.rejectedOperations.firstOrNull;
+              if (rejected != null) {
+                final reason =
+                    rejected.conflictDetails?['reason']?.toString() ??
+                    'You no longer have edit permissions for this trip.';
+                showDialog<void>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Offline Edit Rejected'),
+                    content: Text(
+                      'Your offline update to ${rejected.entityType.replaceAll('_', ' ')} was not applied:\n\n$reason',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          ref
+                              .read(syncProvider.notifier)
+                              .dismissRejected(rejected.operationId);
+                          Navigator.of(ctx).pop();
+                        },
+                        child: const Text('Dismiss'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              decoration: BoxDecoration(
+                color: colorScheme.error.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colorScheme.error),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.block_rounded, size: 16, color: colorScheme.error),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Rejected (${syncState.rejectedCount})',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
       case SyncStatus.offline:
         return Tooltip(
           message: 'Offline mode — edits will sync when reconnected',

@@ -23,7 +23,7 @@ final class UploadJournalPhotoRequest extends FormRequest
             return false;
         }
 
-        return $entry->trip->members()->where('user_id', $user->id)->exists();
+        return $entry->trip->hasMember($user);
     }
 
     /**

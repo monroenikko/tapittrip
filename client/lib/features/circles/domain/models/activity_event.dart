@@ -28,6 +28,7 @@ class ActivityEvent {
   String get eventEmoji => switch (eventType) {
     'moment_shared' => '📸',
     'member_joined' => '👋',
+    'ownership_transferred' => '👑',
     'itinerary_updated' => '🗺️',
     'expense_logged' => '💳',
     _ => '✨',

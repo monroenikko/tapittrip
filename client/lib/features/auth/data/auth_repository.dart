@@ -31,7 +31,10 @@ abstract interface class AuthRepository {
     String? homeCurrency,
     String? homeTimezone,
     String? locale,
+    bool? acceptsDirectInvites,
   });
+
+  Future<AuthUser> regenerateFriendCode();
 
   Future<void> logout();
 
@@ -120,6 +123,7 @@ class RemoteAuthRepository implements AuthRepository {
     String? homeCurrency,
     String? homeTimezone,
     String? locale,
+    bool? acceptsDirectInvites,
   }) async {
     final payload = <String, dynamic>{};
     if (displayName != null) payload['display_name'] = displayName;
@@ -130,8 +134,17 @@ class RemoteAuthRepository implements AuthRepository {
     if (homeCurrency != null) payload['home_currency'] = homeCurrency;
     if (homeTimezone != null) payload['home_timezone'] = homeTimezone;
     if (locale != null) payload['locale'] = locale;
+    if (acceptsDirectInvites != null) {
+      payload['accepts_direct_invites'] = acceptsDirectInvites;
+    }
 
     final response = await apiClient.patch('/me', data: payload);
+    return AuthUser.fromJson(response as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AuthUser> regenerateFriendCode() async {
+    final response = await apiClient.post('/me/friend-code/regenerate');
     return AuthUser.fromJson(response as Map<String, dynamic>);
   }
 
@@ -146,11 +159,8 @@ class RemoteAuthRepository implements AuthRepository {
 
   @override
   Future<void> deleteAccount() async {
-    try {
-      await apiClient.delete('/me');
-    } finally {
-      await tokenStorage.deleteToken();
-    }
+    await apiClient.delete('/me');
+    await tokenStorage.deleteToken();
   }
 }
 

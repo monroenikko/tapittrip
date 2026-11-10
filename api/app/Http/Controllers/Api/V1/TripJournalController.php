@@ -32,7 +32,7 @@ final class TripJournalController extends Controller
         Request $request,
     ): JsonResponse {
         $user = $request->user();
-        if ($user === null || ! $trip->members()->where('user_id', $user->id)->exists()) {
+        if ($user === null || ! $trip->hasMember($user)) {
             throw new AuthorizationException('You are not a member of this trip.');
         }
 
@@ -60,7 +60,7 @@ final class TripJournalController extends Controller
         Request $request,
     ): JsonResponse {
         $user = $request->user();
-        if ($user === null || ! $entry->trip->members()->where('user_id', $user->id)->exists()) {
+        if ($user === null || ! $entry->trip->hasMember($user)) {
             throw new AuthorizationException('You are not a member of this trip.');
         }
 

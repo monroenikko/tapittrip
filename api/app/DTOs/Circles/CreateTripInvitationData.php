@@ -12,4 +12,3 @@ final readonly class CreateTripInvitationData
         public int $expiresInDays = 7,
     ) {}
 }
-

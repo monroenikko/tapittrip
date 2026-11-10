@@ -23,4 +23,3 @@ final class UpdateTripMemberRoleRequest extends FormRequest
         ];
     }
 }
-

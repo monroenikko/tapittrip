@@ -25,6 +25,7 @@ final class UpdateProfileRequest extends FormRequest
             'home_currency' => ['nullable', 'string', 'max:10'],
             'home_timezone' => ['nullable', 'string', 'max:64'],
             'locale' => ['nullable', 'string', 'max:12'],
+            'accepts_direct_invites' => ['sometimes', 'boolean'],
         ];
     }
 }

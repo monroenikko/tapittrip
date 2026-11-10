@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\CurrencyController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\GroupSettlementController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InvitationInboxController;
 use App\Http\Controllers\Api\V1\InvitationRedemptionController;
 use App\Http\Controllers\Api\V1\ItineraryItemController;
 use App\Http\Controllers\Api\V1\MediaController;
@@ -47,6 +48,14 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/me', [ProfileController::class, 'show'])->name('me.show');
         Route::patch('/me', [ProfileController::class, 'update'])->name('me.update');
         Route::delete('/me', [ProfileController::class, 'destroy'])->name('me.destroy');
+        Route::post('/me/friend-code/regenerate', [ProfileController::class, 'regenerateFriendCode'])->middleware('throttle:10,1')->name('me.friend-code.regenerate');
+
+        Route::get('/me/invitations', [InvitationInboxController::class, 'invitations'])->name('me.invitations.index');
+        Route::post('/me/invitations/{invitation}/accept', [InvitationInboxController::class, 'acceptInvitation'])->middleware('throttle:20,1')->name('me.invitations.accept');
+        Route::post('/me/invitations/{invitation}/decline', [InvitationInboxController::class, 'declineInvitation'])->middleware('throttle:20,1')->name('me.invitations.decline');
+        Route::get('/me/ownership-transfers', [InvitationInboxController::class, 'ownershipTransfers'])->name('me.ownership-transfers.index');
+        Route::post('/me/ownership-transfers/{transfer}/accept', [InvitationInboxController::class, 'acceptOwnershipTransfer'])->middleware('throttle:20,1')->name('me.ownership-transfers.accept');
+        Route::post('/me/ownership-transfers/{transfer}/decline', [InvitationInboxController::class, 'declineOwnershipTransfer'])->middleware('throttle:20,1')->name('me.ownership-transfers.decline');
 
         Route::apiResource('trips', TripController::class);
         Route::get('/trips/{trip}/today', [TripTodayController::class, 'show'])->name('trips.today.show');
@@ -108,7 +117,11 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/trips/{trip}/members/{member}', [TripCircleController::class, 'removeMember'])->name('trips.members.destroy');
         Route::get('/trips/{trip}/invitations', [TripCircleController::class, 'invitations'])->name('trips.invitations.index');
         Route::post('/trips/{trip}/invitations', [TripCircleController::class, 'storeInvitation'])->middleware('throttle:20,1')->name('trips.invitations.store');
+        Route::post('/trips/{trip}/invitations/direct', [TripCircleController::class, 'storeDirectInvitation'])->middleware('throttle:20,1')->name('trips.invitations.direct');
         Route::delete('/trips/{trip}/invitations/{invitation}', [TripCircleController::class, 'revokeInvitation'])->name('trips.invitations.revoke');
+        Route::get('/trips/{trip}/ownership-transfer', [TripCircleController::class, 'pendingOwnershipTransfer'])->name('trips.ownership-transfer.show');
+        Route::post('/trips/{trip}/ownership-transfer', [TripCircleController::class, 'initiateOwnershipTransfer'])->middleware('throttle:20,1')->name('trips.ownership-transfer.store');
+        Route::delete('/trips/{trip}/ownership-transfer/{transfer}', [TripCircleController::class, 'cancelOwnershipTransfer'])->name('trips.ownership-transfer.destroy');
         Route::post('/invitations/{token}/accept', [InvitationRedemptionController::class, 'accept'])->middleware('throttle:20,1')->name('invitations.accept');
 
         Route::get('/trips/{trip}/checklists', [ChecklistController::class, 'index'])->name('trips.checklists.index');

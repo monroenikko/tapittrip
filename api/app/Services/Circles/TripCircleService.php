@@ -6,12 +6,16 @@ namespace App\Services\Circles;
 
 use App\DTOs\Activity\RecordActivityEventData;
 use App\DTOs\Circles\AcceptTripInvitationResult;
+use App\DTOs\Circles\CreatedDirectInvitationResult;
+use App\DTOs\Circles\CreateDirectInvitationData;
 use App\DTOs\Circles\CreatedTripInvitationResult;
 use App\DTOs\Circles\CreateTripInvitationData;
 use App\Models\Trip;
 use App\Models\TripInvitation;
 use App\Models\TripMember;
+use App\Models\TripOwnershipTransfer;
 use App\Models\User;
+use App\Models\UserBlock;
 use App\Services\Activity\ActivityService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -118,7 +122,18 @@ final class TripCircleService
             ]);
         }
 
-        $member->delete();
+        DB::transaction(function () use ($trip, $member): void {
+            TripOwnershipTransfer::query()
+                ->where('trip_id', $trip->id)
+                ->where('to_user_id', $member->user_id)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'cancelled',
+                    'responded_at' => CarbonImmutable::now('UTC'),
+                ]);
+
+            $member->delete();
+        });
     }
 
     /**
@@ -135,7 +150,7 @@ final class TripCircleService
         }
 
         return $trip->invitations()
-            ->with(['inviter'])
+            ->with(['inviter', 'targetUser'])
             ->get();
     }
 
@@ -160,6 +175,7 @@ final class TripCircleService
         $invitation = TripInvitation::query()->create([
             'trip_id' => $trip->id,
             'inviter_id' => $actor->id,
+            'invite_type' => 'link',
             'token_hash' => $tokenHash,
             'proposed_role' => $data->proposedRole,
             'status' => 'active',
@@ -181,9 +197,274 @@ final class TripCircleService
     }
 
     /**
+     * Send a targeted direct invitation by privacy-safe friend code (TC-2.1, TC-2.3).
+     *
+     * @throws AuthorizationException
+     * @throws ValidationException
+     */
+    public function createDirectInvitation(
+        Trip $trip,
+        User $actor,
+        CreateDirectInvitationData $data,
+    ): CreatedDirectInvitationResult {
+        if ($trip->memberRole($actor) !== 'owner') {
+            throw new AuthorizationException('Only the trip organizer can create invitations.');
+        }
+
+        $normalizedCode = strtoupper(trim($data->friendCode));
+
+        return DB::transaction(function () use ($trip, $actor, $data, $normalizedCode): CreatedDirectInvitationResult {
+            /** @var User|null $targetUser */
+            $targetUser = User::query()
+                ->where('friend_code', $normalizedCode)
+                ->first();
+
+            $isBlocked = $targetUser !== null && UserBlock::query()
+                ->where('blocker_id', $targetUser->id)
+                ->where('blocked_id', $actor->id)
+                ->exists();
+
+            // Nonexistent code, self-invite, direct-invite opt-out, and blocked sender
+            // produce the identical safe error without leaking account existence or block status.
+            if ($targetUser === null
+                || $targetUser->id === $actor->id
+                || ! $targetUser->accepts_direct_invites
+                || $isBlocked) {
+                throw ValidationException::withMessages([
+                    'friend_code' => ['Unable to deliver invitation to that identifier. Please check the friend code and try again.'],
+                ]);
+            }
+
+            if ($trip->hasMember($targetUser)) {
+                throw ValidationException::withMessages([
+                    'friend_code' => ['This traveler is already an accepted member of the trip circle.'],
+                ]);
+            }
+
+            $now = CarbonImmutable::now('UTC');
+
+            /** @var TripInvitation|null $existingPending */
+            $existingPending = TripInvitation::query()
+                ->where('trip_id', $trip->id)
+                ->where('invite_type', 'direct')
+                ->where('target_user_id', $targetUser->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingPending !== null) {
+                if (! $existingPending->expires_at->isPast()) {
+                    return new CreatedDirectInvitationResult(
+                        invitation: $existingPending->load(['inviter', 'targetUser']),
+                        alreadyPending: true,
+                    );
+                }
+
+                $existingPending->update(['status' => 'expired']);
+            }
+
+            /** @var TripInvitation $invitation */
+            $invitation = TripInvitation::query()->create([
+                'trip_id' => $trip->id,
+                'inviter_id' => $actor->id,
+                'invite_type' => 'direct',
+                'token_hash' => null,
+                'target_user_id' => $targetUser->id,
+                'proposed_role' => $data->proposedRole,
+                'status' => 'pending',
+                'max_uses' => 1,
+                'use_count' => 0,
+                'expires_at' => $now->addDays($data->expiresInDays),
+            ]);
+
+            return new CreatedDirectInvitationResult(
+                invitation: $invitation->load(['inviter', 'targetUser']),
+                alreadyPending: false,
+            );
+        });
+    }
+
+    /**
+     * List pending direct invitations in the authenticated traveler's inbox (TC-2.2).
+     *
+     * @return Collection<int, TripInvitation>
+     */
+    public function listIncomingInvitations(User $user): Collection
+    {
+        return TripInvitation::query()
+            ->where('invite_type', 'direct')
+            ->where('target_user_id', $user->id)
+            ->where('status', 'pending')
+            ->whereHas('trip')
+            ->with(['trip', 'inviter'])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    /**
+     * Accept a targeted direct invitation cleanly inside an atomic transaction (TC-2.2).
+     *
+     * @throws AuthorizationException
+     * @throws ValidationException
+     */
+    public function acceptDirectInvitation(TripInvitation $invitation, User $user): AcceptTripInvitationResult
+    {
+        if (($invitation->invite_type ?? 'link') !== 'direct') {
+            throw new ModelNotFoundException('Direct invitation not found.');
+        }
+
+        if ($invitation->target_user_id !== $user->id) {
+            throw new AuthorizationException('You are not authorized to respond to this invitation.');
+        }
+
+        return DB::transaction(function () use ($invitation, $user): AcceptTripInvitationResult {
+            /** @var TripInvitation $locked */
+            $locked = TripInvitation::query()
+                ->where('id', $invitation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->target_user_id !== $user->id) {
+                throw new AuthorizationException('You are not authorized to respond to this invitation.');
+            }
+
+            /** @var Trip|null $trip */
+            $trip = Trip::query()->find($locked->trip_id);
+            if ($trip === null) {
+                throw new ModelNotFoundException('Trip not found.');
+            }
+
+            $status = $locked->effectiveStatus();
+
+            if ($status === 'accepted') {
+                /** @var TripMember|null $existingMember */
+                $existingMember = TripMember::query()
+                    ->where('trip_id', $trip->id)
+                    ->where('user_id', $user->id)
+                    ->where('invitation_status', 'accepted')
+                    ->first();
+
+                if ($existingMember !== null) {
+                    return new AcceptTripInvitationResult(
+                        trip: $trip,
+                        member: $existingMember->load(['user']),
+                        alreadyMember: true,
+                    );
+                }
+            }
+
+            if ($status === 'revoked') {
+                throw ValidationException::withMessages([
+                    'invitation' => ['This invitation has been revoked by the organizer.'],
+                ]);
+            }
+
+            if ($status === 'declined') {
+                throw ValidationException::withMessages([
+                    'invitation' => ['Declined invitations cannot be accepted later. Ask the organizer for a new invite.'],
+                ]);
+            }
+
+            if ($status === 'expired') {
+                throw ValidationException::withMessages([
+                    'invitation' => ['This invitation has expired.'],
+                ]);
+            }
+
+            /** @var TripMember|null $existingActive */
+            $existingActive = TripMember::query()
+                ->where('trip_id', $trip->id)
+                ->where('user_id', $user->id)
+                ->where('invitation_status', 'accepted')
+                ->first();
+
+            $locked->update([
+                'status' => 'accepted',
+                'use_count' => 1,
+                'responded_at' => CarbonImmutable::now('UTC'),
+            ]);
+
+            if ($existingActive !== null) {
+                return new AcceptTripInvitationResult(
+                    trip: $trip,
+                    member: $existingActive->load(['user']),
+                    alreadyMember: true,
+                );
+            }
+
+            $member = $this->admitOrRestoreMember($trip, $user, (string) $locked->proposed_role);
+
+            return new AcceptTripInvitationResult(
+                trip: $trip,
+                member: $member->load(['user']),
+                alreadyMember: false,
+            );
+        });
+    }
+
+    /**
+     * Decline a targeted direct invitation, optionally blocking future targeted invites from its sender (TC-2.2, TC-2.3).
+     *
+     * @throws AuthorizationException
+     * @throws ValidationException
+     */
+    public function declineDirectInvitation(
+        TripInvitation $invitation,
+        User $user,
+        bool $blockSender = false,
+    ): TripInvitation {
+        if (($invitation->invite_type ?? 'link') !== 'direct') {
+            throw new ModelNotFoundException('Direct invitation not found.');
+        }
+
+        if ($invitation->target_user_id !== $user->id) {
+            throw new AuthorizationException('You are not authorized to respond to this invitation.');
+        }
+
+        return DB::transaction(function () use ($invitation, $user, $blockSender): TripInvitation {
+            /** @var TripInvitation $locked */
+            $locked = TripInvitation::query()
+                ->where('id', $invitation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $status = $locked->effectiveStatus();
+
+            if ($status === 'accepted') {
+                throw ValidationException::withMessages([
+                    'invitation' => ['This invitation has already been accepted.'],
+                ]);
+            }
+
+            if ($status === 'revoked') {
+                throw ValidationException::withMessages([
+                    'invitation' => ['This invitation was revoked by the organizer.'],
+                ]);
+            }
+
+            if ($status !== 'declined') {
+                $locked->update([
+                    'status' => 'declined',
+                    'responded_at' => CarbonImmutable::now('UTC'),
+                ]);
+            }
+
+            if ($blockSender && $locked->inviter_id !== $user->id) {
+                UserBlock::query()->firstOrCreate([
+                    'blocker_id' => $user->id,
+                    'blocked_id' => $locked->inviter_id,
+                ]);
+            }
+
+            return $locked->fresh(['trip', 'inviter']);
+        });
+    }
+
+    /**
      * Revoke an active invitation (organizer only).
      *
      * @throws AuthorizationException
+     * @throws ValidationException
      */
     public function revokeInvitation(Trip $trip, TripInvitation $invitation, User $actor): TripInvitation
     {
@@ -195,6 +476,13 @@ final class TripCircleService
             throw new AuthorizationException('Only the trip organizer can revoke invitations.');
         }
 
+        $effective = $invitation->effectiveStatus();
+        if (in_array($effective, ['accepted', 'declined'], true)) {
+            throw ValidationException::withMessages([
+                'invitation' => ["Cannot revoke an invitation that has already been {$effective}."],
+            ]);
+        }
+
         if ($invitation->status !== 'revoked') {
             $invitation->update([
                 'status' => 'revoked',
@@ -202,7 +490,7 @@ final class TripCircleService
             ]);
         }
 
-        return $invitation->fresh(['inviter']);
+        return $invitation->fresh(['inviter', 'targetUser']);
     }
 
     /**
@@ -320,46 +608,7 @@ final class TripCircleService
                 'status' => $newUseCount >= $invitation->max_uses ? 'exhausted' : 'active',
             ]);
 
-            /** @var TripMember|null $existingAny */
-            $existingAny = TripMember::withTrashed()
-                ->where('trip_id', $trip->id)
-                ->where('user_id', $user->id)
-                ->first();
-
-            if ($existingAny !== null) {
-                if ($existingAny->trashed()) {
-                    $existingAny->restore();
-                }
-                $existingAny->update([
-                    'role' => $invitation->proposed_role,
-                    'invitation_status' => 'accepted',
-                ]);
-                $member = $existingAny;
-            } else {
-                /** @var TripMember $member */
-                $member = TripMember::query()->create([
-                    'trip_id' => $trip->id,
-                    'user_id' => $user->id,
-                    'role' => $invitation->proposed_role,
-                    'invitation_status' => 'accepted',
-                ]);
-            }
-
-            $displayName = $user->display_name ?? $user->name;
-            $this->activityService->recordEvent(
-                $trip,
-                $user,
-                new RecordActivityEventData(
-                    eventType: 'member_joined',
-                    title: "{$displayName} joined the trip circle",
-                    summary: "Joined as {$invitation->proposed_role}.",
-                    entityType: 'trip_member',
-                    entityId: (string) $member->id,
-                    metadata: [
-                        'role' => $invitation->proposed_role,
-                    ],
-                )
-            );
+            $member = $this->admitOrRestoreMember($trip, $user, (string) $invitation->proposed_role);
 
             return new AcceptTripInvitationResult(
                 trip: $trip,
@@ -368,5 +617,53 @@ final class TripCircleService
             );
         });
     }
-}
 
+    /**
+     * Create or restore a traveler's TripMember row cleanly and log join activity.
+     */
+    private function admitOrRestoreMember(Trip $trip, User $user, string $role): TripMember
+    {
+        /** @var TripMember|null $existingAny */
+        $existingAny = TripMember::withTrashed()
+            ->where('trip_id', $trip->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($existingAny !== null) {
+            if ($existingAny->trashed()) {
+                $existingAny->restore();
+            }
+            $existingAny->update([
+                'role' => $role,
+                'invitation_status' => 'accepted',
+            ]);
+            $member = $existingAny;
+        } else {
+            /** @var TripMember $member */
+            $member = TripMember::query()->create([
+                'trip_id' => $trip->id,
+                'user_id' => $user->id,
+                'role' => $role,
+                'invitation_status' => 'accepted',
+            ]);
+        }
+
+        $displayName = $user->display_name ?? $user->name;
+        $this->activityService->recordEvent(
+            $trip,
+            $user,
+            new RecordActivityEventData(
+                eventType: 'member_joined',
+                title: "{$displayName} joined the trip circle",
+                summary: "Joined as {$role}.",
+                entityType: 'trip_member',
+                entityId: (string) $member->id,
+                metadata: [
+                    'role' => $role,
+                ],
+            )
+        );
+
+        return $member;
+    }
+}

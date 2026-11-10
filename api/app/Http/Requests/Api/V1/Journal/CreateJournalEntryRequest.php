@@ -23,7 +23,7 @@ final class CreateJournalEntryRequest extends FormRequest
             return false;
         }
 
-        return $trip->members()->where('user_id', $user->id)->exists();
+        return $trip->hasMember($user);
     }
 
     /**

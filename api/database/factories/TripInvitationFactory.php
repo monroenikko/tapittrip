@@ -24,6 +24,7 @@ final class TripInvitationFactory extends Factory
         return [
             'trip_id' => Trip::factory(),
             'inviter_id' => User::factory(),
+            'invite_type' => 'link',
             'token_hash' => hash('sha256', fake()->unique()->uuid().bin2hex(random_bytes(8))),
             'proposed_role' => 'viewer',
             'status' => 'active',
@@ -34,4 +35,3 @@ final class TripInvitationFactory extends Factory
         ];
     }
 }
-

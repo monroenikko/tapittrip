@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_exceptions.dart';
 import '../../../auth/domain/models/auth_state.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../trips/presentation/providers/trip_list_provider.dart';
@@ -21,10 +22,171 @@ class TripCirclePage extends ConsumerStatefulWidget {
 }
 
 class _TripCirclePageState extends ConsumerState<TripCirclePage> {
+  final _friendCodeController = TextEditingController();
+  bool _directInviteMode = false;
   String _inviteRole = 'viewer';
   int _inviteMaxUses = 1;
   bool _isCreatingInvite = false;
   TripInvitation? _latestCreatedInvite;
+
+  @override
+  void dispose() {
+    _friendCodeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendDirectInvite() async {
+    final code = _friendCodeController.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter a traveler Friend Code first.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isCreatingInvite = true);
+    try {
+      final result = await ref
+          .read(tripInvitationsProvider(widget.tripId).notifier)
+          .sendDirectInvitation(friendCode: code, proposedRole: _inviteRole);
+      if (mounted) {
+        setState(() => _isCreatingInvite = false);
+        _friendCodeController.clear();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.alreadyPending
+                  ? 'An invite is already pending for that traveler.'
+                  : 'Invitation sent to ${result.invitation.targetDisplayName ?? 'traveler'}!',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on ValidationException catch (e) {
+      if (mounted) {
+        setState(() => _isCreatingInvite = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.fieldErrors.isNotEmpty ? e.fieldErrors.first : e.message,
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _isCreatingInvite = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isCreatingInvite = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to send direct invite right now.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmTransferOwnership(CircleMember member) async {
+    var formerOwnerRole = 'editor';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Transfer Organizer Ownership?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Offer organizer ownership of this trip to ${member.displayName}. Ownership changes only after they explicitly accept.',
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Your role after handover:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Editor'),
+                    selected: formerOwnerRole == 'editor',
+                    onSelected: (_) =>
+                        setDialogState(() => formerOwnerRole = 'editor'),
+                  ),
+                  ChoiceChip(
+                    label: const Text('Viewer'),
+                    selected: formerOwnerRole == 'viewer',
+                    onSelected: (_) =>
+                        setDialogState(() => formerOwnerRole = 'viewer'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Send Handover Request'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final result = await ref
+          .read(pendingOwnershipTransferProvider(widget.tripId).notifier)
+          .initiateTransfer(
+            targetMemberId: member.id,
+            formerOwnerRole: formerOwnerRole,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.alreadyPending
+                  ? 'Handover request is already pending for ${member.displayName}.'
+                  : 'Ownership handover offer sent to ${member.displayName}.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   Future<void> _createInvite() async {
     setState(() => _isCreatingInvite = true);
@@ -148,6 +310,11 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
                     .refresh();
                 ref
                     .read(tripInvitationsProvider(widget.tripId).notifier)
+                    .refresh();
+                ref
+                    .read(
+                      pendingOwnershipTransferProvider(widget.tripId).notifier,
+                    )
                     .refresh();
               },
             ),
@@ -367,6 +534,9 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
 
     final membersAsync = ref.watch(circleMembersProvider(widget.tripId));
     final invitationsAsync = ref.watch(tripInvitationsProvider(widget.tripId));
+    final pendingTransferAsync = ref.watch(
+      pendingOwnershipTransferProvider(widget.tripId),
+    );
 
     return membersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -409,6 +579,13 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
           padding: const EdgeInsets.all(16),
           children: [
             if (isOrganizer) ...[
+              if (pendingTransferAsync.asData?.value != null) ...[
+                _buildPendingTransferBanner(
+                  context,
+                  pendingTransferAsync.asData!.value!,
+                ),
+                const SizedBox(height: 12),
+              ],
               _buildInviteGeneratorCard(context, theme, colorScheme),
               const SizedBox(height: 16),
             ],
@@ -484,6 +661,55 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
     );
   }
 
+  Widget _buildPendingTransferBanner(
+    BuildContext context,
+    TripOwnershipTransfer transfer,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colorScheme.secondary.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.swap_horiz_rounded, color: colorScheme.secondary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Ownership Handover Pending',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Offered to ${transfer.toUserName} (you remain ${transfer.formerOwnerRoleLabel}).',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: colorScheme.error),
+            onPressed: () => ref
+                .read(pendingOwnershipTransferProvider(widget.tripId).notifier)
+                .cancelTransfer(transfer.id),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInviteGeneratorCard(
     BuildContext context,
     ThemeData theme,
@@ -511,13 +737,46 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Share Link'),
+                selected: !_directInviteMode,
+                onSelected: (_) => setState(() => _directInviteMode = false),
+              ),
+              ChoiceChip(
+                label: const Text('Friend Code'),
+                selected: _directInviteMode,
+                onSelected: (_) => setState(() => _directInviteMode = true),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           Text(
-            'Generate a private expiring invite code to share via Messenger, WhatsApp, or text.',
+            _directInviteMode
+                ? 'Send an in-app invitation directly using your companion’s Friend Code.'
+                : 'Generate a private expiring invite link to share via Messenger, WhatsApp, or text.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
+          if (_directInviteMode) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _friendCodeController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Traveler Friend Code',
+                hintText: 'e.g. TRP-4K9M2P',
+                prefixIcon: Icon(Icons.qr_code_rounded),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -535,27 +794,31 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Text('Max uses: ', style: TextStyle(fontSize: 13)),
-              const SizedBox(width: 6),
-              ChoiceChip(
-                label: const Text('1 person'),
-                selected: _inviteMaxUses == 1,
-                onSelected: (_) => setState(() => _inviteMaxUses = 1),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('Up to 5'),
-                selected: _inviteMaxUses == 5,
-                onSelected: (_) => setState(() => _inviteMaxUses = 5),
-              ),
-            ],
-          ),
+          if (!_directInviteMode) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Text('Max uses: ', style: TextStyle(fontSize: 13)),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('1 person'),
+                  selected: _inviteMaxUses == 1,
+                  onSelected: (_) => setState(() => _inviteMaxUses = 1),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Up to 5'),
+                  selected: _inviteMaxUses == 5,
+                  onSelected: (_) => setState(() => _inviteMaxUses = 5),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           FilledButton.icon(
-            onPressed: _isCreatingInvite ? null : _createInvite,
+            onPressed: _isCreatingInvite
+                ? null
+                : (_directInviteMode ? _sendDirectInvite : _createInvite),
             icon: _isCreatingInvite
                 ? const SizedBox(
                     width: 16,
@@ -565,12 +828,19 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
                       color: Colors.white,
                     ),
                   )
-                : const Icon(Icons.link_rounded),
+                : Icon(
+                    _directInviteMode ? Icons.send_rounded : Icons.link_rounded,
+                  ),
             label: Text(
-              _isCreatingInvite ? 'Generating...' : 'Generate Invite Link',
+              _isCreatingInvite
+                  ? (_directInviteMode ? 'Sending...' : 'Generating...')
+                  : (_directInviteMode
+                        ? 'Send Direct Invite'
+                        : 'Generate Invite Link'),
             ),
           ),
-          if (_latestCreatedInvite != null &&
+          if (!_directInviteMode &&
+              _latestCreatedInvite != null &&
               _latestCreatedInvite!.inviteToken != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -706,6 +976,8 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
                   await ref
                       .read(circleMembersProvider(widget.tripId).notifier)
                       .updateRole(member.id, value);
+                } else if (value == 'transfer') {
+                  await _confirmTransferOwnership(member);
                 } else if (value == 'remove') {
                   await _confirmRemoveOrLeave(member, isSelf: false);
                 }
@@ -721,6 +993,10 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
                     value: 'viewer',
                     child: Text('Change to Viewer'),
                   ),
+                const PopupMenuItem(
+                  value: 'transfer',
+                  child: Text('Transfer Ownership'),
+                ),
                 PopupMenuItem(
                   value: 'remove',
                   child: Text(
@@ -753,7 +1029,9 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${inv.proposedRoleLabel} Invite • ${inv.useCount}/${inv.maxUses} used',
+                  inv.isDirect
+                      ? '${inv.proposedRoleLabel} Direct • ${inv.targetDisplayName ?? 'Companion'}'
+                      : '${inv.proposedRoleLabel} Invite • ${inv.useCount}/${inv.maxUses} used',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -762,7 +1040,7 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
                   'Status: ${inv.status.toUpperCase()}',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: inv.isActive
-                        ? Colors.teal.shade700
+                        ? colorScheme.primary
                         : colorScheme.onSurfaceVariant,
                   ),
                 ),

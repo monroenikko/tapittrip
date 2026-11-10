@@ -2,14 +2,32 @@
 
 ## Current milestone
 
-- Milestone: **Trip Circles Collaboration (Track 1 / M10 Slice 1)**
-- Status: **Completed (Step 0–3: Shareable Invite Links, Member Role Management & Shared Activity Feed UI)**
-- Basis: User-approved Track 1 (`MASTER_PLAN.md` Section 14C Steps 0–3 / ADR `0004-trip-circles-invitations-and-membership.md`). Private SHA-256 hashed shareable invite links with bounded uses and safe preview redaction, atomic redemption with soft-delete rejoin restore, accepted-membership isolation across Trip/User/Sync, member role management (`organizer`/`editor`/`viewer`) with sole-organizer leave guard, and Flutter `TripCirclePage` + `JoinTripSheet` UI wired to the Activity Feed and Members & Invites tabs.
+- Milestone: **Trip Circles Collaboration (Track 1 / M10 Slice 2)**
+- Status: **Completed (Steps 2–3 Core: Targeted Friend Code Invites, Circle Inbox, Two-Party Ownership Transfer, Account Orphan Guard & Sync Rejection Visibility)**
+- Basis: User-approved Trip Circles Slice 2 (`MASTER_PLAN.md` Section 14C `TC-2`, `TC-3` / ADR `0005-trip-circles-targeted-invites-and-ownership-transfer.md`). Privacy-safe `TRP-XXXXXX` friend codes, opt-out & sender blocking (`user_blocks`), anti-enumeration direct invitations & in-app `CircleInboxPage`, atomic two-party organizer ownership handovers (`trip_ownership_transfers`), `DELETE /me` shared-trip orphan guard, viewer/journal/sync access hardening, and non-silent outbox rejection visibility.
 - Boundary:
-  - ADR 0004 (`docs/decisions/0004-trip-circles-invitations-and-membership.md`) & `trip_invitations` migration — **Completed**.
-  - Backend Trip Circle & Invitation Redemption endpoints, strict `invitation_status = 'accepted'` & non-deleted membership hardening, and OpenAPI contract — **Completed**.
-  - Flutter `TripCirclePage`, `JoinTripSheet`, `TripCard` shared role pills, offline circle caching with 403 purge, and widget/unit tests — **Completed**.
-- Next Boundary: Slice 1 complete; awaiting explicit approval before proceeding to targeted friend-code invites (`TC-2`), ownership transfer (`TC-3`), or other next-track features.
+  - Slice 1 (`TC-0`, `TC-1`, `TC-3.1`, `TC-8.2` UI): Shareable Invite Links, Member Roles, Leave Guard & Shared Activity Feed UI — **Completed**.
+  - Slice 2 (`TC-2`, `TC-3.2`–`TC-3.4`): Targeted Friend Code Invites, Circle Inbox, Explicit Two-Party Ownership Transfer, Account Deletion Orphan Guard & Sync Hardening — **Completed**.
+- Next Boundary: Slice 2 complete (`daddbd7` + this Slice 2 commit); awaiting explicit approval before starting **Trip Circles Slice 3 (`TC-4` multi-device offline conflict UI & `TC-5` organizer announcements)** or moving to **M10: Voice & Camera Translation / Safety Intelligence** or **Flights & Booking Import**.
+
+## 2026-11-10 — Trip Circles Slice 2: Friend Code Invites, Circle Inbox, Ownership Transfer & Sync/Account Hardening
+
+### Completed
+- **Architecture Decision & Migration (`docs/decisions/0005-trip-circles-targeted-invites-and-ownership-transfer.md`)**:
+  - Accepted ADR 0005 specifying server-assigned `TRP-XXXXXX` friend codes (`users.friend_code`), direct invite opt-out (`accepts_direct_invites`), recipient-side sender blocks (`user_blocks`), uniform `422` anti-enumeration failure responses, direct invitation inbox isolation, explicit two-party `trip_ownership_transfers`, and `DELETE /me` shared-trip protection.
+  - Added migration `2026_11_10_040000_add_trip_circles_slice2_tables.php` (applied cleanly to both `tapittrip` and `tapittrip_test`).
+- **Backend API & Security Hardening (`api/`)**:
+  - Added `User::generateUniqueFriendCode()`, `UserBlock`, `TripOwnershipTransfer`, DTOs under `app/DTOs/Circles/`, Form Requests, Resources (`IncomingTripInvitationResource`, `TripOwnershipTransferResource`), `TripOwnershipService`, `InvitationInboxController`, and endpoints `POST /me/friend-code/regenerate`, `POST /trips/{trip}/invitations/direct`, `GET/POST/DELETE /trips/{trip}/ownership-transfer`, `GET/POST /me/invitations`, and `GET/POST /me/ownership-transfers`.
+  - Hardened `ProfileService::deleteAccount()` to lock owned trips and block (`422`) deletion while shared trips remain owned (`TC-3.4`), while cleaning up solo owned trips and companion memberships cleanly.
+  - Hardened `TripJournalController`, Journal Form Requests, and `SyncService::pull()` so non-accepted or removed travelers cannot read/write journals or pull previously touched trip operations globally.
+  - Updated `docs/api/openapi.yaml` and `docs/features/trip-circles.md`.
+- **Flutter UI, Profile & Offline Sync Hardening (`client/`)**:
+  - Updated `AuthUser`, `AuthRepository`, `AuthNotifier`, and `ProfilePage` with Friend Code copy/rotation, `Allow direct Friend Code invites` toggle, and safe blocked-deletion dialog handling in both `ProfilePage` and `TripListPage`.
+  - Added `CircleInboxPage` (`/invitations/inbox`), `TripListPage` inbox badge icon, `Friend Code` invite mode and organizer `Transfer Ownership` workflow + pending banner in `TripCirclePage`.
+  - Updated mobile `SyncService`, `SyncNotifier`, and `SyncStatusIndicator` to retain server-`rejected` outbox operations with their reason and let users inspect/dismiss them rather than discarding silently (`TC-3.2`).
+- **Verification**:
+  - Backend Sail Pint (`./vendor/bin/sail pint --test`), OpenAPI `contracts`, and PHPUnit/Pest suite (`173` tests, `2,213` assertions; includes 15 tests / 199 assertions in `TripCircleTest`) passed.
+  - Mobile `dart format --output=none --set-exit-if-changed lib/ test/` (`163` files), `flutter analyze` (`0` issues), and `flutter test` (`195/195` passed, including updated `auth_test.dart`, `sync_test.dart`, and 9 tests in `trip_circle_test.dart`).
 
 ## 2026-11-10 — Trip Circles: Shareable Invite Links, Member Role Management & Shared Activity Feed UI
 

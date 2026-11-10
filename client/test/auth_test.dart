@@ -20,6 +20,8 @@ class FakeAuthRepository implements AuthRepository {
     id: 'user-uuid-1',
     name: 'Traveler Tester',
     displayName: 'Traveler',
+    friendCode: 'TRP-TEST01',
+    acceptsDirectInvites: true,
     email: 'traveler@tapittrip.local',
   );
 
@@ -75,6 +77,7 @@ class FakeAuthRepository implements AuthRepository {
     String? homeCurrency,
     String? homeTimezone,
     String? locale,
+    bool? acceptsDirectInvites,
   }) async {
     if (shouldFail) {
       throw ApiException(code: 'update_failed', message: failureMessage);
@@ -86,14 +89,31 @@ class FakeAuthRepository implements AuthRepository {
       homeCurrency: homeCurrency,
       homeTimezone: homeTimezone,
       locale: locale,
+      acceptsDirectInvites: acceptsDirectInvites,
     );
+  }
+
+  @override
+  Future<AuthUser> regenerateFriendCode() async {
+    if (shouldFail) {
+      throw ApiException(code: 'failed', message: failureMessage);
+    }
+    return testUser.copyWith(friendCode: 'TRP-NEW999');
   }
 
   @override
   Future<void> logout() async {}
 
   @override
-  Future<void> deleteAccount() async {}
+  Future<void> deleteAccount() async {
+    if (shouldFail) {
+      throw ApiException(
+        code: 'validation_failed',
+        message: failureMessage,
+        statusCode: 422,
+      );
+    }
+  }
 }
 
 void main() {
@@ -280,6 +300,67 @@ void main() {
       expect(user.permanentAddress, 'Cebu City, Philippines');
       expect(user.homeCountry, 'PH');
       expect(user.homeCurrency, 'PHP');
+    });
+
+    test('regenerateFriendCode updates authenticated user code', () async {
+      final fakeTokenStorage = InMemoryTokenStorage('mock-token');
+      final fakeRepo = FakeAuthRepository();
+
+      final container = ProviderContainer(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(fakeTokenStorage),
+          authRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(authProvider.notifier)
+          .login(email: 'traveler@tapittrip.local', password: 'password');
+
+      final updated = await container
+          .read(authProvider.notifier)
+          .regenerateFriendCode();
+
+      expect(updated, isNotNull);
+      expect(updated!.friendCode, 'TRP-NEW999');
+      expect(
+        (container.read(authProvider) as Authenticated).user.friendCode,
+        'TRP-NEW999',
+      );
+    });
+
+    test('deleteAccount failure preserves Authenticated state and returns explanation', () async {
+      final fakeTokenStorage = InMemoryTokenStorage('mock-token');
+      final fakeRepo = FakeAuthRepository();
+
+      final container = ProviderContainer(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(fakeTokenStorage),
+          authRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(authProvider.notifier)
+          .login(email: 'traveler@tapittrip.local', password: 'password');
+
+      fakeRepo.shouldFail = true;
+      fakeRepo.failureMessage =
+          'Transfer organizer ownership or delete shared trips first.';
+
+      final error = await container.read(authProvider.notifier).deleteAccount();
+
+      expect(error, fakeRepo.failureMessage);
+      expect(container.read(authProvider), isA<Authenticated>());
+
+      fakeRepo.shouldFail = false;
+      final cleared = await container
+          .read(authProvider.notifier)
+          .deleteAccount();
+      expect(cleared, isNull);
+      expect(container.read(authProvider), isA<Unauthenticated>());
     });
   });
 }

@@ -24,6 +24,8 @@ final class UserResource extends JsonResource
             'id' => (string) $this->id,
             'name' => $this->name,
             'display_name' => $this->display_name ?? $this->name,
+            'friend_code' => $this->friend_code,
+            'accepts_direct_invites' => (bool) ($this->accepts_direct_invites ?? true),
             'email' => $this->email,
             'avatar_url' => $this->avatar_url,
             'locale' => $this->locale ?? 'en',

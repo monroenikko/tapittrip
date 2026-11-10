@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_exceptions.dart';
 import '../../../../core/storage/token_storage.dart';
+import '../../../circles/data/trip_circle_repository.dart';
 import '../../data/auth_repository.dart';
 import '../../domain/models/auth_state.dart';
+import '../../domain/models/auth_user.dart';
 
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthRepository _repository;
@@ -86,17 +88,29 @@ class AuthNotifier extends Notifier<AuthState> {
     state = const AuthLoading('Logging out...');
     try {
       await _repository.logout();
+      await ref.read(tripCircleRepositoryProvider).purgeInboxCaches();
     } finally {
       state = const Unauthenticated();
     }
   }
 
-  Future<void> deleteAccount() async {
+  Future<String?> deleteAccount() async {
+    final previousState = state;
     state = const AuthLoading('Deleting account...');
     try {
       await _repository.deleteAccount();
-    } finally {
+      await ref.read(tripCircleRepositoryProvider).purgeInboxCaches();
       state = const Unauthenticated();
+      return null;
+    } on ValidationException catch (e) {
+      state = previousState;
+      return e.fieldErrors.isNotEmpty ? e.fieldErrors.join('\n') : e.message;
+    } on ApiException catch (e) {
+      state = previousState;
+      return e.message;
+    } catch (e) {
+      state = previousState;
+      return 'Unable to delete account right now.';
     }
   }
 
@@ -107,6 +121,7 @@ class AuthNotifier extends Notifier<AuthState> {
     String? homeCurrency,
     String? homeTimezone,
     String? locale,
+    bool? acceptsDirectInvites,
   }) async {
     final current = state;
     if (current is! Authenticated) return false;
@@ -119,11 +134,25 @@ class AuthNotifier extends Notifier<AuthState> {
         homeCurrency: homeCurrency,
         homeTimezone: homeTimezone,
         locale: locale,
+        acceptsDirectInvites: acceptsDirectInvites,
       );
       state = Authenticated(user: updatedUser, token: current.token);
       return true;
     } catch (_) {
       return false;
+    }
+  }
+
+  Future<AuthUser?> regenerateFriendCode() async {
+    final current = state;
+    if (current is! Authenticated) return null;
+
+    try {
+      final updatedUser = await _repository.regenerateFriendCode();
+      state = Authenticated(user: updatedUser, token: current.token);
+      return updatedUser;
+    } catch (_) {
+      return null;
     }
   }
 }

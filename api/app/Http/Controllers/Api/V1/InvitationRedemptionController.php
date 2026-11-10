@@ -37,4 +37,3 @@ final class InvitationRedemptionController extends Controller
         ]);
     }
 }
-

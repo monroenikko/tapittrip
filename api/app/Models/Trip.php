@@ -101,6 +101,17 @@ final class Trip extends Model
     }
 
     /**
+     * All ownership transfer handovers requested for this trip.
+     *
+     * @return HasMany<TripOwnershipTransfer, $this>
+     */
+    public function ownershipTransfers(): HasMany
+    {
+        return $this->hasMany(TripOwnershipTransfer::class)
+            ->orderByDesc('created_at');
+    }
+
+    /**
      * Check if a given user is an accepted member of this trip.
      */
     public function hasMember(User|string $user): bool

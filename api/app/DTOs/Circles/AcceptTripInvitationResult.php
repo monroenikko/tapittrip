@@ -15,4 +15,3 @@ final readonly class AcceptTripInvitationResult
         public bool $alreadyMember = false,
     ) {}
 }
-

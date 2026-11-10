@@ -12,12 +12,14 @@ class SyncAllSummary {
     required this.pulledCount,
     required this.conflictCount,
     required this.newCursor,
+    this.rejectedCount = 0,
   });
 
   final int pushedCount;
   final int pulledCount;
   final int conflictCount;
   final int newCursor;
+  final int rejectedCount;
 }
 
 class SyncService {
@@ -107,11 +109,24 @@ class SyncService {
           ),
         );
       } else if (result.status == 'rejected') {
-        await outboxStorage.removeOperation(result.operationId);
+        final existing = toSend.firstWhere(
+          (op) => op.operationId == result.operationId,
+          orElse: () => toSend.first,
+        );
+        await outboxStorage.updateOperation(
+          existing.copyWith(
+            status: 'rejected',
+            conflictDetails: result.conflictDetails,
+          ),
+        );
       }
     }
 
     return rawResults;
+  }
+
+  Future<void> dismissRejectedOperation(String operationId) async {
+    await outboxStorage.removeOperation(operationId);
   }
 
   /// Pulls recent mutations from the server using monotonic cursors.
@@ -146,6 +161,9 @@ class SyncService {
     final conflictCount = pushResults
         .where((r) => r.status == 'conflict')
         .length;
+    final rejectedCount = pushResults
+        .where((r) => r.status == 'rejected')
+        .length;
     final acceptedCount = pushResults
         .where((r) => r.status == 'accepted')
         .length;
@@ -173,6 +191,7 @@ class SyncService {
       pulledCount: pullResult.operations.length,
       conflictCount: conflictCount,
       newCursor: pullResult.cursor,
+      rejectedCount: rejectedCount,
     );
   }
 

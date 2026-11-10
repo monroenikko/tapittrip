@@ -310,6 +310,50 @@ void main() {
       expect(result.operations.length, 1);
       expect(await storage.getCursor('trip-1'), 200);
     });
+
+    test('pushPending preserves rejected operations with reason instead of discarding silently', () async {
+      final op = await syncService.queueMutation(
+        tripId: 'trip-1',
+        entityType: 'checklist_item',
+        entityId: 'item-1',
+        operationType: 'update',
+        payload: {'title': 'Demoted Offline Edit'},
+        baseVersion: 1,
+      );
+
+      fakeClient.postResponse = {
+        'data': {
+          'results': [
+            {
+              'operation_id': op.operationId,
+              'status': 'rejected',
+              'server_sequence': 90,
+              'current_version': null,
+              'conflict_details': {
+                'reason':
+                    'Unauthorized trip membership or insufficient permissions',
+              },
+            },
+          ],
+        },
+      };
+
+      final results = await syncService.pushPending();
+      expect(results.first.status, 'rejected');
+
+      // Excluded from pending retries, yet retained in outbox with reason (TC-3.2)
+      expect(await storage.getPendingOperations(), isEmpty);
+      final all = await storage.getAllOperations();
+      expect(all.length, 1);
+      expect(all.first.status, 'rejected');
+      expect(
+        all.first.conflictDetails?['reason'],
+        'Unauthorized trip membership or insufficient permissions',
+      );
+
+      await syncService.dismissRejectedOperation(op.operationId);
+      expect(await storage.getAllOperations(), isEmpty);
+    });
   });
 
   group('Presentation Widgets', () {
@@ -453,6 +497,56 @@ void main() {
         expect(find.text('Keep My Offline Edit'), findsOneWidget);
         expect(find.textContaining('Remote Cloud Title'), findsOneWidget);
         expect(find.textContaining('My Offline Title'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'SyncStatusIndicator surfaces rejected edits dialog and dismisses cleanly',
+      (tester) async {
+        final storage = InMemoryOutboxStorage();
+        await storage.saveOperation(
+          OutboxOperation(
+            operationId: 'rej-1',
+            entityType: 'checklist_item',
+            entityId: 'item-1',
+            operationType: 'update',
+            status: 'rejected',
+            conflictDetails: {
+              'reason':
+                  'Unauthorized trip membership or insufficient permissions',
+            },
+            createdAt: DateTime.now(),
+          ),
+        );
+
+        final client = FakeSyncApiClient();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              outboxStorageProvider.overrideWithValue(storage),
+              apiClientProvider.overrideWithValue(client),
+            ],
+            child: const MaterialApp(
+              home: Scaffold(body: SyncStatusIndicator()),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+        expect(find.text('Rejected (1)'), findsOneWidget);
+
+        await tester.tap(find.text('Rejected (1)'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Offline Edit Rejected'), findsOneWidget);
+        expect(find.textContaining('insufficient permissions'), findsOneWidget);
+
+        await tester.tap(find.text('Dismiss'));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.cloud_done_outlined), findsOneWidget);
+        expect(await storage.getAllOperations(), isEmpty);
       },
     );
   });

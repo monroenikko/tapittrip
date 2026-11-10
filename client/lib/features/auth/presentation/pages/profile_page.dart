@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -169,6 +170,143 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Trip Circle Identity & Friend Code
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest.withValues(
+                        alpha: 0.35,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.group_outlined,
+                              size: 20,
+                              color: colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Your Trip Circle Friend Code',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Share this code with trusted organizers to receive direct in-app trip invitations without sharing your email.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: colorScheme.outlineVariant,
+                                  ),
+                                ),
+                                child: SelectableText(
+                                  user.friendCode ?? '—',
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
+                              tooltip: 'Copy Friend Code',
+                              onPressed: user.friendCode == null
+                                  ? null
+                                  : () async {
+                                      await Clipboard.setData(
+                                        ClipboardData(text: user.friendCode!),
+                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Friend Code copied!',
+                                            ),
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      }
+                                    },
+                              icon: const Icon(Icons.copy_rounded, size: 18),
+                            ),
+                            IconButton.outlined(
+                              tooltip: 'Generate New Friend Code',
+                              onPressed: () async {
+                                final updated = await ref
+                                    .read(authProvider.notifier)
+                                    .regenerateFriendCode();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        updated != null
+                                            ? 'New Friend Code generated: ${updated.friendCode}'
+                                            : 'Unable to rotate Friend Code.',
+                                      ),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'Allow direct Friend Code invites',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          subtitle: const Text(
+                            'When off, organizers cannot invite you using your Friend Code.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          value: user.acceptsDirectInvites,
+                          onChanged: (val) async {
+                            await ref
+                                .read(authProvider.notifier)
+                                .updateProfile(acceptsDirectInvites: val);
+                          },
                         ),
                       ],
                     ),
@@ -463,9 +601,26 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                       );
                       if (confirm == true) {
-                        await ref.read(authProvider.notifier).deleteAccount();
-                        if (context.mounted) {
+                        final error = await ref
+                            .read(authProvider.notifier)
+                            .deleteAccount();
+                        if (!context.mounted) return;
+                        if (error == null) {
                           context.go('/login');
+                        } else {
+                          await showDialog<void>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Cannot Delete Account'),
+                              content: Text(error),
+                              actions: [
+                                FilledButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('OK'),
+                                ),
+                              ],
+                            ),
+                          );
                         }
                       }
                     },

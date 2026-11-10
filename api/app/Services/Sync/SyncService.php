@@ -147,7 +147,10 @@ final class SyncService
                 ->all();
 
             $query->where(function ($q) use ($user, $userTripIds): void {
-                $q->where('user_id', $user->id);
+                $q->where(function ($sub) use ($user): void {
+                    $sub->whereNull('trip_id')
+                        ->where('user_id', $user->id);
+                });
                 if ($userTripIds !== []) {
                     $q->orWhereIn('trip_id', $userTripIds);
                 }

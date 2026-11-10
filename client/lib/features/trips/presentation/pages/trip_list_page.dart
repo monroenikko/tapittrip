@@ -6,6 +6,7 @@ import 'package:tapittrip/core/network/api_exceptions.dart';
 import 'package:tapittrip/core/widgets/app_logo.dart';
 import 'package:tapittrip/features/auth/domain/models/auth_state.dart';
 import 'package:tapittrip/features/auth/presentation/providers/auth_provider.dart';
+import 'package:tapittrip/features/circles/presentation/providers/trip_circle_provider.dart';
 import 'package:tapittrip/features/circles/presentation/widgets/join_trip_sheet.dart';
 import 'package:tapittrip/features/trips/presentation/providers/trip_list_provider.dart';
 import 'package:tapittrip/features/trips/presentation/widgets/edit_trip_bottom_sheet.dart';
@@ -81,6 +82,21 @@ class _TripListPageState extends ConsumerState<TripListPage> {
           ],
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final pendingCount = ref.watch(pendingInboxCountProvider);
+              return IconButton(
+                tooltip: 'Circle Inbox',
+                onPressed: () => context.push('/invitations/inbox'),
+                icon: pendingCount > 0
+                    ? Badge.count(
+                        count: pendingCount,
+                        child: const Icon(Icons.mark_email_unread_outlined),
+                      )
+                    : const Icon(Icons.inbox_outlined),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.today_rounded),
             tooltip: 'Today Dashboard',
@@ -118,7 +134,24 @@ class _TripListPageState extends ConsumerState<TripListPage> {
                   ),
                 );
                 if (confirm == true) {
-                  await ref.read(authProvider.notifier).deleteAccount();
+                  final error = await ref
+                      .read(authProvider.notifier)
+                      .deleteAccount();
+                  if (error != null && context.mounted) {
+                    await showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Cannot Delete Account'),
+                        content: Text(error),
+                        actions: [
+                          FilledButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('OK'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
                 }
               }
             },

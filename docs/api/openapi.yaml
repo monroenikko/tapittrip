@@ -230,6 +230,8 @@ paths:
                   type: string
                 locale:
                   type: string
+                accepts_direct_invites:
+                  type: boolean
       responses:
         "200":
           description: Updated user profile.
@@ -243,7 +245,7 @@ paths:
           $ref: "#/components/responses/ValidationError"
     delete:
       operationId: deleteAccount
-      summary: Delete traveler account and revoke access tokens
+      summary: Delete traveler account and revoke access tokens (blocks if owning shared trips)
       tags:
         - Profile
       security:
@@ -253,6 +255,226 @@ paths:
           description: Account deleted.
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /me/friend-code/regenerate:
+    post:
+      operationId: regenerateFriendCode
+      summary: Regenerate the authenticated traveler's friend code
+      tags:
+        - Profile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Updated profile with fresh friend code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          description: Rate limited.
+  /me/invitations:
+    get:
+      operationId: listIncomingInvitations
+      summary: List pending direct invitations received by the authenticated traveler
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Minimal safe incoming invitations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/IncomingTripInvitation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /me/invitations/{invitation}/accept:
+    post:
+      operationId: acceptDirectInvitation
+      summary: Accept a targeted direct invitation and join the trip circle
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: invitation
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Joined or idempotently confirmed circle membership.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [trip, member, already_member]
+                    properties:
+                      trip:
+                        $ref: "#/components/schemas/Trip"
+                      member:
+                        $ref: "#/components/schemas/TripCircleMember"
+                      already_member:
+                        type: boolean
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (not recipient).
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /me/invitations/{invitation}/decline:
+    post:
+      operationId: declineDirectInvitation
+      summary: Decline a targeted direct invitation, optionally blocking the organizer
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: invitation
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                block_sender:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Declined invitation summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/IncomingTripInvitation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (not recipient).
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /me/ownership-transfers:
+    get:
+      operationId: listIncomingOwnershipTransfers
+      summary: List pending trip organizer handover requests offered to the authenticated traveler
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Pending incoming ownership transfer offers.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TripOwnershipTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /me/ownership-transfers/{transfer}/accept:
+    post:
+      operationId: acceptOwnershipTransfer
+      summary: Accept an organizer ownership handover offer
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: transfer
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Ownership transferred atomically.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [trip, transfer]
+                    properties:
+                      trip:
+                        $ref: "#/components/schemas/Trip"
+                      transfer:
+                        $ref: "#/components/schemas/TripOwnershipTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /me/ownership-transfers/{transfer}/decline:
+    post:
+      operationId: declineOwnershipTransfer
+      summary: Decline an organizer ownership handover offer
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: transfer
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Handover declined.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripOwnershipTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /trips:
     get:
       operationId: listTrips
@@ -3100,6 +3322,199 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           description: Forbidden.
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /trips/{trip}/invitations/direct:
+    post:
+      operationId: createDirectTripInvitation
+      summary: Send a targeted in-app invitation using an exact friend code (organizer only)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [friend_code]
+              properties:
+                friend_code:
+                  type: string
+                  maxLength: 32
+                proposed_role:
+                  type: string
+                  enum: [viewer, editor]
+                  default: viewer
+                expires_in_days:
+                  type: integer
+                  minimum: 1
+                  maximum: 30
+                  default: 7
+      responses:
+        "200":
+          description: Existing active pending direct invitation returned idempotently.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CreatedDirectTripInvitation"
+        "201":
+          description: Direct invitation created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CreatedDirectTripInvitation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /trips/{trip}/ownership-transfer:
+    get:
+      operationId: getPendingOwnershipTransfer
+      summary: Get active pending organizer handover request for a trip (organizer only)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current pending handover or null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    allOf:
+                      - $ref: "#/components/schemas/TripOwnershipTransfer"
+                    nullable: true
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: initiateOwnershipTransfer
+      summary: Initiate explicit two-party organizer ownership handover to an accepted member
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [target_member_id]
+              properties:
+                target_member_id:
+                  type: string
+                  format: uuid
+                former_owner_role:
+                  type: string
+                  enum: [editor, viewer]
+                  default: editor
+      responses:
+        "200":
+          description: Matching pending handover returned idempotently.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/InitiatedOwnershipTransfer"
+        "201":
+          description: Ownership handover requested.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/InitiatedOwnershipTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /trips/{trip}/ownership-transfer/{transfer}:
+    delete:
+      operationId: cancelOwnershipTransfer
+      summary: Cancel a pending organizer ownership handover request (organizer only)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: transfer
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Cancelled handover.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripOwnershipTransfer"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
 
   /invitations/{token}:
     get:
@@ -3343,6 +3758,12 @@ components:
           type: string
         display_name:
           type: string
+        friend_code:
+          type: string
+          nullable: true
+          example: "TRP-4K9M2P"
+        accepts_direct_invites:
+          type: boolean
         email:
           type: string
           nullable: true
@@ -6034,6 +6455,7 @@ components:
       required:
         - id
         - trip_id
+        - invite_type
         - proposed_role
         - status
         - max_uses
@@ -6047,12 +6469,18 @@ components:
         trip_id:
           type: string
           format: uuid
+        invite_type:
+          type: string
+          enum: [link, direct]
+        target_display_name:
+          type: string
+          nullable: true
         proposed_role:
           type: string
           enum: [viewer, editor]
         status:
           type: string
-          enum: [active, revoked, exhausted, expired]
+          enum: [active, pending, accepted, declined, revoked, exhausted, expired]
         max_uses:
           type: integer
         use_count:
@@ -6061,6 +6489,10 @@ components:
           type: string
           format: date-time
         revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        responded_at:
           type: string
           format: date-time
           nullable: true
@@ -6083,6 +6515,120 @@ components:
               type: string
             share_url:
               type: string
+
+    CreatedDirectTripInvitation:
+      allOf:
+        - $ref: "#/components/schemas/TripInvitation"
+        - type: object
+          required:
+            - already_pending
+          properties:
+            already_pending:
+              type: boolean
+
+    IncomingTripInvitation:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - trip_title
+        - proposed_role
+        - status
+        - inviter_name
+        - expires_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        trip_title:
+          type: string
+        destination_country:
+          type: string
+          nullable: true
+        proposed_role:
+          type: string
+          enum: [viewer, editor]
+        status:
+          type: string
+          enum: [pending, accepted, declined, revoked, expired]
+        inviter_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        responded_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    TripOwnershipTransfer:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - trip_title
+        - from_user_id
+        - from_user_name
+        - to_user_id
+        - to_user_name
+        - former_owner_role
+        - status
+        - expires_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        trip_title:
+          type: string
+        from_user_id:
+          type: string
+          format: uuid
+        from_user_name:
+          type: string
+        to_user_id:
+          type: string
+          format: uuid
+        to_user_name:
+          type: string
+        former_owner_role:
+          type: string
+          enum: [editor, viewer]
+        status:
+          type: string
+          enum: [pending, accepted, declined, cancelled, expired]
+        expires_at:
+          type: string
+          format: date-time
+        responded_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    InitiatedOwnershipTransfer:
+      allOf:
+        - $ref: "#/components/schemas/TripOwnershipTransfer"
+        - type: object
+          required:
+            - already_pending
+          properties:
+            already_pending:
+              type: boolean
 
     InvitationPreview:
       type: object

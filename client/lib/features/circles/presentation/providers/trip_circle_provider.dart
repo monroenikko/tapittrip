@@ -98,6 +98,27 @@ class TripInvitationsNotifier extends AsyncNotifier<List<TripInvitation>> {
     return created;
   }
 
+  Future<({TripInvitation invitation, bool alreadyPending})>
+  sendDirectInvitation({
+    required String friendCode,
+    String proposedRole = 'viewer',
+    int expiresInDays = 7,
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final result = await repo.sendDirectInvitation(
+      tripId,
+      friendCode: friendCode,
+      proposedRole: proposedRole,
+      expiresInDays: expiresInDays,
+    );
+    final current = state.asData?.value ?? [];
+    final withoutDup = current
+        .where((inv) => inv.id != result.invitation.id)
+        .toList();
+    state = AsyncData([result.invitation, ...withoutDup]);
+    return result;
+  }
+
   Future<void> revokeInvitation(String invitationId) async {
     final repo = ref.read(tripCircleRepositoryProvider);
     final revoked = await repo.revokeInvitation(tripId, invitationId);
@@ -120,3 +141,189 @@ final tripActivityFeedProvider =
       final repo = ref.watch(tripCircleRepositoryProvider);
       return repo.getActivityFeed(tripId);
     });
+
+class PendingOwnershipTransferNotifier
+    extends AsyncNotifier<TripOwnershipTransfer?> {
+  PendingOwnershipTransferNotifier(this.tripId);
+  final String tripId;
+
+  @override
+  Future<TripOwnershipTransfer?> build() async {
+    final repo = ref.watch(tripCircleRepositoryProvider);
+    try {
+      return await repo.getPendingOwnershipTransfer(tripId);
+    } on ApiException catch (e) {
+      if (e.statusCode == 403 || e.code == 'forbidden') {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(tripCircleRepositoryProvider);
+      try {
+        return await repo.getPendingOwnershipTransfer(tripId);
+      } on ApiException catch (e) {
+        if (e.statusCode == 403 || e.code == 'forbidden') {
+          return null;
+        }
+        rethrow;
+      }
+    });
+  }
+
+  Future<({TripOwnershipTransfer transfer, bool alreadyPending})>
+  initiateTransfer({
+    required String targetMemberId,
+    String formerOwnerRole = 'editor',
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final result = await repo.initiateOwnershipTransfer(
+      tripId,
+      targetMemberId: targetMemberId,
+      formerOwnerRole: formerOwnerRole,
+    );
+    state = AsyncData(result.transfer);
+    return result;
+  }
+
+  Future<void> cancelTransfer(String transferId) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    await repo.cancelOwnershipTransfer(tripId, transferId);
+    state = const AsyncData(null);
+  }
+}
+
+final pendingOwnershipTransferProvider =
+    AsyncNotifierProvider.family<
+      PendingOwnershipTransferNotifier,
+      TripOwnershipTransfer?,
+      String
+    >((tripId) => PendingOwnershipTransferNotifier(tripId));
+
+class CircleInboxData {
+  const CircleInboxData({
+    required this.invitations,
+    required this.transfers,
+    this.isOffline = false,
+  });
+
+  final List<IncomingInvitation> invitations;
+  final List<TripOwnershipTransfer> transfers;
+  final bool isOffline;
+
+  int get totalPendingCount =>
+      invitations.where((i) => i.isPending).length +
+      transfers.where((t) => t.isPending).length;
+
+  bool get isEmpty => invitations.isEmpty && transfers.isEmpty;
+}
+
+class CircleInboxNotifier extends AsyncNotifier<CircleInboxData> {
+  @override
+  Future<CircleInboxData> build() async {
+    return _fetch();
+  }
+
+  Future<CircleInboxData> _fetch() async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final invResult = await repo.getIncomingInvitations();
+    final transferResult = await repo.getIncomingOwnershipTransfers();
+    return CircleInboxData(
+      invitations: invResult.items,
+      transfers: transferResult.items,
+      isOffline: invResult.fromCache || transferResult.fromCache,
+    );
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(_fetch);
+  }
+
+  Future<String> acceptInvitation(String invitationId) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final res = await repo.acceptDirectInvitation(invitationId);
+    final current = state.asData?.value;
+    if (current != null) {
+      state = AsyncData(
+        CircleInboxData(
+          invitations: current.invitations
+              .where((i) => i.id != invitationId)
+              .toList(),
+          transfers: current.transfers,
+          isOffline: false,
+        ),
+      );
+    }
+    return res.trip.id;
+  }
+
+  Future<void> declineInvitation(
+    String invitationId, {
+    bool blockSender = false,
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    await repo.declineDirectInvitation(invitationId, blockSender: blockSender);
+    final current = state.asData?.value;
+    if (current != null) {
+      state = AsyncData(
+        CircleInboxData(
+          invitations: current.invitations
+              .where((i) => i.id != invitationId)
+              .toList(),
+          transfers: current.transfers,
+          isOffline: false,
+        ),
+      );
+    }
+  }
+
+  Future<String> acceptOwnershipTransfer(String transferId) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final res = await repo.acceptOwnershipTransfer(transferId);
+    final current = state.asData?.value;
+    if (current != null) {
+      state = AsyncData(
+        CircleInboxData(
+          invitations: current.invitations,
+          transfers: current.transfers
+              .where((t) => t.id != transferId)
+              .toList(),
+          isOffline: false,
+        ),
+      );
+    }
+    return res.trip.id;
+  }
+
+  Future<void> declineOwnershipTransfer(String transferId) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    await repo.declineOwnershipTransfer(transferId);
+    final current = state.asData?.value;
+    if (current != null) {
+      state = AsyncData(
+        CircleInboxData(
+          invitations: current.invitations,
+          transfers: current.transfers
+              .where((t) => t.id != transferId)
+              .toList(),
+          isOffline: false,
+        ),
+      );
+    }
+  }
+}
+
+final circleInboxProvider =
+    AsyncNotifierProvider<CircleInboxNotifier, CircleInboxData>(
+      CircleInboxNotifier.new,
+    );
+
+final pendingInboxCountProvider = Provider<int>((ref) {
+  final inbox = ref.watch(circleInboxProvider).asData?.value;
+  return inbox?.totalPendingCount ?? 0;
+});

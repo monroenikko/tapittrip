@@ -30,4 +30,3 @@ final class TripCircleMemberResource extends JsonResource
         ];
     }
 }
-
