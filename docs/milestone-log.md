@@ -10,6 +10,29 @@
   - Slice 2: Trip Circles Shared Activity Feed & Moments Stream (TC-8.2) — **Next**.
   - Slice 3: Automated Trip Recap & Story Album — **Planned**.
 
+## 2026-11-10 — Architecture Simplification: Feature 2 (Itinerary) to Service-Model-DTO Pattern
+
+### Completed
+
+- **Feature-by-Feature Architecture Migration**:
+  - Migrated `Itinerary` from DDD/Modular Monolith layer to standard Laravel Service-Model-DTO architecture.
+  - **Models (`app/Models/`)**:
+    - Moved `ItineraryItem.php`, `TripDay.php`, `Place.php`, and `VisitEvent.php` to `app/Models/` (namespace `App\Models`).
+    - Updated relationships and imports across all models, factories, and resources.
+  - **DTOs (`app/DTOs/Itinerary/`)**:
+    - Consolidated 10 DTO classes into `app/DTOs/Itinerary/` (`CreateItineraryItemData`, `UpdateItineraryItemData`, `CreatePlaceData`, `RecordVisitEventData`, `GenerateAiItineraryData`, `ApplyAiItineraryData`, `AiItineraryPlanResult`, `AiDaySuggestionData`, `AiActivitySuggestionData`, `TripAssistantResult`).
+  - **Services (`app/Services/Itinerary/`)**:
+    - Created unified `ItineraryService` (`createItem`, `updateItem`, `deleteItem`, `reorderItems`, `ensureTripDay`, `recordVisitEvent`).
+    - Created unified `PlaceService` (`createPlace`, `search`).
+    - Moved AI services (`GenerateAiItineraryService`, `ApplyAiItineraryService`, `GeminiItineraryService`, `AskTapItTripService`, `GeminiAssistantService`) under `app/Services/Itinerary/`.
+  - **Controllers (`app/Http/Controllers/Api/V1/`)**:
+    - Simplified `ItineraryItemController`, `TripDayController`, `VisitEventController`, `PlaceController`, and `AiItineraryController` to inject unified services directly.
+  - **Removed Legacy Paths**:
+    - Safely removed `app/Domain/Itinerary/` and `app/Application/Itinerary/`.
+- **Verification**:
+  - Ran `php artisan test`: All 127 tests passed (787 assertions) in 25.38s.
+  - Ran `./vendor/bin/pint`: Formatted and cleaned all modified files.
+
 ## 2026-11-10 — Architecture Simplification: Feature 1 (Trips) to Service-Model-DTO Pattern
 
 ### Completed
