@@ -24,6 +24,32 @@ final class ItineraryService
     ) {}
 
     /**
+     * List itinerary items for a trip with optional day filter.
+     *
+     * @return Collection<int, ItineraryItem>
+     */
+    public function getTripItems(Trip $trip, ?string $tripDayId = null): Collection
+    {
+        $query = $trip->itineraryItems()->with(['place', 'day']);
+
+        if ($tripDayId !== null && trim($tripDayId) !== '') {
+            $query->where('trip_day_id', $tripDayId);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * List all days for a trip.
+     *
+     * @return Collection<int, TripDay>
+     */
+    public function getTripDays(Trip $trip): Collection
+    {
+        return $trip->days()->get();
+    }
+
+    /**
      * Create a new itinerary item / activity.
      */
     public function createItem(Trip $trip, CreateItineraryItemData $data): ItineraryItem

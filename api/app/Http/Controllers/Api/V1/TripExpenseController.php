@@ -21,7 +21,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 
 final class TripExpenseController extends Controller
 {
@@ -36,17 +35,14 @@ final class TripExpenseController extends Controller
     {
         Gate::authorize('view', $trip);
 
-        $query = $trip->expenses()->with(['payer', 'itineraryItem', 'stay']);
+        $category = $request->query('category');
+        $expenseDate = $request->query('expense_date');
 
-        if ($request->has('category') && $request->filled('category')) {
-            $query->where('category', $request->query('category'));
-        }
-
-        if ($request->has('expense_date') && $request->filled('expense_date')) {
-            $query->whereDate('expense_date', $request->query('expense_date'));
-        }
-
-        $expenses = $query->get();
+        $expenses = $this->expenseService->getTripExpenses(
+            $trip,
+            is_string($category) && $category !== '' ? $category : null,
+            is_string($expenseDate) && $expenseDate !== '' ? $expenseDate : null,
+        );
 
         return ExpenseResource::collection($expenses);
     }
@@ -139,12 +135,10 @@ final class TripExpenseController extends Controller
 
         /** @var UploadedFile $file */
         $file = $request->file('file');
-        $path = $file->store("receipts/{$expense->trip_id}", 'public');
-        $url = Storage::disk('public')->url($path);
 
-        $expense->update(['receipt_url' => $url]);
+        $updated = $this->expenseService->uploadReceipt($expense, $file);
 
-        return (new ExpenseResource($expense->fresh(['payer', 'itineraryItem', 'stay', 'splits.user'])))
+        return (new ExpenseResource($updated))
             ->response();
     }
 }

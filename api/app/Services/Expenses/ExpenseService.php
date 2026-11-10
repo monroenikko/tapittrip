@@ -17,7 +17,10 @@ use App\Models\Trip;
 use App\Models\TripBudget;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 final class ExpenseService
@@ -528,5 +531,46 @@ final class ExpenseService
         ]);
 
         return $settlement->load(['payer', 'payee']);
+    }
+
+    /**
+     * List expenses for a trip with optional category and date filters.
+     *
+     * @return Collection<int, Expense>
+     */
+    public function getTripExpenses(Trip $trip, ?string $category = null, ?string $expenseDate = null): Collection
+    {
+        $query = $trip->expenses()->with(['payer', 'itineraryItem', 'stay']);
+
+        if ($category !== null && trim($category) !== '') {
+            $query->where('category', $category);
+        }
+
+        if ($expenseDate !== null && trim($expenseDate) !== '') {
+            $query->whereDate('expense_date', $expenseDate);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Get the target budget for a trip.
+     */
+    public function getTripBudget(Trip $trip): ?TripBudget
+    {
+        return $trip->budget;
+    }
+
+    /**
+     * Upload and attach a receipt photo to an expense.
+     */
+    public function uploadReceipt(Expense $expense, UploadedFile $file): Expense
+    {
+        $path = $file->store("receipts/{$expense->trip_id}", 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $expense->update(['receipt_url' => $url]);
+
+        return $expense->fresh(['payer', 'itineraryItem', 'stay', 'splits.user']);
     }
 }

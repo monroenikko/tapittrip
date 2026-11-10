@@ -27,7 +27,7 @@ final class TripBudgetController extends Controller
     {
         Gate::authorize('view', $trip);
 
-        $budget = $trip->budget;
+        $budget = $this->expenseService->getTripBudget($trip);
         if (! $budget) {
             return response()->json(['data' => null]);
         }

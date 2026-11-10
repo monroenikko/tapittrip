@@ -32,7 +32,7 @@ final class StayController extends Controller
     {
         Gate::authorize('view', $trip);
 
-        $stays = $trip->stays()->with(['place', 'itineraryItems'])->get();
+        $stays = $this->stayService->getTripStays($trip);
 
         return StayResource::collection($stays);
     }

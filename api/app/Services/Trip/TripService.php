@@ -24,6 +24,19 @@ final class TripService
     ) {}
 
     /**
+     * List all trips the user is a member of.
+     *
+     * @return Collection<int, Trip>
+     */
+    public function getUserTrips(User $user): Collection
+    {
+        return $user->trips()
+            ->with(['members'])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    /**
      * Create a new trip and assign the creator as the owner.
      */
     public function create(User $owner, CreateTripData $data): Trip

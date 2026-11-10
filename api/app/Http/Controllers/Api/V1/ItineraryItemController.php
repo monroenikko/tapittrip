@@ -33,13 +33,10 @@ final class ItineraryItemController extends Controller
     {
         Gate::authorize('view', $trip);
 
-        $query = $trip->itineraryItems()->with(['place', 'day']);
+        $tripDayId = $request->query('trip_day_id');
+        $items = $this->itineraryService->getTripItems($trip, is_string($tripDayId) ? $tripDayId : null);
 
-        if ($request->has('trip_day_id')) {
-            $query->where('trip_day_id', $request->query('trip_day_id'));
-        }
-
-        return ItineraryItemResource::collection($query->get());
+        return ItineraryItemResource::collection($items);
     }
 
     /**

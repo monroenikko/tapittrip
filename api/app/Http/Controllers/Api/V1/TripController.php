@@ -29,11 +29,7 @@ final class TripController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $trips = $request->user()
-            ->trips()
-            ->with(['members'])
-            ->orderByDesc('created_at')
-            ->get();
+        $trips = $this->tripService->getUserTrips($request->user());
 
         return TripResource::collection($trips);
     }

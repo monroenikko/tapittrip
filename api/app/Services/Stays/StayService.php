@@ -12,6 +12,7 @@ use App\Models\Stay;
 use App\Models\Trip;
 use App\Services\Itinerary\ItineraryService;
 use App\Services\Itinerary\PlaceService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -22,6 +23,16 @@ final class StayService
         private readonly ItineraryService $itineraryService,
         private readonly CompareStayTransportService $compareStayTransportService,
     ) {}
+
+    /**
+     * List all stays for a trip.
+     *
+     * @return Collection<int, Stay>
+     */
+    public function getTripStays(Trip $trip): Collection
+    {
+        return $trip->stays()->with(['place', 'itineraryItems'])->get();
+    }
 
     /**
      * Create a new stay / accommodation for a trip.

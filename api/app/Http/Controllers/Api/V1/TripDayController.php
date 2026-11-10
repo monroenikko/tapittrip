@@ -27,7 +27,7 @@ final class TripDayController extends Controller
     {
         Gate::authorize('view', $trip);
 
-        $days = $trip->days()->get();
+        $days = $this->itineraryService->getTripDays($trip);
 
         return TripDayResource::collection($days);
     }

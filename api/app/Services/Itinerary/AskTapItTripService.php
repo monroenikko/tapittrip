@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Itinerary;
 
+use App\DTOs\Itinerary\AskTripAssistantData;
 use App\DTOs\Itinerary\TripAssistantResult;
 use App\Models\AirportLounge;
 use App\Models\Trip;
@@ -19,10 +20,16 @@ final class AskTapItTripService
      */
     public function ask(
         Trip $trip,
-        string $query,
+        string|AskTripAssistantData $query,
         ?string $contextDate = null,
         ?string $terminalCode = null,
     ): TripAssistantResult {
+        if ($query instanceof AskTripAssistantData) {
+            $contextDate = $query->contextDate;
+            $terminalCode = $query->terminalCode;
+            $query = $query->query;
+        }
+
         $normalizedQuery = mb_strtolower(trim($query));
         $stay = $trip->stays()->first();
         $daysCount = $trip->days()->count();
