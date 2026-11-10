@@ -1941,3 +1941,47 @@ Implement Slice 2: Trip data model, migrations (`trips`, `trip_members`), `TripP
 ### Next smallest task
 
 Implement Slice 3: Flutter mobile integration for authentication state and trip creation/listing across all four planning modes.
+
+## 2026-11-10 — Backend architecture simplification and database-driven reference data (ADR 0003)
+
+### Completed
+
+1. **Simplified Backend Pattern (Features 1–9 Refactored)**:
+   - Refactored backend from separated `Domain/{Feature}` and `Application/{Feature}` layers into cohesive `app/Services/{Feature}/`, `app/Models/`, `app/DTOs/{Feature}/`, and `app/Policies/`:
+     - **Trips**: `TripService`, `CreateTripData`, `UpdateTripData`, `TodaySummaryResult`, models `Trip`, `TripMember`.
+     - **Itinerary**: `ItineraryService`, `PlaceService`, Gemini AI assistant & transit services, models `ItineraryItem`, `TripDay`, `Place`, `VisitEvent`.
+     - **Stays**: `StayService`, `CreateStayData`, `UpdateStayData`, `CompareStayTransportData`, model `Stay`.
+     - **Expenses**: `ExpenseService`, `CurrencyExchangeRateService`, `LiveExchangeRateProvider`, `FakeExchangeRateProvider`, models `Expense`, `TripBudget`, `ExpenseSplit`, `ExpenseSettlement`.
+     - **Checklists**: `ChecklistService`, `CreateChecklistData`, `CreateChecklistItemData`, `UpdateChecklistItemData`, models `Checklist`, `ChecklistItem`.
+     - **Journal**: `JournalService`, `CreateJournalEntryData`, `UpdateJournalEntryData`, model `JournalEntry`.
+     - **Lounges**: `AirportLoungeService`, `AirportLoungeDirectoryService`, `SearchAirportLoungesData`, models `Airport`, `AirportTerminal`, `AirportLounge`.
+     - **Notifications**: `NotificationService`, `RegisterDeviceData`, `UpdateNotificationPreferencesData`, models `Reminder`, `NotificationPreference`, `UserDevice`.
+     - **Media**: `MediaService`, `UploadMediaData`, model `MediaAttachment`.
+   - Unified flat models in `app/Models/` eliminating verbose cross-domain namespace imports.
+
+2. **Updatable Reference Data Moved to Database**:
+   - Added migration `2026_11_10_000000_create_countries_table.php` with `code` (unique), `name`, `currency_code`, `flag_emoji`, `is_zero_decimal`, and `aliases` (`jsonb`).
+   - Added model `App\Models\Country` with automated cache invalidation on save/delete.
+   - Added `CountrySeeder` and `database/data/countries.json` covering 215 global countries and destination aliases.
+   - Refactored `CountryCurrencyResolver` to query the database with `Cache::rememberForever` for sub-millisecond lookups.
+   - Added public `GET /api/v1/countries` endpoint with optional `?search=` filter via `CountryController` and `CountryResource`.
+
+3. **Static Constants Extraction**:
+   - Extracted 850+ lines of raw lounge catalog constants from `AirportLoungeDirectoryService` into `database/data/airports_catalog.json`.
+   - Extracted 160+ lines of starter templates from `ChecklistService` into `database/data/checklist_templates.json`.
+
+4. **Documentation & Architecture Decision**:
+   - Authored [ADR 0003](decisions/0003-simplified-backend-architecture-and-dynamic-reference-data.md).
+   - Updated `docs/architecture.md`, `docs/features/expenses-and-budgeting.md`, and `docs/api/openapi.yaml`.
+
+### Verification
+
+- Fast & PostgreSQL Test Suite: **129 passed (1875 assertions)** via Sail (`php artisan test`).
+- Code Formatting: Laravel Pint clean across 299 files.
+- Zero breaking changes to API JSON response contracts or client integrations.
+
+### Next steps
+
+- Refactor Feature 10 (Sync: `SyncService`, `SyncPushData`, `SyncPullData`, `SyncCursor`, `SyncOperation`).
+- Refactor Feature 11 (Weather: `WeatherService`).
+- Refactor Feature 12 (Identity: `AuthService`, `ProfileService`, `User`).

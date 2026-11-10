@@ -31,6 +31,28 @@ paths:
               example:
                 data:
                   status: ok
+  /countries:
+    get:
+      operationId: listCountries
+      summary: List supported world countries
+      description: Returns all supported countries worldwide with ISO code, name, primary currency code, flag emoji, and zero-decimal scale indicator.
+      tags:
+        - System
+      security: []
+      parameters:
+        - name: search
+          in: query
+          required: false
+          description: Search term to filter countries by name, code, or currency.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of countries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountryListResponse"
   /auth/register:
     post:
       operationId: register
@@ -2815,6 +2837,41 @@ components:
             status:
               type: string
               const: ok
+    CountryItem:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+        - currency_code
+        - flag_emoji
+        - is_zero_decimal
+      properties:
+        code:
+          type: string
+          example: "JP"
+        name:
+          type: string
+          example: "Japan"
+        currency_code:
+          type: string
+          example: "JPY"
+        flag_emoji:
+          type: string
+          example: "🇯🇵"
+        is_zero_decimal:
+          type: boolean
+          example: true
+    CountryListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountryItem"
     RegisterRequest:
       type: object
       additionalProperties: false

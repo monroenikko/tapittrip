@@ -14,6 +14,17 @@ Laravel routes pass validated/authorized requests through thin controllers into 
 
 Before the first offline mutation, settle operation identity, aggregate versioning, retry results, pull cursor ordering, tombstones, conflict responses, and logout/account-switch isolation. A sequence allocated before commit must not cause later pulls to skip an earlier uncommitted change; cursor design needs explicit concurrency tests. M6 hardens this mechanism.
 
+## Backend architecture & structure (ADR 0003)
+
+The backend follows a simplified, cohesive Laravel architecture under `api/app/`:
+- `Services/{Feature}/`: Feature service classes containing application logic, transactions, and domain rules.
+- `Models/`: Consolidated flat Eloquent models (`Trip`, `Stay`, `Expense`, `Country`, etc.).
+- `DTOs/{Feature}/`: Strongly-typed Data Transfer Objects for requests and aggregated results.
+- `Http/Controllers/Api/V1/`: Thin controllers validating requests, calling services, and returning resources.
+- `Http/Resources/Api/V1/`: Standardized JSON API resources (`data`, `error` envelopes).
+- `Policies/`: Trip membership and resource authorization policies.
+- **Dynamic Reference Data**: All future-updatable reference data (countries, currencies, destination aliases, airport catalogs, checklist templates) is stored in PostgreSQL tables and seed files (`database/data/`), queried via in-memory caching (`Cache::rememberForever`) rather than hardcoded in PHP classes. See [ADR 0003](decisions/0003-simplified-backend-architecture-and-dynamic-reference-data.md).
+
 ## Verification boundaries
 
 - Fast PHPUnit suite: health HTTP behavior without a database.

@@ -37,12 +37,14 @@ TapItTrip provides international travelers with an integrated multi-currency exp
    - Travelers can review past expenditures, balances, and logged amounts even without an active internet connection.
 
 ## Data & Security Model
+- **Database-Driven Countries & Currencies**: 215 world countries, primary currency codes, Unicode flag emojis, zero-decimal scale flags, and common travel destination aliases are stored in the PostgreSQL `countries` table and seeded via `CountrySeeder` (`database/data/countries.json`). Lookups are cached in-memory with automatic cache flushing on model lifecycle events.
 - **Integer Minor Units**: All monetary values (`total_budget_minor`, `amount_minor`, `base_amount_minor`, etc.) are strictly represented as integers in minor units (e.g. $10.50 = 1050 cents, ¥3000 = 3000 yen) to eliminate floating-point arithmetic errors.
 - **Trip Membership Authorization**: Enforced on all expense, split, and settlement endpoints through `TripPolicy` (`$user->trips()->where('trips.id', $trip->id)->exists()`).
 - **Encrypted Local Storage**: Cached summaries, expense lists, and group settlement balances are stored securely on device.
 
 ## API Contracts
 Documented in `docs/api/openapi.yaml`:
+- `GET /v1/countries`: List all supported world countries with ISO code, name, currency code, flag emoji, and zero-decimal scale indicator (optional `?search=` parameter).
 - `PATCH /v1/me`: Update traveler profile (`home_country`, `home_currency`, `display_name`).
 - `GET /v1/currencies/rates`: Fetch current live or cached exchange rates between any two currencies.
 - `GET /v1/trips/{trip}/budget`: Retrieve budget configuration.
