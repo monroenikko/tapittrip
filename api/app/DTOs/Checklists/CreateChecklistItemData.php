@@ -13,6 +13,8 @@ final readonly class CreateChecklistItemData
         public ?string $notes = null,
         public ?string $photoUrl = null,
         public int $sortOrder = 0,
+        public ?string $assignedUserId = null,
+        public ?string $assignedTravelerId = null,
     ) {}
 
     /**
@@ -27,6 +29,8 @@ final readonly class CreateChecklistItemData
             notes: isset($data['notes']) ? (string) $data['notes'] : null,
             photoUrl: isset($data['photo_url']) ? (string) $data['photo_url'] : null,
             sortOrder: (int) ($data['sort_order'] ?? 0),
+            assignedUserId: isset($data['assigned_user_id']) ? (string) $data['assigned_user_id'] : null,
+            assignedTravelerId: isset($data['assigned_traveler_id']) ? (string) $data['assigned_traveler_id'] : null,
         );
     }
 }

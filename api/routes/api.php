@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\PlaceController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ReminderController;
 use App\Http\Controllers\Api\V1\StayController;
+use App\Http\Controllers\Api\V1\StayRecommendationController;
 use App\Http\Controllers\Api\V1\StayTransportController;
 use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TripAnnouncementController;
@@ -32,6 +33,7 @@ use App\Http\Controllers\Api\V1\TripJournalController;
 use App\Http\Controllers\Api\V1\TripNotificationController;
 use App\Http\Controllers\Api\V1\TripRecapController;
 use App\Http\Controllers\Api\V1\TripTodayController;
+use App\Http\Controllers\Api\V1\TripTravelerController;
 use App\Http\Controllers\Api\V1\TripWeatherController;
 use App\Http\Controllers\Api\V1\VisitEventController;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +83,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/places', [PlaceController::class, 'store'])->name('places.store');
         Route::get('/places/{place}', [PlaceController::class, 'show'])->name('places.show');
 
+        Route::post('/trips/{trip}/stay-recommendations', StayRecommendationController::class)->middleware('throttle:6,1')->name('trips.stay-recommendations');
+
         Route::get('/trips/{trip}/stays', [StayController::class, 'index'])->name('trips.stays.index');
         Route::post('/trips/{trip}/stays', [StayController::class, 'store'])->name('trips.stays.store');
         Route::get('/stays/{stay}', [StayController::class, 'show'])->name('stays.show');
@@ -121,6 +125,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/trips/{trip}/members', [TripCircleController::class, 'members'])->name('trips.members.index');
         Route::patch('/trips/{trip}/members/{member}', [TripCircleController::class, 'updateMemberRole'])->name('trips.members.update');
         Route::delete('/trips/{trip}/members/{member}', [TripCircleController::class, 'removeMember'])->name('trips.members.destroy');
+        Route::get('/trips/{trip}/travelers', [TripTravelerController::class, 'index'])->name('trips.travelers.index');
+        Route::post('/trips/{trip}/travelers', [TripTravelerController::class, 'store'])->name('trips.travelers.store');
+        Route::patch('/travelers/{traveler}', [TripTravelerController::class, 'update'])->name('travelers.update');
+        Route::delete('/travelers/{traveler}', [TripTravelerController::class, 'destroy'])->name('travelers.destroy');
         Route::get('/trips/{trip}/invitations', [TripCircleController::class, 'invitations'])->name('trips.invitations.index');
         Route::post('/trips/{trip}/invitations', [TripCircleController::class, 'storeInvitation'])->middleware('throttle:20,1')->name('trips.invitations.store');
         Route::post('/trips/{trip}/invitations/direct', [TripCircleController::class, 'storeDirectInvitation'])->middleware('throttle:20,1')->name('trips.invitations.direct');

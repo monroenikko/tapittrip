@@ -26,6 +26,9 @@ final class UpdateChecklistItemRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:1000'],
             'photo_url' => ['nullable', 'url', 'max:2048'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
+            'assigned_user_id' => ['nullable', 'uuid'],
+            'assigned_traveler_id' => ['nullable', 'uuid'],
+            'base_version' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }

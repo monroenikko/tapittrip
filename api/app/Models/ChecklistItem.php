@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'checklist_id',
     'trip_id',
+    'assigned_user_id',
+    'assigned_traveler_id',
     'title',
     'category',
     'is_packed',
@@ -24,6 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'photo_url',
     'sort_order',
     'packed_at',
+    'completed_by_user_id',
     'version',
 ])]
 final class ChecklistItem extends Model
@@ -73,6 +76,36 @@ final class ChecklistItem extends Model
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class);
+    }
+
+    /**
+     * Accepted trip member responsible for this item, if assigned to a member.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function assignedUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    /**
+     * Managed traveler profile responsible for this item, if any.
+     *
+     * @return BelongsTo<TripTraveler, $this>
+     */
+    public function assignedTraveler(): BelongsTo
+    {
+        return $this->belongsTo(TripTraveler::class, 'assigned_traveler_id');
+    }
+
+    /**
+     * User who last marked this item packed/completed.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function completedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by_user_id');
     }
 
     /**

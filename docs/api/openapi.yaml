@@ -1313,6 +1313,121 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /trips/{trip}/stay-recommendations:
+    post:
+      operationId: generateStayRecommendations
+      summary: Generate advisory accommodation ideas from the saved itinerary
+      description: |
+        No request body is required. The server owns the prompt and loads up to 50
+        authorized trip stops with day/place context; without stops it uses the trip
+        destination. Does not save stays or bookings. Accepted members, including
+        viewers, may request ideas. Limited to 6 requests per minute per user.
+        A saved stay before or during generation returns stay_exists without ideas.
+        Missing credentials, provider failures or malformed output return unavailable
+        with no fabricated hotels. ready may contain area guidance without cards.
+        All ideas are unverified. Results are transient and must not be cached.
+      tags: [Stays]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: trip
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Advisory ideas, unavailable AI, or an existing-stay no-op.
+          headers:
+            Cache-Control:
+              schema: {type: string}
+              description: Contains no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [reply, category, context_summary, suggested_actions]
+                    properties:
+                      reply: {type: string, maxLength: 6000}
+                      category: {type: string, const: general}
+                      context_summary:
+                        type: object
+                        required: [trip_id, destination, source, status, has_stay, verified]
+                        properties:
+                          trip_id: {type: string, format: uuid}
+                          destination: {type: string}
+                          source: {type: string, enum: [gemini, local_fallback]}
+                          status: {type: string, enum: [ready, unavailable, stay_exists]}
+                          has_stay: {type: boolean}
+                          verified: {type: boolean, const: false}
+                      suggested_actions:
+                        type: array
+                        maxItems: 3
+                        items:
+                          type: object
+                          required: [label, kind, payload]
+                          properties:
+                            label: {type: string, maxLength: 255}
+                            kind: {type: string, const: add_activity}
+                            payload:
+                              type: object
+                              additionalProperties: false
+                              required: [title, kind, place_name, notes]
+                              properties:
+                                title: {type: string, minLength: 1, maxLength: 255}
+                                kind: {type: string, const: hotel}
+                                place_name: {type: string, minLength: 1, maxLength: 255}
+                                notes: {type: string, maxLength: 1000}
+              example:
+                data:
+                  reply: Research accommodation around your planned stops.
+                  category: general
+                  context_summary:
+                    trip_id: 00000000-0000-4000-8000-000000000001
+                    destination: Example City
+                    source: gemini
+                    status: ready
+                    has_stay: false
+                    verified: false
+                  suggested_actions: []
+        "401":
+          description: Authentication required (unauthenticated).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Trip membership required (forbidden).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Trip not found (not_found).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Request limit exceeded (rate_limited).
+          headers:
+            Retry-After:
+              description: Seconds until a retry is allowed.
+              schema: {type: integer}
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected safe error (internal_error).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /trips/{trip}/stays:
     get:
       operationId: listTripStays
@@ -1785,6 +1900,12 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           description: Forbidden.
+        "409":
+          description: Optimistic concurrency conflict (`version_conflict`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       operationId: deleteChecklistItem
       summary: Delete a checklist item
@@ -1810,7 +1931,7 @@ paths:
   /checklist-items/{item}/toggle:
     post:
       operationId: toggleChecklistItem
-      summary: Toggle packed status of a checklist item
+      summary: Toggle packed status of a checklist item (owners/editors or assigned viewer)
       tags:
         - Checklists
       security:
@@ -1822,6 +1943,16 @@ paths:
           schema:
             type: string
             format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                base_version:
+                  type: integer
+                  nullable: true
       responses:
         "200":
           description: Item toggled.
@@ -1838,6 +1969,12 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           description: Forbidden.
+        "409":
+          description: Optimistic concurrency conflict (`version_conflict`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /checklist-items/{item}/photo:
     post:
@@ -3302,6 +3439,141 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           description: Forbidden (Not a member of this trip).
+
+  /trips/{trip}/travelers:
+    get:
+      operationId: listTripTravelers
+      summary: List minimal managed traveler profiles for a trip circle (TC-6.3)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Traveler profile list with restricted_notes redacted for non-managers.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TripTraveler"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: createTripTraveler
+      summary: Create a minimal managed traveler profile without creating a user account (TC-6.3)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreTripTravelerRequest"
+      responses:
+        "201":
+          description: Managed traveler created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripTraveler"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation error.
+
+  /travelers/{traveler}:
+    patch:
+      operationId: updateTripTraveler
+      summary: Update a managed traveler profile (strictly managing adult only)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: traveler
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTripTravelerRequest"
+      responses:
+        "200":
+          description: Managed traveler updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripTraveler"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden (Only managing adult).
+        "409":
+          description: Optimistic concurrency conflict (`version_conflict`).
+        "422":
+          description: Validation error.
+    delete:
+      operationId: deleteTripTraveler
+      summary: Delete a managed traveler profile and unassign its checklist items
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: traveler
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Managed traveler deleted.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
 
   /trips/{trip}/members:
     get:
@@ -5158,6 +5430,30 @@ components:
           type: string
           format: date-time
           nullable: true
+        assigned_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        assigned_user_name:
+          type: string
+          nullable: true
+        assigned_traveler_id:
+          type: string
+          format: uuid
+          nullable: true
+        assigned_traveler_name:
+          type: string
+          nullable: true
+        assigned_traveler_category:
+          type: string
+          nullable: true
+        completed_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        completed_by_name:
+          type: string
+          nullable: true
         version:
           type: integer
         created_at:
@@ -5224,6 +5520,14 @@ components:
         sort_order:
           type: integer
           default: 0
+        assigned_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        assigned_traveler_id:
+          type: string
+          format: uuid
+          nullable: true
 
     UpdateChecklistItemRequest:
       type: object
@@ -5245,6 +5549,17 @@ components:
           nullable: true
         sort_order:
           type: integer
+        assigned_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        assigned_traveler_id:
+          type: string
+          format: uuid
+          nullable: true
+        base_version:
+          type: integer
+          nullable: true
 
     MediaAttachment:
       type: object
@@ -7025,6 +7340,97 @@ components:
         created_at:
           type: string
           format: date-time
+          nullable: true
+
+    TripTraveler:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - managing_user_id
+        - managing_user_name
+        - display_name
+        - traveler_category
+        - can_edit
+        - can_delete
+        - version
+      properties:
+        id:
+          type: string
+          format: uuid
+        trip_id:
+          type: string
+          format: uuid
+        linked_member_id:
+          type: string
+          format: uuid
+          nullable: true
+        managing_user_id:
+          type: string
+          format: uuid
+        managing_user_name:
+          type: string
+        display_name:
+          type: string
+        traveler_category:
+          type: string
+          enum: [adult, child, infant, companion]
+        restricted_notes:
+          type: string
+          nullable: true
+        can_edit:
+          type: boolean
+        can_delete:
+          type: boolean
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    StoreTripTravelerRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - display_name
+      properties:
+        display_name:
+          type: string
+          maxLength: 120
+        traveler_category:
+          type: string
+          enum: [adult, child, infant, companion]
+        restricted_notes:
+          type: string
+          nullable: true
+          maxLength: 2000
+        linked_member_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    UpdateTripTravelerRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        display_name:
+          type: string
+          maxLength: 120
+        traveler_category:
+          type: string
+          enum: [adult, child, infant, companion]
+        restricted_notes:
+          type: string
+          nullable: true
+          maxLength: 2000
+        base_version:
+          type: integer
           nullable: true
 
 

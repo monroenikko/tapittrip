@@ -2,14 +2,56 @@
 
 ## Current milestone
 
-- Milestone: **Trip Circles Collaboration (Track 1 / M10 Slice 3)**
-- Status: **Completed (Steps 4–5 Core: Multi-Device Conflict Resolution, Stay Privacy Redaction, Organizer Announcements, Timezone/Quiet-Hours Preferences & Removal Cleanup)**
-- Basis: User-approved Trip Circles Slice 3 (`MASTER_PLAN.md` Section 14C `TC-4`, `TC-5` / ADR `0006-trip-circles-sync-conflicts-and-announcements.md`). Added REST optimistic concurrency (`base_version` / `expected_versions` returning `409 version_conflict`), aligned sync handling (`itinerary_item`, `stay`) with schema & cross-trip isolation, non-owner `Stay` privacy redaction (`booking_reference`, `phone`, `friends_family` private location), organizer `trip_announcements` + companion `trip_notifications`, `circle_announcements_enabled` & `timezone_behavior`-aware quiet hours, auto reminder rescheduling/cancellation, and complete revoked-trip cache & local reminder purging.
+- Milestone: **Trip Circles Collaboration (Track 1 / M10 Slice 4)**
+- Status: **Completed (Step 6 Core: Managed Traveler Profiles, Collaborative Checklist Assignments, Viewer Completion Isolation & Offline Outbox Sync)**
+- Basis: User-approved Trip Circles Slice 4 (`MASTER_PLAN.md` Section 14C `TC-6` / ADR `0007-trip-circles-managed-travelers-and-checklists.md`). Added minimal non-account `trip_travelers` profiles (`encrypted` `restricted_notes` scoped strictly to `managing_user_id`), exclusive single-trip checklist item assignments (`assigned_user_id` or `assigned_traveler_id`), `completed_by_user_id` attribution, `base_version` optimistic concurrency (`409 version_conflict`), viewer personal completion isolation (`POST /checklist-items/{item}/toggle` and `is_packed`-only `sync/push`), atomic member/traveler removal cleanup, and offline Flutter assignment/viewer UX with `OutboxStorage` persistence and `403` cache purging.
 - Boundary:
   - Slice 1 (`TC-0`, `TC-1`, `TC-3.1`, `TC-8.2` UI): Shareable Invite Links, Member Roles, Leave Guard & Shared Activity Feed UI — **Completed**.
   - Slice 2 (`TC-2`, `TC-3.2`–`TC-3.4`): Targeted Friend Code Invites, Circle Inbox, Explicit Two-Party Ownership Transfer, Account Deletion Orphan Guard & Sync Hardening — **Completed**.
   - Slice 3 (`TC-4`, `TC-5`): Multi-Device Sync Conflicts, Stay Privacy Redaction, Organizer Announcements & Notification Cleanup — **Completed**.
-- Next Boundary: Slice 3 complete; awaiting explicit approval before starting **Trip Circles Slice 4 (`TC-6` managed child/companion profiles, `TC-9` opt-in location sharing, or `TC-8` group expense splits)** or moving to **M10: Voice & Camera Translation / Safety Intelligence** or **Flights & Booking Import**.
+  - Slice 4 (`TC-6`): Managed Traveler Profiles & Collaborative Checklist Assignments — **Completed**.
+- Next Boundary: Slice 4 complete; awaiting explicit approval before starting **Trip Circles Slice 5 (`TC-7` group expense splits & multi-currency settlement balances, or `TC-9` opt-in location sharing)** or moving to **M10: Voice & Camera Translation / Safety Intelligence** or **Flights & Booking Import**.
+
+## 2026-11-10 — Trip Circles Slice 4: Managed Traveler Profiles & Collaborative Checklist Assignments
+
+### Completed
+- **Architecture Decision & Schema (`docs/decisions/0007-trip-circles-managed-travelers-and-checklists.md`)**:
+  - Accepted ADR 0007 specifying minimal non-account `trip_travelers` profiles (`child`/`infant`/`adult`/`companion`, encrypted `managing_user_id`-only `restricted_notes`, no credentials or location/document sharing), exclusive checklist assignees (`assigned_user_id` / `assigned_traveler_id`), completion attribution (`completed_by_user_id`), and `version` optimistic concurrency (`409 version_conflict`).
+  - Added migration `2026_11_10_060000_add_trip_circles_slice4_tables.php` (applied cleanly to both `tapittrip` and `tapittrip_test`).
+- **Backend API, Sync & Removal Lifecycle (`api/`)**:
+  - Added `TripTraveler` model + factory, `CreateTripTravelerData` / `UpdateTripTravelerData`, `StoreTripTravelerRequest` / `UpdateTripTravelerRequest`, `TripTravelerResource`, `TripTravelerService`, and `TripTravelerController` (`GET/POST /trips/{trip}/travelers`, `PATCH/DELETE /travelers/{traveler}`).
+  - Updated `ChecklistItem`, `ChecklistItemResource`, `CreateChecklistItemData` / `UpdateChecklistItemData`, `StoreChecklistItemRequest` / `UpdateChecklistItemRequest`, `ChecklistService`, `ChecklistController`, `ChecklistItemController`, and `SyncService` (`push()` viewer `checklist_item` `is_packed`-only authorization on own assigned items, cross-trip assignee validation, `base_version` `409` conflict handling, and safe conflict serialization).
+  - Updated `TripCircleService::removeMember()` to clear `assigned_user_id` and soft-delete the departing adult's managed travelers while clearing their `assigned_traveler_id` tasks atomically.
+  - Updated `docs/api/openapi.yaml`, `docs/features/trip-circles.md`, and `docs/features/README.md`.
+- **Flutter Managed Travelers & Collaborative Checklists UI (`client/`)**:
+  - Added `TripTraveler`, `TripCircleRepository` traveler CRUD + `cached_travelers_{tripId}` `403` purge, `tripTravelersProvider`, and `ManagedTravelersSection` inside `TripCirclePage` (privacy notice, organizer/editor profile creation, manager-only `restricted_notes` / edit / delete).
+  - Updated `ChecklistItem`, `ChecklistRepository` (`cached_checklists_{tripId}` cache & `403` purge, `base_version` + assignee params), `ChecklistListNotifier` (offline `OutboxStorage` `checklist_item` queueing across restart + `409` conflict capture), `ChecklistItemTile` (`canToggle`, `canEdit`, assignee & `Packed by` badges, `colorScheme.error`), `AddChecklistItemBottomSheet` (`Assign to (optional)` dropdown preserving `onSubmit` & `onSubmitWithAssignee` compatibility), and `ChecklistsView` (assignee filter chips, viewer read-only notice & own-item toggle guard).
+- **Verification**:
+  - Backend: `./vendor/bin/sail pint --test` passed; `./vendor/bin/sail --profile tools run --rm --no-deps contracts` passed; full `./vendor/bin/sail exec -e DB_CONNECTION=pgsql -e DB_DATABASE=tapittrip_test laravel.test php artisan test` passed **199/199 tests (2,463 assertions)**, including `TripCollaborationSlice4Test` (`TC-6.1`, `TC-6.2`, `TC-6.3`).
+  - Mobile: `dart format --output=none --set-exit-if-changed lib/features/circles/ lib/features/checklists/ test/trip_circle_slice4_test.dart` passed; `flutter analyze` passed (`0 issues`); targeted `flutter test test/trip_circle_slice4_test.dart test/trip_circle_slice3_test.dart test/trip_circle_test.dart test/checklist_test.dart test/sync_test.dart` passed **42/42 tests**. Full `flutter test` passed **216 tests** with **5 pre-existing failures** strictly in `client/test/itinerary_test.dart` (`A Timer is still pending even after the widget tree was disposed` from uncommitted `recommendations_provider.dart`).
+
+## 2026-11-10 — Itinerary checklist callback compilation fix
+
+- Updated the itinerary page's add-checklist callback to the sheet's assignment-aware `onSubmitWithAssignee` API, accepting assignment fields and forwarding selected member/traveler IDs (or null when cleared). Preserved concurrently updated legacy callback support in the sheet.
+- From `client/`: `dart format lib/features/itinerary/presentation/pages/trip_itinerary_page.dart` passed; `flutter analyze` passed with no issues after the concurrent sheet update completed; `flutter test test/checklist_test.dart` passed (8 tests).
+- No API, persistence, security, or offline contract changes. Next check: hot restart and add an item from the itinerary page. No milestone expansion.
+
+## 2026-11-10 — Dedicated stay recommendation backend
+
+- User-authorized API follow-up for the empty Stays UI. Added `POST /api/v1/trips/{trip}/stay-recommendations`, Application Service, provider interface/Gemini adapter, API Resource, thin authorized controller, provider binding, and per-user throttling. Server-owned prompt uses saved itinerary/destination context. Existing stays before/during generation suppress results; provider failure returns explicit unavailable state. No booking/stay mutations.
+- Backend filters/deduplicates lodging cards, bounds/strips text and drops external URL fields. All results are unverified and no-store. Updated OpenAPI schema/example and [stay feature/rollout notes](features/stays-and-luggage-transport.md#stay-recommendations-api). No migrations or new environment variables; backend deploy precedes client.
+- Flutter now uses `StayRecommendationRepository` and the dedicated endpoint instead of submitting a generic chat prompt. Updated provider/view and client contract test. Added `StayRecommendationTest.php` to `phpunit.postgres.xml`.
+- From `api/`: `./vendor/bin/sail bin phpunit --configuration=phpunit.postgres.xml tests/Feature/StayRecommendationTest.php tests/Feature/TripAssistantTest.php` passed (25 tests, 96 assertions), covering all four planning modes, no itinerary, saved-stay race, member/viewer isolation, filtering, malformed/failed/missing AI, rate limit and safe errors. `./vendor/bin/sail artisan route:list --path=stay-recommendations --json` confirmed auth and throttle middleware. OpenAPI parsed via Sail PHP/Symfony YAML (syntax validation only).
+- Pint `--dirty --format agent` was unavailable because Git metadata is not mounted in Sail; `./vendor/bin/sail bin pint --format agent` with the eight changed backend paths passed. No PHP static-analysis binary is installed.
+- From `client/`: `dart format` on the four changed stay integration/test files passed; `flutter test test/stay_recommendations_test.dart test/recommendations_test.dart` passed (14 tests). Full `flutter analyze` reported an unrelated unused import in `features/checklists/data/checklist_repository.dart:10`; focused `flutter analyze lib/features/stays/data/stay_recommendation_repository.dart lib/features/stays/presentation/providers/stay_recommendations_provider.dart lib/features/stays/presentation/widgets/stay_recommendations_view.dart test/stay_recommendations_test.dart` passed.
+- Security/offline: existing trip authorization and minimized provider context; no arbitrary AI URLs, private stay data, or new location access. Network/provider failures leave manual stay entry available. Tests use HTTP fakes; live Gemini/device output not verified. Next smallest task: hot restart and check the empty Stays flow against the new endpoint. Scope ends here.
+
+## 2026-11-10 — Itinerary-based empty-stay ideas
+
+- User-authorized follow-up: the empty Stays tab now automatically requests advisory lodging/area ideas from the existing assistant, using saved itinerary context or destination when no stops exist. Manual Add Accommodation remains available; saving a stay hides ideas and suppresses new calls. No milestone expansion or new API contract.
+- Added `stay_recommendations_provider.dart`, `stay_recommendations_view.dart`, and `stay_recommendations_test.dart`; connected the existing itinerary page. Reused safe map actions and documented the flow in the [stays feature](features/stays-and-luggage-transport.md).
+- From `client/`: `dart format lib/features/stays/presentation/providers/stay_recommendations_provider.dart lib/features/stays/presentation/widgets/stay_recommendations_view.dart lib/features/itinerary/presentation/pages/trip_itinerary_page.dart test/stay_recommendations_test.dart` passed; `flutter analyze` passed; `flutter test test/stay_recommendations_test.dart test/recommendations_test.dart` passed (13 tests). `git diff --check` passed.
+- No backend changes, migrations, new dependencies, or credentials. Existing Gemini setup and internet are required for AI results. Suggestions are unverified, transient, and never save/book accommodation; offline/provider failure leaves manual entry available. Device/live-provider verification remains manual. Next smallest task: inspect stay ideas on-device and save a stay to confirm the section disappears.
 
 ## 2026-11-10 — Trip Circles Slice 3: Conflict Resolution, Stay Privacy, Announcements & Notification Cleanup
 

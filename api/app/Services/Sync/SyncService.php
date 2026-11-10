@@ -19,6 +19,7 @@ use App\Models\SyncOperation;
 use App\Models\Trip;
 use App\Models\TripDay;
 use App\Models\TripMember;
+use App\Models\TripTraveler;
 use App\Models\User;
 use App\Services\Notifications\NotificationService;
 use Carbon\CarbonImmutable;
@@ -65,7 +66,21 @@ final class SyncService
                 $tripId = $operation->tripId;
                 if ($tripId !== null) {
                     $trip = Trip::find($tripId);
-                    if ($trip === null || ! $trip->hasMember($user) || ! in_array($trip->memberRole($user), ['owner', 'editor'], true)) {
+                    $role = $trip?->memberRole($user);
+                    $isAuthorizedEditor = $trip !== null && $trip->hasMember($user) && in_array($role, ['owner', 'editor'], true);
+                    $isViewerOwnChecklistCompletion = $trip !== null
+                        && $trip->hasMember($user)
+                        && $role === 'viewer'
+                        && $operation->entityType === 'checklist_item'
+                        && $operation->operationType === 'update'
+                        && empty(array_diff(array_keys($operation->payload ?? []), ['is_packed', 'packed_at']))
+                        && ChecklistItem::query()
+                            ->where('id', $operation->entityId)
+                            ->where('trip_id', $trip->id)
+                            ->where('assigned_user_id', $user->id)
+                            ->exists();
+
+                    if (! $isAuthorizedEditor && ! $isViewerOwnChecklistCompletion) {
                         $rejectedOp = SyncOperation::create([
                             'operation_id' => $operation->operationId,
                             'user_id' => $user->id,
@@ -222,18 +237,52 @@ final class SyncService
 
     private function handleChecklistItem(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult
     {
+        if ($op->tripId === null) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'trip_id is required for checklist_item sync operations');
+        }
+
         if ($op->operationType === 'update') {
             $item = ChecklistItem::find($op->entityId);
             if ($item === null) {
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item not found');
             }
+            if ($item->trip_id !== $op->tripId) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item does not belong to the specified trip');
+            }
 
             // Conflict detection
             if ($op->baseVersion < $item->version) {
-                return $this->recordConflict($user, $deviceKey, $op, $item->version, $item->toArray());
+                return $this->recordConflict($user, $deviceKey, $op, $item->version, $this->serializeChecklistConflictPayload($item));
             }
 
             $payload = $op->payload ?? [];
+            $trip = Trip::find($op->tripId);
+            if (array_key_exists('assigned_user_id', $payload) || array_key_exists('assigned_traveler_id', $payload)) {
+                $assignedUser = $payload['assigned_user_id'] ?? null;
+                $assignedTraveler = $payload['assigned_traveler_id'] ?? null;
+                if ($assignedUser !== null && $assignedTraveler !== null) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item cannot be assigned to both user and traveler');
+                }
+                if ($assignedUser !== null && ($trip === null || ! $trip->hasMember((string) $assignedUser))) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Assigned user is not an accepted member of this trip');
+                }
+                if ($assignedTraveler !== null && ! TripTraveler::where('id', (string) $assignedTraveler)->where('trip_id', $op->tripId)->exists()) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Assigned traveler does not belong to this trip');
+                }
+                if (array_key_exists('assigned_user_id', $payload)) {
+                    $item->assigned_user_id = $assignedUser !== null ? (string) $assignedUser : null;
+                    if ($item->assigned_user_id !== null) {
+                        $item->assigned_traveler_id = null;
+                    }
+                }
+                if (array_key_exists('assigned_traveler_id', $payload)) {
+                    $item->assigned_traveler_id = $assignedTraveler !== null ? (string) $assignedTraveler : null;
+                    if ($item->assigned_traveler_id !== null) {
+                        $item->assigned_user_id = null;
+                    }
+                }
+            }
+
             if (array_key_exists('title', $payload)) {
                 $item->title = (string) $payload['title'];
             }
@@ -253,6 +302,7 @@ final class SyncService
                 $isPacked = (bool) $payload['is_packed'];
                 $item->is_packed = $isPacked;
                 $item->packed_at = $isPacked ? now() : null;
+                $item->completed_by_user_id = $isPacked ? $user->id : null;
             }
 
             $item->version = $item->version + 1;
@@ -263,38 +313,100 @@ final class SyncService
 
         if ($op->operationType === 'create') {
             $payload = $op->payload ?? [];
-            $item = ChecklistItem::find($op->entityId);
-            if ($item === null) {
-                $checklistId = $payload['checklist_id'] ?? null;
-                if (! $checklistId && $op->tripId) {
-                    $firstChecklist = Checklist::where('trip_id', $op->tripId)->first();
-                    $checklistId = $firstChecklist?->id;
+            $item = ChecklistItem::withTrashed()->find($op->entityId);
+            if ($item !== null) {
+                if ($item->trip_id !== $op->tripId) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item does not belong to the specified trip');
+                }
+                if ($item->trashed()) {
+                    $item->restore();
                 }
 
-                $item = new ChecklistItem;
-                $item->id = $op->entityId;
-                $item->trip_id = $op->tripId ?? '';
-                $item->checklist_id = (string) $checklistId;
-                $item->title = (string) ($payload['title'] ?? 'New Item');
-                $item->category = (string) ($payload['category'] ?? 'General');
-                $item->quantity = (int) ($payload['quantity'] ?? 1);
-                $item->notes = $payload['notes'] ?? null;
-                $item->is_packed = (bool) ($payload['is_packed'] ?? false);
-                $item->version = 1;
-                $item->save();
+                return $this->recordAccepted($user, $deviceKey, $op, $item->version);
             }
+
+            $checklistId = $payload['checklist_id'] ?? null;
+            if (is_string($checklistId) && $checklistId !== '') {
+                $checklistValid = Checklist::where('id', $checklistId)->where('trip_id', $op->tripId)->exists();
+                if (! $checklistValid) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Invalid checklist_id for this trip');
+                }
+            } else {
+                $firstChecklist = Checklist::where('trip_id', $op->tripId)->first();
+                $checklistId = $firstChecklist?->id;
+                if (! $checklistId) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'No checklist found for this trip');
+                }
+            }
+
+            $assignedUser = isset($payload['assigned_user_id']) ? (string) $payload['assigned_user_id'] : null;
+            $assignedTraveler = isset($payload['assigned_traveler_id']) ? (string) $payload['assigned_traveler_id'] : null;
+            $trip = Trip::find($op->tripId);
+            if ($assignedUser !== null && $assignedTraveler !== null) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item cannot be assigned to both user and traveler');
+            }
+            if ($assignedUser !== null && ($trip === null || ! $trip->hasMember($assignedUser))) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Assigned user is not an accepted member of this trip');
+            }
+            if ($assignedTraveler !== null && ! TripTraveler::where('id', $assignedTraveler)->where('trip_id', $op->tripId)->exists()) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Assigned traveler does not belong to this trip');
+            }
+
+            $isPacked = (bool) ($payload['is_packed'] ?? false);
+            $item = new ChecklistItem;
+            $item->id = $op->entityId;
+            $item->trip_id = $op->tripId;
+            $item->checklist_id = (string) $checklistId;
+            $item->assigned_user_id = $assignedUser;
+            $item->assigned_traveler_id = $assignedTraveler;
+            $item->title = (string) ($payload['title'] ?? 'New Item');
+            $item->category = (string) ($payload['category'] ?? 'other');
+            $item->quantity = (int) ($payload['quantity'] ?? 1);
+            $item->notes = $payload['notes'] ?? null;
+            $item->is_packed = $isPacked;
+            $item->packed_at = $isPacked ? now() : null;
+            $item->completed_by_user_id = $isPacked ? $user->id : null;
+            $item->version = 1;
+            $item->save();
 
             return $this->recordAccepted($user, $deviceKey, $op, $item->version);
         }
 
         if ($op->operationType === 'delete') {
             $item = ChecklistItem::find($op->entityId);
-            $item?->delete();
+            if ($item !== null) {
+                if ($item->trip_id !== $op->tripId) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item does not belong to the specified trip');
+                }
+                if ($op->baseVersion < $item->version) {
+                    return $this->recordConflict($user, $deviceKey, $op, $item->version, $this->serializeChecklistConflictPayload($item));
+                }
+                $item->delete();
+            }
 
             return $this->recordAccepted($user, $deviceKey, $op, 0);
         }
 
         return $this->rejectUnsupported($user, $deviceKey, $op, "Unsupported operation type: {$op->operationType}");
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeChecklistConflictPayload(ChecklistItem $item): array
+    {
+        return [
+            'id' => $item->id,
+            'trip_id' => $item->trip_id,
+            'checklist_id' => $item->checklist_id,
+            'title' => $item->title,
+            'is_packed' => (bool) $item->is_packed,
+            'assigned_user_id' => $item->assigned_user_id,
+            'assigned_traveler_id' => $item->assigned_traveler_id,
+            'completed_by_user_id' => $item->completed_by_user_id,
+            'notes' => $item->notes,
+            'version' => (int) $item->version,
+        ];
     }
 
     private function handleItineraryItem(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult

@@ -8,6 +8,8 @@ class ChecklistItemTile extends StatelessWidget {
     super.key,
     required this.item,
     required this.onToggle,
+    this.canToggle = true,
+    this.canEdit = true,
     this.onEdit,
     this.onDelete,
     this.onAttachPhoto,
@@ -15,6 +17,8 @@ class ChecklistItemTile extends StatelessWidget {
 
   final ChecklistItem item;
   final VoidCallback onToggle;
+  final bool canToggle;
+  final bool canEdit;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onAttachPhoto;
@@ -47,7 +51,7 @@ class ChecklistItemTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onToggle,
+        onTap: canToggle ? onToggle : null,
         borderRadius: BorderRadius.circular(16),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
@@ -70,14 +74,16 @@ class ChecklistItemTile extends StatelessWidget {
                 iconSize: 26,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                onPressed: onToggle,
+                onPressed: canToggle ? onToggle : null,
                 icon: Icon(
                   isPacked
                       ? Icons.check_circle_rounded
                       : Icons.radio_button_unchecked_rounded,
                   color: isPacked
-                      ? Colors.teal
-                      : colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      ? colorScheme.primary
+                      : canToggle
+                      ? colorScheme.onSurfaceVariant.withValues(alpha: 0.7)
+                      : colorScheme.outlineVariant,
                 ),
               ),
               const SizedBox(width: 12),
@@ -160,6 +166,53 @@ class ChecklistItemTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
+                    if (item.assigneeLabel != null ||
+                        (item.isPacked && item.completedByName != null)) ...[
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          if (item.assigneeLabel != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.tertiaryContainer,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                item.assignedTravelerId != null
+                                    ? 'For ${item.assigneeLabel} (Managed)'
+                                    : 'Assigned: ${item.assigneeLabel}',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onTertiaryContainer,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          if (item.isPacked && item.completedByName != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Packed by ${item.completedByName}',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -196,59 +249,63 @@ class ChecklistItemTile extends StatelessWidget {
                 ),
               ],
 
-              // Context Menu
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert_rounded,
-                  size: 20,
-                  color: colorScheme.onSurfaceVariant,
+              // Context Menu (only for editors/organizers)
+              if (canEdit)
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    size: 20,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'edit') onEdit?.call();
+                    if (value == 'photo') onAttachPhoto?.call();
+                    if (value == 'delete') onDelete?.call();
+                  },
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, size: 18),
+                          SizedBox(width: 8),
+                          Text('Edit'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'photo',
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_a_photo_outlined, size: 18),
+                          SizedBox(width: 8),
+                          Text('Attach Photo'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline_rounded,
+                            size: 18,
+                            color: colorScheme.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete',
+                            style: TextStyle(color: colorScheme.error),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                onSelected: (value) {
-                  if (value == 'edit') onEdit?.call();
-                  if (value == 'photo') onAttachPhoto?.call();
-                  if (value == 'delete') onDelete?.call();
-                },
-                itemBuilder: (ctx) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 18),
-                        SizedBox(width: 8),
-                        Text('Edit'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'photo',
-                    child: Row(
-                      children: [
-                        Icon(Icons.add_a_photo_outlined, size: 18),
-                        SizedBox(width: 8),
-                        Text('Attach Photo'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline_rounded,
-                          size: 18,
-                          color: Colors.red,
-                        ),
-                        SizedBox(width: 8),
-                        Text('Delete', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),

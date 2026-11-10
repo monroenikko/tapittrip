@@ -16,6 +16,7 @@ use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Services\Checklists\ChecklistService;
 use App\Services\Media\MediaService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -59,6 +60,7 @@ final class ChecklistItemController extends Controller
         $updated = $this->checklistService->updateItem(
             $item,
             UpdateChecklistItemData::from($request->validated()),
+            $request->user(),
         );
 
         return (new ChecklistItemResource($updated))
@@ -67,14 +69,36 @@ final class ChecklistItemController extends Controller
 
     /**
      * Toggle the packed status of the specified checklist item.
+     *
+     * Viewers may toggle completion only on items explicitly assigned to them (TC-6.2).
      */
     public function toggle(
         Request $request,
         ChecklistItem $item,
     ): JsonResponse {
-        Gate::authorize('update', $item->trip);
+        $trip = $item->trip;
+        $user = $request->user();
+        if ($trip === null || $user === null || ! $trip->hasMember($user)) {
+            throw new AuthorizationException('You are not a member of this trip.');
+        }
 
-        $toggled = $this->checklistService->toggleItem($item);
+        $role = $trip->memberRole($user);
+        $canToggle = in_array($role, ['owner', 'editor'], true)
+            || ($role === 'viewer' && $item->assigned_user_id === $user->id);
+
+        if (! $canToggle) {
+            throw new AuthorizationException('Viewers can only complete checklist items assigned to them.');
+        }
+
+        $validated = $request->validate([
+            'base_version' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $toggled = $this->checklistService->toggleItem(
+            $item,
+            $user,
+            isset($validated['base_version']) ? (int) $validated['base_version'] : null,
+        );
 
         return (new ChecklistItemResource($toggled))
             ->response();

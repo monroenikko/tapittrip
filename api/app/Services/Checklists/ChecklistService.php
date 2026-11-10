@@ -7,13 +7,17 @@ namespace App\Services\Checklists;
 use App\DTOs\Checklists\CreateChecklistData;
 use App\DTOs\Checklists\CreateChecklistItemData;
 use App\DTOs\Checklists\UpdateChecklistItemData;
+use App\Exceptions\VersionConflictException;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\Trip;
+use App\Models\TripTraveler;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 final class ChecklistService
@@ -46,7 +50,7 @@ final class ChecklistService
     public function getTripChecklists(Trip $trip): Collection
     {
         return $trip->checklists()
-            ->with(['items'])
+            ->with(['items.assignedUser', 'items.assignedTraveler', 'items.completedBy'])
             ->get();
     }
 
@@ -136,10 +140,15 @@ final class ChecklistService
      */
     public function createItem(Checklist $checklist, CreateChecklistItemData $data): ChecklistItem
     {
+        $trip = $checklist->trip;
+        $this->validateAssignee($trip, $data->assignedUserId, $data->assignedTravelerId);
+
         /** @var ChecklistItem $item */
         $item = ChecklistItem::query()->create([
             'checklist_id' => $checklist->id,
             'trip_id' => $checklist->trip_id,
+            'assigned_user_id' => $data->assignedUserId,
+            'assigned_traveler_id' => $data->assignedTravelerId,
             'title' => $data->title,
             'category' => $data->category,
             'is_packed' => false,
@@ -148,65 +157,189 @@ final class ChecklistService
             'photo_url' => null,
             'sort_order' => $checklist->items()->count(),
             'packed_at' => null,
+            'completed_by_user_id' => null,
             'version' => 1,
         ]);
 
-        return $item;
+        return $item->load(['assignedUser', 'assignedTraveler', 'completedBy']);
     }
 
     /**
      * Update an existing checklist item.
+     *
+     * @throws VersionConflictException
      */
-    public function updateItem(ChecklistItem $item, UpdateChecklistItemData $data): ChecklistItem
-    {
-        $attributes = [];
+    public function updateItem(
+        ChecklistItem $item,
+        UpdateChecklistItemData $data,
+        ?User $actor = null,
+    ): ChecklistItem {
+        $trip = $item->trip;
+        $this->validateAssignee($trip, $data->assignedUserId, $data->assignedTravelerId);
 
-        if ($data->title !== null) {
-            $attributes['title'] = $data->title;
-        }
+        return DB::transaction(function () use ($item, $data, $actor): ChecklistItem {
+            /** @var ChecklistItem $locked */
+            $locked = ChecklistItem::query()
+                ->whereKey($item->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($data->category !== null) {
-            $attributes['category'] = $data->category;
-        }
+            if ($data->baseVersion !== null && $data->baseVersion !== $locked->version) {
+                throw new VersionConflictException(
+                    serverVersion: (int) $locked->version,
+                    serverPayload: $this->serializeConflictPayload($locked),
+                );
+            }
 
-        if ($data->quantity !== null) {
-            $attributes['quantity'] = $data->quantity;
-        }
+            $attributes = [];
 
-        if ($data->notes !== null) {
-            $attributes['notes'] = $data->notes;
-        }
+            if ($data->title !== null) {
+                $attributes['title'] = $data->title;
+            }
 
-        if ($data->sortOrder !== null) {
-            $attributes['sort_order'] = $data->sortOrder;
-        }
+            if ($data->category !== null) {
+                $attributes['category'] = $data->category;
+            }
 
-        if ($data->isPacked !== null) {
-            $attributes['is_packed'] = $data->isPacked;
-            $attributes['packed_at'] = $data->isPacked ? now() : null;
-        }
+            if ($data->quantity !== null) {
+                $attributes['quantity'] = $data->quantity;
+            }
 
-        $attributes['version'] = $item->version + 1;
+            if ($data->notes !== null) {
+                $attributes['notes'] = $data->notes;
+            }
 
-        $item->update($attributes);
+            if ($data->sortOrder !== null) {
+                $attributes['sort_order'] = $data->sortOrder;
+            }
 
-        return $item->fresh(['checklist', 'trip']);
+            if ($data->assignedUserId !== null) {
+                $attributes['assigned_user_id'] = $data->assignedUserId;
+                $attributes['assigned_traveler_id'] = null;
+            } elseif ($data->assignedTravelerId !== null) {
+                $attributes['assigned_traveler_id'] = $data->assignedTravelerId;
+                $attributes['assigned_user_id'] = null;
+            } else {
+                if ($data->clearAssignedUser) {
+                    $attributes['assigned_user_id'] = null;
+                }
+                if ($data->clearAssignedTraveler) {
+                    $attributes['assigned_traveler_id'] = null;
+                }
+            }
+
+            if ($data->isPacked !== null) {
+                $attributes['is_packed'] = $data->isPacked;
+                $attributes['packed_at'] = $data->isPacked ? now() : null;
+                $attributes['completed_by_user_id'] = $data->isPacked ? $actor?->id : null;
+            }
+
+            if ($attributes !== []) {
+                $attributes['version'] = $locked->version + 1;
+                $locked->update($attributes);
+            }
+
+            return $locked->fresh([
+                'checklist',
+                'trip',
+                'assignedUser',
+                'assignedTraveler',
+                'completedBy',
+            ]) ?? $locked;
+        });
     }
 
     /**
      * Toggle the packed state of a checklist item.
+     *
+     * @throws VersionConflictException
      */
-    public function toggleItem(ChecklistItem $item): ChecklistItem
+    public function toggleItem(
+        ChecklistItem $item,
+        ?User $actor = null,
+        ?int $baseVersion = null,
+    ): ChecklistItem {
+        return DB::transaction(function () use ($item, $actor, $baseVersion): ChecklistItem {
+            /** @var ChecklistItem $locked */
+            $locked = ChecklistItem::query()
+                ->whereKey($item->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($baseVersion !== null && $baseVersion !== $locked->version) {
+                throw new VersionConflictException(
+                    serverVersion: (int) $locked->version,
+                    serverPayload: $this->serializeConflictPayload($locked),
+                );
+            }
+
+            $newPacked = ! $locked->is_packed;
+
+            $locked->update([
+                'is_packed' => $newPacked,
+                'packed_at' => $newPacked ? now() : null,
+                'completed_by_user_id' => $newPacked ? $actor?->id : null,
+                'version' => $locked->version + 1,
+            ]);
+
+            return $locked->fresh([
+                'checklist',
+                'trip',
+                'assignedUser',
+                'assignedTraveler',
+                'completedBy',
+            ]) ?? $locked;
+        });
+    }
+
+    private function validateAssignee(
+        Trip $trip,
+        ?string $assignedUserId,
+        ?string $assignedTravelerId,
+    ): void {
+        if ($assignedUserId !== null && $assignedTravelerId !== null) {
+            throw ValidationException::withMessages([
+                'assigned_user_id' => ['Assign a task to either a circle member or a managed traveler, not both.'],
+            ]);
+        }
+
+        if ($assignedUserId !== null && ! $trip->hasMember($assignedUserId)) {
+            throw ValidationException::withMessages([
+                'assigned_user_id' => ['The assigned user must be an accepted member of this trip circle.'],
+            ]);
+        }
+
+        if ($assignedTravelerId !== null) {
+            $travelerExists = TripTraveler::query()
+                ->where('id', $assignedTravelerId)
+                ->where('trip_id', $trip->id)
+                ->exists();
+
+            if (! $travelerExists) {
+                throw ValidationException::withMessages([
+                    'assigned_traveler_id' => ['The assigned managed traveler does not belong to this trip circle.'],
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeConflictPayload(ChecklistItem $item): array
     {
-        $newPacked = ! $item->is_packed;
-
-        $item->update([
-            'is_packed' => $newPacked,
-            'packed_at' => $newPacked ? now() : null,
-            'version' => $item->version + 1,
-        ]);
-
-        return $item->fresh(['checklist', 'trip']);
+        return [
+            'id' => $item->id,
+            'trip_id' => $item->trip_id,
+            'checklist_id' => $item->checklist_id,
+            'title' => $item->title,
+            'is_packed' => (bool) $item->is_packed,
+            'assigned_user_id' => $item->assigned_user_id,
+            'assigned_traveler_id' => $item->assigned_traveler_id,
+            'completed_by_user_id' => $item->completed_by_user_id,
+            'notes' => $item->notes,
+            'version' => (int) $item->version,
+        ];
     }
 
     public function toggleItemPacked(ChecklistItem $item): ChecklistItem

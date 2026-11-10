@@ -6,6 +6,7 @@ import '../../domain/models/activity_event.dart';
 import '../../domain/models/circle_member.dart';
 import '../../domain/models/trip_announcement.dart';
 import '../../domain/models/trip_invitation.dart';
+import '../../domain/models/trip_traveler.dart';
 
 class CircleMembersNotifier extends AsyncNotifier<List<CircleMember>> {
   CircleMembersNotifier(this.tripId);
@@ -416,3 +417,75 @@ final pendingInboxCountProvider = Provider<int>((ref) {
   final inbox = ref.watch(circleInboxProvider).asData?.value;
   return inbox?.totalPendingCount ?? 0;
 });
+
+class TripTravelersNotifier extends AsyncNotifier<List<TripTraveler>> {
+  TripTravelersNotifier(this.tripId);
+  final String tripId;
+
+  @override
+  Future<List<TripTraveler>> build() async {
+    final repo = ref.watch(tripCircleRepositoryProvider);
+    return repo.getTravelers(tripId);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() {
+      final repo = ref.read(tripCircleRepositoryProvider);
+      return repo.getTravelers(tripId);
+    });
+  }
+
+  Future<TripTraveler> createTraveler({
+    required String displayName,
+    String travelerCategory = 'child',
+    String? restrictedNotes,
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final created = await repo.createTraveler(
+      tripId,
+      displayName: displayName,
+      travelerCategory: travelerCategory,
+      restrictedNotes: restrictedNotes,
+    );
+    final current = state.asData?.value ?? [];
+    state = AsyncData([...current, created]);
+    return created;
+  }
+
+  Future<TripTraveler> updateTraveler(
+    String travelerId, {
+    String? displayName,
+    String? travelerCategory,
+    String? restrictedNotes,
+    int? baseVersion,
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final updated = await repo.updateTraveler(
+      travelerId,
+      displayName: displayName,
+      travelerCategory: travelerCategory,
+      restrictedNotes: restrictedNotes,
+      baseVersion: baseVersion,
+    );
+    final current = state.asData?.value ?? [];
+    state = AsyncData(
+      current.map((t) => t.id == travelerId ? updated : t).toList(),
+    );
+    return updated;
+  }
+
+  Future<void> deleteTraveler(String travelerId) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    await repo.deleteTraveler(travelerId);
+    final current = state.asData?.value ?? [];
+    state = AsyncData(current.where((t) => t.id != travelerId).toList());
+  }
+}
+
+final tripTravelersProvider =
+    AsyncNotifierProvider.family<
+      TripTravelersNotifier,
+      List<TripTraveler>,
+      String
+    >((tripId) => TripTravelersNotifier(tripId));

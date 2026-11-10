@@ -1,39 +1,62 @@
 import 'package:flutter/material.dart';
 
+import '../../../circles/domain/models/circle_member.dart';
+import '../../../circles/domain/models/trip_traveler.dart';
 import '../../domain/models/checklist_item.dart';
+
+typedef ChecklistItemSubmitCallback = Future<void> Function({
+  required String title,
+  required String category,
+  required int quantity,
+  String? notes,
+  String? photoUrl,
+});
+
+typedef ChecklistItemAssignedSubmitCallback = Future<void> Function({
+  required String title,
+  required String category,
+  required int quantity,
+  String? notes,
+  String? photoUrl,
+  String? assignedUserId,
+  String? assignedTravelerId,
+  bool clearAssignee,
+});
 
 class AddChecklistItemBottomSheet extends StatefulWidget {
   const AddChecklistItemBottomSheet({
     super.key,
     required this.checklistId,
     this.initialItem,
-    required this.onSubmit,
-  });
+    this.members = const [],
+    this.travelers = const [],
+    this.onSubmit,
+    this.onSubmitWithAssignee,
+  }) : assert(
+         onSubmit != null || onSubmitWithAssignee != null,
+         'Either onSubmit or onSubmitWithAssignee must be provided.',
+       );
 
   final String checklistId;
   final ChecklistItem? initialItem;
-  final Future<void> Function({
-    required String title,
-    required String category,
-    required int quantity,
-    String? notes,
-    String? photoUrl,
-  })
-  onSubmit;
+  final List<CircleMember> members;
+  final List<TripTraveler> travelers;
+  final ChecklistItemSubmitCallback? onSubmit;
+  final ChecklistItemAssignedSubmitCallback? onSubmitWithAssignee;
 
   static Future<void> show(
     BuildContext context, {
     required String checklistId,
     ChecklistItem? initialItem,
-    required Future<void> Function({
-      required String title,
-      required String category,
-      required int quantity,
-      String? notes,
-      String? photoUrl,
-    })
-    onSubmit,
+    List<CircleMember> members = const [],
+    List<TripTraveler> travelers = const [],
+    ChecklistItemSubmitCallback? onSubmit,
+    ChecklistItemAssignedSubmitCallback? onSubmitWithAssignee,
   }) {
+    assert(
+      onSubmit != null || onSubmitWithAssignee != null,
+      'Either onSubmit or onSubmitWithAssignee must be provided.',
+    );
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -43,7 +66,10 @@ class AddChecklistItemBottomSheet extends StatefulWidget {
       builder: (ctx) => AddChecklistItemBottomSheet(
         checklistId: checklistId,
         initialItem: initialItem,
+        members: members,
+        travelers: travelers,
         onSubmit: onSubmit,
+        onSubmitWithAssignee: onSubmitWithAssignee,
       ),
     );
   }
@@ -62,6 +88,7 @@ class _AddChecklistItemBottomSheetState
 
   late String _selectedCategory;
   late int _quantity;
+  String? _selectedAssigneeKey;
   bool _isSubmitting = false;
 
   static const List<Map<String, dynamic>> _categories = [
@@ -88,6 +115,13 @@ class _AddChecklistItemBottomSheetState
     );
     _selectedCategory = widget.initialItem?.category ?? 'other';
     _quantity = widget.initialItem?.quantity ?? 1;
+    final assignedUserId = widget.initialItem?.assignedUserId;
+    final assignedTravelerId = widget.initialItem?.assignedTravelerId;
+    if (assignedUserId != null && assignedUserId.isNotEmpty) {
+      _selectedAssigneeKey = 'member:$assignedUserId';
+    } else if (assignedTravelerId != null && assignedTravelerId.isNotEmpty) {
+      _selectedAssigneeKey = 'traveler:$assignedTravelerId';
+    }
   }
 
   @override
@@ -103,17 +137,52 @@ class _AddChecklistItemBottomSheetState
 
     setState(() => _isSubmitting = true);
     try {
-      await widget.onSubmit(
-        title: _titleController.text.trim(),
-        category: _selectedCategory,
-        quantity: _quantity,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-        photoUrl: _photoUrlController.text.trim().isEmpty
-            ? null
-            : _photoUrlController.text.trim(),
-      );
+      final hadAssignee =
+          (widget.initialItem?.assignedUserId?.isNotEmpty ?? false) ||
+          (widget.initialItem?.assignedTravelerId?.isNotEmpty ?? false);
+      String? assignedUserId;
+      String? assignedTravelerId;
+      var clearAssignee = false;
+      if (_selectedAssigneeKey != null) {
+        if (_selectedAssigneeKey!.startsWith('member:')) {
+          assignedUserId = _selectedAssigneeKey!.substring('member:'.length);
+        } else if (_selectedAssigneeKey!.startsWith('traveler:')) {
+          assignedTravelerId = _selectedAssigneeKey!.substring(
+            'traveler:'.length,
+          );
+        }
+      } else if (hadAssignee) {
+        clearAssignee = true;
+      }
+
+      final title = _titleController.text.trim();
+      final notes = _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim();
+      final photoUrl = _photoUrlController.text.trim().isEmpty
+          ? null
+          : _photoUrlController.text.trim();
+
+      if (widget.onSubmitWithAssignee != null) {
+        await widget.onSubmitWithAssignee!(
+          title: title,
+          category: _selectedCategory,
+          quantity: _quantity,
+          notes: notes,
+          photoUrl: photoUrl,
+          assignedUserId: assignedUserId,
+          assignedTravelerId: assignedTravelerId,
+          clearAssignee: clearAssignee,
+        );
+      } else {
+        await widget.onSubmit!(
+          title: title,
+          category: _selectedCategory,
+          quantity: _quantity,
+          notes: notes,
+          photoUrl: photoUrl,
+        );
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -123,6 +192,77 @@ class _AddChecklistItemBottomSheetState
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Widget _buildAssigneeDropdown() {
+    final seenKeys = <String>{};
+    final items = <DropdownMenuItem<String?>>[
+      const DropdownMenuItem<String?>(
+        value: null,
+        child: Text('Unassigned (Anyone)'),
+      ),
+    ];
+
+    for (final member in widget.members) {
+      if (member.invitationStatus != 'accepted' || member.userId.isEmpty) {
+        continue;
+      }
+      final key = 'member:${member.userId}';
+      if (seenKeys.add(key)) {
+        items.add(
+          DropdownMenuItem<String?>(
+            value: key,
+            child: Text(
+              '${member.displayName} (${member.roleLabel})',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        );
+      }
+    }
+
+    for (final traveler in widget.travelers) {
+      if (traveler.id.isEmpty) continue;
+      final key = 'traveler:${traveler.id}';
+      if (seenKeys.add(key)) {
+        items.add(
+          DropdownMenuItem<String?>(
+            value: key,
+            child: Text(
+              '${traveler.displayName} (${traveler.categoryLabel})',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        );
+      }
+    }
+
+    if (_selectedAssigneeKey != null &&
+        !seenKeys.contains(_selectedAssigneeKey)) {
+      items.add(
+        DropdownMenuItem<String?>(
+          value: _selectedAssigneeKey,
+          child: Text(
+            widget.initialItem?.assigneeLabel ?? 'Assigned traveler',
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<String?>(
+      initialValue: _selectedAssigneeKey,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: 'Assign to (optional)',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        prefixIcon: const Icon(Icons.person_outline_rounded),
+      ),
+      items: items,
+      onChanged: _isSubmitting
+          ? null
+          : (value) => setState(() => _selectedAssigneeKey = value),
+    );
   }
 
   @override
@@ -286,6 +426,12 @@ class _AddChecklistItemBottomSheetState
                   prefixIcon: const Icon(Icons.add_photo_alternate_outlined),
                 ),
               ),
+              if (widget.members.isNotEmpty ||
+                  widget.travelers.isNotEmpty ||
+                  _selectedAssigneeKey != null) ...[
+                const SizedBox(height: 16),
+                _buildAssigneeDropdown(),
+              ],
               const SizedBox(height: 24),
 
               // Submit Button

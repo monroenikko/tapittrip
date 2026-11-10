@@ -289,4 +289,15 @@ final class Trip extends Model
             ->orderByDesc('is_pinned')
             ->orderByDesc('created_at');
     }
+
+    /**
+     * Minimal managed traveler profiles associated with this trip circle.
+     *
+     * @return HasMany<TripTraveler, $this>
+     */
+    public function travelers(): HasMany
+    {
+        return $this->hasMany(TripTraveler::class)
+            ->orderBy('created_at');
+    }
 }

@@ -1,13 +1,13 @@
 # Trip Circles — Travel Together
 
-- Milestone: `M10 (Trip Circles Slice 1 & Slice 2)`
-- Status: `implemented` (Shareable Invite Links, Targeted Friend Code Invites, Circle Inbox, Member Roles, Two-Party Ownership Transfer & Shared Activity Feed UI)
+- Milestone: `M10 (Trip Circles Slices 1–4)`
+- Status: `implemented` (Shareable Invite Links, Targeted Friend Code Invites, Circle Inbox, Ownership Transfer, Conflict Resolution, Announcements, Managed Traveler Profiles & Collaborative Checklist Assignments)
 - Owner: `engineering`
 - Last verified: `2026-11-10`
 
 ## Purpose and traveler outcome
 
-Enables trip organizers to invite friends, partners, and family into a single shared trip workspace (`trip_members`) via expiring, bounded-use invite links or privacy-safe Traveler Friend Codes (`TRP-XXXXXX`), review incoming invitations and organizer handovers inside an in-app Circle Inbox, manage member roles (`owner`, `editor`, `viewer`) and ownership transfer safely, and follow shared trip moments chronologically via the Circle Activity Feed.
+Enables trip organizers to invite friends, partners, and family into a single shared trip workspace (`trip_members`) via expiring, bounded-use invite links or privacy-safe Traveler Friend Codes (`TRP-XXXXXX`), review incoming invitations and organizer handovers inside an in-app Circle Inbox, manage member roles (`owner`, `editor`, `viewer`) and ownership transfer safely, follow shared trip moments chronologically via the Circle Activity Feed, add minimal managed traveler profiles (children/dependents without accounts), and collaborate on packing checklists with clear responsibility and offline resilience.
 
 ## How it works
 
@@ -35,6 +35,13 @@ Enables trip organizers to invite friends, partners, and family into a single sh
    - `TripCirclePage` provides an **Activity Feed** tab and **Members & Invites** tab supporting both Share Links and Friend Code direct invites, pending handover banner cancellation, member role updates, ownership transfer initiation, and leave/removal flows.
    - `CircleInboxPage` displays incoming invitations (with decline-and-block), ownership handover offers, offline state guards, and actionable empty state.
    - `ProfilePage` lets travelers view, copy, rotate, or disable their `Friend Code`; `JoinTripSheet` supports invite link/code lookup and joining.
+7. **Managed Traveler Profiles (`TC-6.3`, `GET/POST /api/v1/trips/{trip}/travelers`, `PATCH/DELETE /api/v1/travelers/{traveler}`)**:
+   - Organizers and editors can add lightweight companion/dependent profiles (`child`, `infant`, `adult`, `companion`) without user accounts, credentials, location sharing, or document sharing.
+   - Optional `restricted_notes` are encrypted at rest via Laravel `encrypted` casting and returned (`restricted_notes`, `can_edit`, `can_delete`) solely to the `managing_user_id`; all other members receive `restricted_notes: null` and `403` on direct edit/delete attempts. Removing the managing adult clears dependent checklist assignments and soft-deletes their managed travelers atomically.
+8. **Collaborative Checklist Assignments & Offline Completion (`TC-6.1`, `TC-6.2`)**:
+   - Checklist items accept an exclusive assignee (`assigned_user_id` for accepted trip members or `assigned_traveler_id` for single-trip managed travelers, never both), completion attribution (`completed_by_user_id`, `completed_by_name`), and `base_version` optimistic concurrency (`409 version_conflict`).
+   - `viewer` members can toggle pack status strictly on items assigned to them (`assigned_user_id === viewer->id`, via `POST /checklist-items/{item}/toggle` or `is_packed`-only `sync/push` updates) without gaining edit/delete access or altering itinerary/visit state.
+   - Mobile `ChecklistsView`, `AddChecklistItemBottomSheet`, `ChecklistItemTile`, and `ManagedTravelersSection` provide assignee dropdowns/filters, manager-scoped private traveler notes, viewer completion-only guards, durable `OutboxStorage` offline queues across app restart, and `403` cache purging (`cached_checklists_{tripId}`, `cached_travelers_{tripId}`).
 
 ## Architecture and contracts
 
@@ -42,15 +49,17 @@ Enables trip organizers to invite friends, partners, and family into a single sh
   - [`docs/decisions/0004-trip-circles-invitations-and-membership.md`](../decisions/0004-trip-circles-invitations-and-membership.md)
   - [`docs/decisions/0005-trip-circles-targeted-invites-and-ownership-transfer.md`](../decisions/0005-trip-circles-targeted-invites-and-ownership-transfer.md)
   - [`docs/decisions/0006-trip-circles-sync-conflicts-and-announcements.md`](../decisions/0006-trip-circles-sync-conflicts-and-announcements.md)
-- OpenAPI: [`docs/api/openapi.yaml`](../api/openapi.yaml) (`listTripCircleMembers`, `updateTripCircleMemberRole`, `removeOrLeaveTripCircleMember`, `listTripInvitations`, `createTripInvitation`, `createDirectTripInvitation`, `revokeTripInvitation`, `previewTripInvitation`, `acceptTripInvitation`, `listIncomingInvitations`, `acceptDirectInvitation`, `declineDirectInvitation`, `getPendingOwnershipTransfer`, `initiateOwnershipTransfer`, `cancelOwnershipTransfer`, `listIncomingOwnershipTransfers`, `acceptOwnershipTransfer`, `declineOwnershipTransfer`, `regenerateFriendCode`, `getTripActivityFeed`, `listTripAnnouncements`, `createTripAnnouncement`, `updateTripAnnouncement`, `deleteTripAnnouncement`, `listUserNotifications`, `markUserNotificationRead`, `409 version_conflict` on itinerary/reorder/stays/announcements)
+  - [`docs/decisions/0007-trip-circles-managed-travelers-and-checklists.md`](../decisions/0007-trip-circles-managed-travelers-and-checklists.md)
+- OpenAPI: [`docs/api/openapi.yaml`](../api/openapi.yaml) (`listTripCircleMembers`, `updateTripCircleMemberRole`, `removeOrLeaveTripCircleMember`, `listTripInvitations`, `createTripInvitation`, `createDirectTripInvitation`, `revokeTripInvitation`, `previewTripInvitation`, `acceptTripInvitation`, `listIncomingInvitations`, `acceptDirectInvitation`, `declineDirectInvitation`, `getPendingOwnershipTransfer`, `initiateOwnershipTransfer`, `cancelOwnershipTransfer`, `listIncomingOwnershipTransfers`, `acceptOwnershipTransfer`, `declineOwnershipTransfer`, `regenerateFriendCode`, `getTripActivityFeed`, `listTripAnnouncements`, `createTripAnnouncement`, `updateTripAnnouncement`, `deleteTripAnnouncement`, `listTripTravelers`, `createTripTraveler`, `updateTripTraveler`, `deleteTripTraveler`, `listUserNotifications`, `markUserNotificationRead`, checklist assignee/attribution fields, and `409 version_conflict` on itinerary/reorder/stays/announcements/checklists/travelers)
 - Migrations:
   - [`2026_11_10_030000_create_trip_invitations_table.php`](../../api/database/migrations/2026_11_10_030000_create_trip_invitations_table.php)
   - [`2026_11_10_040000_add_trip_circles_slice2_tables.php`](../../api/database/migrations/2026_11_10_040000_add_trip_circles_slice2_tables.php)
   - [`2026_11_10_050000_add_trip_circles_slice3_tables.php`](../../api/database/migrations/2026_11_10_050000_add_trip_circles_slice3_tables.php)
+  - [`2026_11_10_060000_add_trip_circles_slice4_tables.php`](../../api/database/migrations/2026_11_10_060000_add_trip_circles_slice4_tables.php)
 
 ## Known limitations & next slices
 
-- Managed child/companion profiles without personal accounts (`TC-6`) and live opt-in location sharing (`TC-9`) remain deferred to future approved slices.
+- Shared group expense splits/balances (`TC-7` / Slice 5) and live opt-in location sharing (`TC-9`) remain deferred to future approved slices.
 - OS universal links (`tapittrip.com` or custom app-link hosts) are intentionally omitted until domain ownership is approved; shareable invite codes work directly in-app and respect `INVITE_LINK_BASE_URL` when configured.
 
 ## Testing and verification
@@ -58,7 +67,9 @@ Enables trip organizers to invite friends, partners, and family into a single sh
 - Backend Feature Tests:
   - [`api/tests/Feature/TripCircleTest.php`](../../api/tests/Feature/TripCircleTest.php) — invite links, friend codes, ownership handovers, account orphan guard, and sync/journal role isolation.
   - [`api/tests/Feature/TripCollaborationSlice3Test.php`](../../api/tests/Feature/TripCollaborationSlice3Test.php) — `TC-4` & `TC-5`: multi-editor propagation, idempotent itinerary/stay offline sync + cross-trip isolation, `409 version_conflict` on itinerary/reorder/stays, non-owner stay redaction (`booking_reference`, `phone`, `friends_family` private address), organizer announcements without push devices + edit/retry deduplication, `destination` vs `home` quiet-hours evaluation, automatic reminder rescheduling/cancellation, and removed-member notification cancellation.
+  - [`api/tests/Feature/TripCollaborationSlice4Test.php`](../../api/tests/Feature/TripCollaborationSlice4Test.php) — `TC-6`: exclusive checklist assignments to accepted members and managed travelers, automatic unassignment and cleanup when members or travelers are removed, `viewer` completion-only authorization + offline sync isolation + `409 version_conflict` checks, and `trip_travelers` encrypted/redacted `restricted_notes` lifecycle.
 - Mobile Tests:
   - [`client/test/trip_circle_test.dart`](../../client/test/trip_circle_test.dart) — model parsing, URL token extraction, 403 cache cleanup, `TripCirclePage`, `CircleInboxPage`, and `JoinTripSheet`.
   - [`client/test/trip_circle_slice3_test.dart`](../../client/test/trip_circle_slice3_test.dart) — offline outbox queueing, `409` conflict recording, multi-conflict selector sheet & `ConflictResolutionDialog`, full per-trip cache + reminder purge isolation, redacted `StayCard`, `CircleAnnouncementsSection`, `CircleNoticesSection`, and `NotificationPreferencesPage` announcement/timezone controls.
+  - [`client/test/trip_circle_slice4_test.dart`](../../client/test/trip_circle_slice4_test.dart) — `TC-6` checklist assignment picker & filters, `viewer` completion-only UI & API guard, offline checklist completion restart persistence in `OutboxStorage`/cache, `409` conflict & `403` cache purge, and `ManagedTravelersSection` privacy redaction & creation flow.
 

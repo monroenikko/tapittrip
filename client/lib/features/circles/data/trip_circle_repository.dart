@@ -11,6 +11,7 @@ import '../domain/models/activity_event.dart';
 import '../domain/models/circle_member.dart';
 import '../domain/models/trip_announcement.dart';
 import '../domain/models/trip_invitation.dart';
+import '../domain/models/trip_traveler.dart';
 
 class TripCircleRepository {
   TripCircleRepository({required this.apiClient, FlutterSecureStorage? storage})
@@ -83,6 +84,7 @@ class TripCircleRepository {
       'cached_circle_members_',
       'cached_activity_feed_',
       'cached_announcements_',
+      'cached_travelers_',
       'cached_journal_',
       'cached_recap_',
       'cached_today_',
@@ -582,6 +584,83 @@ class TripCircleRepository {
 
   Future<void> deleteAnnouncement(String announcementId) async {
     await apiClient.delete('/announcements/$announcementId');
+  }
+
+  String _travelersCacheKey(String tripId) => 'cached_travelers_$tripId';
+
+  /// Fetch minimal managed traveler profiles for a trip circle (TC-6.3).
+  Future<List<TripTraveler>> getTravelers(String tripId) async {
+    try {
+      final response = await apiClient.get('/trips/$tripId/travelers');
+      final list = _extractList(response);
+
+      await _storage.write(
+        key: _travelersCacheKey(tripId),
+        value: jsonEncode(list),
+      );
+
+      return list
+          .whereType<Map>()
+          .map((e) => TripTraveler.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (e) {
+      if (_isRevokedOrForbidden(e)) {
+        await purgeTripCircleCaches(tripId);
+        rethrow;
+      }
+      final cached = await _storage.read(key: _travelersCacheKey(tripId));
+      if (cached != null && cached.isNotEmpty) {
+        final raw = jsonDecode(cached) as List<dynamic>;
+        return raw
+            .whereType<Map>()
+            .map((e) => TripTraveler.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+      if (e is NetworkException) return [];
+      rethrow;
+    }
+  }
+
+  Future<TripTraveler> createTraveler(
+    String tripId, {
+    required String displayName,
+    String travelerCategory = 'child',
+    String? restrictedNotes,
+  }) async {
+    final response = await apiClient.post(
+      '/trips/$tripId/travelers',
+      data: {
+        'display_name': displayName,
+        'traveler_category': travelerCategory,
+        if (restrictedNotes != null && restrictedNotes.isNotEmpty)
+          'restricted_notes': restrictedNotes,
+      },
+    );
+    return TripTraveler.fromJson(_extractMap(response));
+  }
+
+  Future<TripTraveler> updateTraveler(
+    String travelerId, {
+    String? displayName,
+    String? travelerCategory,
+    String? restrictedNotes,
+    int? baseVersion,
+  }) async {
+    final response = await apiClient.patch(
+      '/travelers/$travelerId',
+      data: {
+        'display_name': ?displayName,
+        'traveler_category': ?travelerCategory,
+        if (restrictedNotes != null)
+          'restricted_notes': restrictedNotes.isEmpty ? null : restrictedNotes,
+        'base_version': ?baseVersion,
+      },
+    );
+    return TripTraveler.fromJson(_extractMap(response));
+  }
+
+  Future<void> deleteTraveler(String travelerId) async {
+    await apiClient.delete('/travelers/$travelerId');
   }
 }
 

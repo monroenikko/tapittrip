@@ -79,7 +79,7 @@ final class ChecklistController extends Controller
     {
         Gate::authorize('view', $checklist->trip);
 
-        return (new ChecklistResource($checklist->load('items')))
+        return (new ChecklistResource($checklist->load(['items.assignedUser', 'items.assignedTraveler', 'items.completedBy'])))
             ->response();
     }
 

@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exceptions.dart';
+import '../../circles/data/trip_circle_repository.dart';
 import '../domain/models/checklist.dart';
 import '../domain/models/checklist_item.dart';
 import '../domain/models/media_attachment.dart';
@@ -36,11 +37,31 @@ class ChecklistRepository {
             .toList();
       }
       return [];
-    } on ApiException {
+    } on ApiException catch (e) {
+      if (e.statusCode == 403 || e.code == 'forbidden') {
+        await TripCircleRepository.purgeAllTripCachesForStorage(
+          storage: _storage,
+          tripId: tripId,
+        );
+        rethrow;
+      }
       return _loadFromCache(tripId);
     } catch (_) {
       return _loadFromCache(tripId);
     }
+  }
+
+  /// Persist updated checklist list to local offline storage cleanly.
+  Future<void> cacheChecklists(
+    String tripId,
+    List<Checklist> checklists,
+  ) async {
+    try {
+      await _storage.write(
+        key: _cacheKey(tripId),
+        value: jsonEncode(checklists.map((c) => c.toJson()).toList()),
+      );
+    } catch (_) {}
   }
 
   Future<List<Checklist>> _loadFromCache(String tripId) async {
@@ -104,6 +125,8 @@ class ChecklistRepository {
     String? notes,
     String? photoUrl,
     int sortOrder = 0,
+    String? assignedUserId,
+    String? assignedTravelerId,
   }) async {
     final payload = {
       'title': title,
@@ -112,6 +135,9 @@ class ChecklistRepository {
       if (notes != null) 'notes': notes,
       if (photoUrl != null) 'photo_url': photoUrl,
       'sort_order': sortOrder,
+      if (assignedUserId != null) 'assigned_user_id': assignedUserId,
+      if (assignedTravelerId != null)
+        'assigned_traveler_id': assignedTravelerId,
     };
 
     final response = await apiClient.post(
@@ -122,11 +148,11 @@ class ChecklistRepository {
     return ChecklistItem.fromJson(response as Map<String, dynamic>);
   }
 
-  /// Toggle an item's packed status.
-  Future<ChecklistItem> toggleItem(String itemId) async {
+  /// Toggle an item's packed status with optional optimistic concurrency version.
+  Future<ChecklistItem> toggleItem(String itemId, {int? baseVersion}) async {
     final response = await apiClient.post(
       '/checklist-items/$itemId/toggle',
-      data: {},
+      data: {if (baseVersion != null) 'base_version': baseVersion},
     );
 
     return ChecklistItem.fromJson(response as Map<String, dynamic>);
@@ -141,6 +167,10 @@ class ChecklistRepository {
     String? notes,
     String? photoUrl,
     bool? isPacked,
+    String? assignedUserId,
+    String? assignedTravelerId,
+    bool clearAssignee = false,
+    int? baseVersion,
   }) async {
     final payload = <String, dynamic>{
       if (title != null) 'title': title,
@@ -149,6 +179,15 @@ class ChecklistRepository {
       if (notes != null) 'notes': notes,
       if (photoUrl != null) 'photo_url': photoUrl,
       if (isPacked != null) 'is_packed': isPacked,
+      if (clearAssignee) ...{
+        'assigned_user_id': null,
+        'assigned_traveler_id': null,
+      } else ...{
+        if (assignedUserId != null) 'assigned_user_id': assignedUserId,
+        if (assignedTravelerId != null)
+          'assigned_traveler_id': assignedTravelerId,
+      },
+      if (baseVersion != null) 'base_version': baseVersion,
     };
 
     final response = await apiClient.patch(

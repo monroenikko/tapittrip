@@ -12,6 +12,7 @@ import '../../domain/models/circle_member.dart';
 import '../../domain/models/trip_invitation.dart';
 import '../providers/trip_circle_provider.dart';
 import '../widgets/circle_announcements_section.dart';
+import '../widgets/managed_travelers_section.dart';
 
 class TripCirclePage extends ConsumerStatefulWidget {
   const TripCirclePage({super.key, required this.tripId});
@@ -308,6 +309,9 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
                 ref.invalidate(tripActivityFeedProvider(widget.tripId));
                 ref
                     .read(tripAnnouncementsProvider(widget.tripId).notifier)
+                    .refresh();
+                ref
+                    .read(tripTravelersProvider(widget.tripId).notifier)
                     .refresh();
                 ref
                     .read(circleMembersProvider(widget.tripId).notifier)
@@ -639,6 +643,11 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
                 isSelf: isSelf,
               );
             }),
+
+            ManagedTravelersSection(
+              tripId: widget.tripId,
+              canManageTravelers: isOrganizer || selfMember?.role == 'editor',
+            ),
 
             if (!isOrganizer && selfMember != null) ...[
               const SizedBox(height: 16),

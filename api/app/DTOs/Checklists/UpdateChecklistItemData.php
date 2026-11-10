@@ -14,6 +14,11 @@ final readonly class UpdateChecklistItemData
         public ?string $notes = null,
         public ?string $photoUrl = null,
         public ?int $sortOrder = null,
+        public ?string $assignedUserId = null,
+        public bool $clearAssignedUser = false,
+        public ?string $assignedTravelerId = null,
+        public bool $clearAssignedTraveler = false,
+        public ?int $baseVersion = null,
     ) {}
 
     /**
@@ -29,6 +34,11 @@ final readonly class UpdateChecklistItemData
             notes: array_key_exists('notes', $data) ? ($data['notes'] !== null ? (string) $data['notes'] : null) : null,
             photoUrl: array_key_exists('photo_url', $data) ? ($data['photo_url'] !== null ? (string) $data['photo_url'] : null) : null,
             sortOrder: isset($data['sort_order']) ? (int) $data['sort_order'] : null,
+            assignedUserId: isset($data['assigned_user_id']) ? (string) $data['assigned_user_id'] : null,
+            clearAssignedUser: array_key_exists('assigned_user_id', $data) && $data['assigned_user_id'] === null,
+            assignedTravelerId: isset($data['assigned_traveler_id']) ? (string) $data['assigned_traveler_id'] : null,
+            clearAssignedTraveler: array_key_exists('assigned_traveler_id', $data) && $data['assigned_traveler_id'] === null,
+            baseVersion: isset($data['base_version']) && $data['base_version'] !== null ? (int) $data['base_version'] : null,
         );
     }
 }

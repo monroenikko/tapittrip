@@ -10,10 +10,12 @@ use App\DTOs\Circles\CreatedDirectInvitationResult;
 use App\DTOs\Circles\CreateDirectInvitationData;
 use App\DTOs\Circles\CreatedTripInvitationResult;
 use App\DTOs\Circles\CreateTripInvitationData;
+use App\Models\ChecklistItem;
 use App\Models\Trip;
 use App\Models\TripInvitation;
 use App\Models\TripMember;
 use App\Models\TripOwnershipTransfer;
+use App\Models\TripTraveler;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Services\Activity\ActivityService;
@@ -135,6 +137,40 @@ final class TripCircleService
 
             app(NotificationService::class)
                 ->cancelMemberTripNotifications($trip, $member->user_id);
+
+            ChecklistItem::query()
+                ->where('trip_id', $trip->id)
+                ->where('assigned_user_id', $member->user_id)
+                ->update([
+                    'assigned_user_id' => null,
+                    'version' => DB::raw('version + 1'),
+                ]);
+
+            $managedTravelerIds = TripTraveler::query()
+                ->where('trip_id', $trip->id)
+                ->where('managing_user_id', $member->user_id)
+                ->pluck('id')
+                ->all();
+
+            if ($managedTravelerIds !== []) {
+                ChecklistItem::query()
+                    ->where('trip_id', $trip->id)
+                    ->whereIn('assigned_traveler_id', $managedTravelerIds)
+                    ->update([
+                        'assigned_traveler_id' => null,
+                        'version' => DB::raw('version + 1'),
+                    ]);
+
+                TripTraveler::query()
+                    ->whereIn('id', $managedTravelerIds)
+                    ->delete();
+            }
+
+            TripTraveler::query()
+                ->where('trip_id', $trip->id)
+                ->where('linked_member_id', $member->id)
+                ->where('managing_user_id', '!=', $member->user_id)
+                ->update(['linked_member_id' => null]);
 
             $member->delete();
         });
