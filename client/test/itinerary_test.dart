@@ -126,7 +126,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Itinerary Day'), findsOneWidget);
+      expect(
+        find.widgetWithText(DropdownButtonFormField<String>, 'Itinerary Day'),
+        findsOneWidget,
+      );
       expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
     });
 

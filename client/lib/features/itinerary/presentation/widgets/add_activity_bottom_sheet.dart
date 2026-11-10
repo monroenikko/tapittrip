@@ -235,6 +235,7 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
                       ),
                       const SizedBox(height: 16),
                     ],
+
                     // Category / Kind Chips
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
