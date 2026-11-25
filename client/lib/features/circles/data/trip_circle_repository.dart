@@ -11,6 +11,7 @@ import '../domain/models/activity_event.dart';
 import '../domain/models/circle_member.dart';
 import '../domain/models/trip_announcement.dart';
 import '../domain/models/trip_invitation.dart';
+import '../domain/models/trip_location_share.dart';
 import '../domain/models/trip_traveler.dart';
 
 class TripCircleRepository {
@@ -94,16 +95,47 @@ class TripCircleRepository {
       'cached_settlements_',
       'cached_checklists_',
       'cached_stays_',
+      'cached_flights_',
+      'cached_documents_',
+      'cached_booking_imports_',
+      'cached_safety_trip_',
+      'cached_phrasebook_trip_',
       'cached_weather_',
       'cached_itinerary_',
       'cached_days_',
       'cached_reminders_',
+      'cached_food_suggestions_',
+      'cached_route_optimization_',
     ];
     for (final prefix in prefixes) {
       try {
         await storage.delete(key: '$prefix$tripId');
       } catch (_) {}
     }
+    try {
+      final allKeys = await storage.readAll();
+      for (final key in allKeys.keys) {
+        if (key.startsWith('cached_weather_${tripId}_') ||
+            key.startsWith('cached_food_suggestions_${tripId}_')) {
+          await storage.delete(key: key);
+        }
+      }
+    } catch (_) {}
+    try {
+      final rawNotices = await storage.read(key: 'cached_user_notifications');
+      if (rawNotices != null && rawNotices.isNotEmpty) {
+        final decoded = jsonDecode(rawNotices);
+        if (decoded is List) {
+          final filtered = decoded
+              .where((item) => item is Map && item['trip_id'] != tripId)
+              .toList();
+          await storage.write(
+            key: 'cached_user_notifications',
+            value: jsonEncode(filtered),
+          );
+        }
+      }
+    } catch (_) {}
     try {
       await LocalNotificationService(storage: storage)
           .cancelRemindersForTrip(tripId);
@@ -661,6 +693,63 @@ class TripCircleRepository {
 
   Future<void> deleteTraveler(String travelerId) async {
     await apiClient.delete('/travelers/$travelerId');
+  }
+
+  Future<TripLocationShare> getLocationShare(String tripId) async {
+    final response = await apiClient.get('/trips/$tripId/location-share');
+    return TripLocationShare.fromJson(_extractMap(response));
+  }
+
+  Future<TripLocationShare> enableLocationShare(
+    String tripId, {
+    int durationMinutes = 60,
+    String audience = 'circle',
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await apiClient.post(
+      '/trips/$tripId/location-share',
+      data: {
+        'enabled': true,
+        'duration_minutes': durationMinutes,
+        'audience': audience,
+        'latitude': latitude,
+        'longitude': longitude,
+      },
+    );
+    return TripLocationShare.fromJson(_extractMap(response));
+  }
+
+  Future<TripLocationShare> disableLocationShare(String tripId) async {
+    final response = await apiClient.patch(
+      '/trips/$tripId/location-share',
+      data: {'enabled': false},
+    );
+    return TripLocationShare.fromJson(_extractMap(response));
+  }
+
+  Future<TripLocationShare> updateLocationCoordinates(
+    String tripId, {
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await apiClient.patch(
+      '/trips/$tripId/location-share',
+      data: {'latitude': latitude, 'longitude': longitude},
+    );
+    return TripLocationShare.fromJson(_extractMap(response));
+  }
+
+  Future<List<TripLocationShare>> getActiveLocationShares(String tripId) async {
+    final response = await apiClient.get('/trips/$tripId/location-shares');
+    final list = _extractList(response);
+    return list
+        .map(
+          (item) => TripLocationShare.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
+        .toList();
   }
 }
 

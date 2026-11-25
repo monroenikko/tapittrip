@@ -8,6 +8,7 @@ class TripReminder {
     required this.title,
     required this.body,
     required this.triggerAtUtc,
+    this.triggerLocalTime,
     required this.timezone,
     this.deliveryChannel = 'local',
     this.status = 'scheduled',
@@ -25,6 +26,7 @@ class TripReminder {
   final String title;
   final String body;
   final DateTime triggerAtUtc;
+  final String? triggerLocalTime;
   final String timezone;
   final String deliveryChannel;
   final String status;
@@ -47,6 +49,7 @@ class TripReminder {
       title: json['title'] as String,
       body: json['body'] as String,
       triggerAtUtc: DateTime.parse(json['trigger_at_utc'] as String),
+      triggerLocalTime: json['trigger_local_time'] as String?,
       timezone: json['timezone'] as String? ?? 'UTC',
       deliveryChannel: json['delivery_channel'] as String? ?? 'local',
       status: json['status'] as String? ?? 'scheduled',
@@ -71,6 +74,7 @@ class TripReminder {
       'title': title,
       'body': body,
       'trigger_at_utc': triggerAtUtc.toIso8601String(),
+      if (triggerLocalTime != null) 'trigger_local_time': triggerLocalTime,
       'timezone': timezone,
       'delivery_channel': deliveryChannel,
       'status': status,

@@ -74,7 +74,7 @@ class TripExpensesNotifier extends AsyncNotifier<List<Expense>> {
 
   Future<void> _recordOutboxOperation(OutboxOperation operation) async {
     final outbox = ref.read(outboxStorageProvider);
-    await outbox.saveOperation(operation);
+    await SyncService.saveWithChainedVersion(outbox, operation);
     await ref.read(syncProvider.notifier).refresh();
   }
 

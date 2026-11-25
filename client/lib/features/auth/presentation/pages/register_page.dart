@@ -186,14 +186,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withValues(
-                          alpha: 0.45,
-                        ),
+                        color: colorScheme.surfaceContainerLowest,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(
-                            alpha: 0.6,
-                          ),
+                          color: colorScheme.outlineVariant,
+                          width: 1,
                         ),
                       ),
                       child: Row(
@@ -262,12 +259,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: colorScheme.primaryContainer.withValues(
-                        alpha: 0.25,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
+                      color: colorScheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: colorScheme.primary.withValues(alpha: 0.35),
+                        color: colorScheme.outlineVariant,
+                        width: 1,
                       ),
                     ),
                     child: Row(

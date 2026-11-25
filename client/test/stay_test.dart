@@ -130,6 +130,12 @@ final sampleTransportOptions = [
     currency: 'USD',
     transfers: 0,
     walkingMeters: 50,
+    boardingLocation: 'DPS Terminal Curbside Taxi Bay',
+    dropoffLocation: 'Hotel Kayon Resort Ubud (Front Lobby)',
+    dropoffAddress: 'Banjar Bresela, Payangan, Ubud, Bali',
+    lastMileWalkMeters: 15,
+    lastMileWalkMinutes: 1,
+    lastMileDirectionsUrl: 'https://maps.google.com/?q=-8.4552,115.2678',
     luggageCapacity: 'Up to 3 large suitcases + stroller',
     accessibilityNotes: 'Step-free trunk loading',
     convenienceScore: 95,
@@ -148,6 +154,12 @@ final sampleTransportOptions = [
     currency: 'USD',
     transfers: 1,
     walkingMeters: 450,
+    boardingLocation: 'DPS Ground Transportation Bus Bay 2',
+    dropoffLocation: 'Ubud Central Shuttle Terminal',
+    dropoffAddress: 'Jl. Raya Ubud, Bali',
+    lastMileWalkMeters: 420,
+    lastMileWalkMinutes: 5,
+    lastMileDirectionsUrl: 'https://www.google.com/maps/dir/?api=1&origin=Ubud+Central+Shuttle+Terminal&destination=-8.4552%2C115.2678&travelmode=walking',
     luggageCapacity: 'Limited rack space for 1 suitcase',
     accessibilityNotes: 'Stairs at transfer stop',
     convenienceScore: 40,
@@ -394,7 +406,11 @@ Phone: +62 361 479 2553
           ProviderScope(
             overrides: [
               transportComparisonProvider(
-                const TransportQueryParams(stayId: 'stay-1', preset: 'heavy'),
+                const TransportQueryParams(
+                  stayId: 'stay-1',
+                  origin: 'Ngurah Rai International Airport (DPS)',
+                  preset: 'heavy',
+                ),
               ).overrideWith((ref) => Future.value(sampleComparisonResult)),
             ],
             child: MaterialApp(
@@ -420,10 +436,127 @@ Phone: +62 361 479 2553
         expect(find.text('Most Convenient'), findsOneWidget);
         expect(find.text('Fastest'), findsOneWidget);
         expect(find.text('Best Value'), findsOneWidget);
+        // Waypoint guidance assertions
+        expect(
+          find.text('Board: DPS Terminal Curbside Taxi Bay'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Drop off: Hotel Kayon Resort Ubud (Front Lobby)'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Drop off: Ubud Central Shuttle Terminal'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('420m walk from station to stay (~5 min)'),
+          findsOneWidget,
+        );
+        expect(find.text('Walk Map'), findsOneWidget);
+
+        // Attribution footer is at the bottom of the list view
+        await tester.scrollUntilVisible(
+          find.textContaining('TapItTrip Transit Adapter'),
+          200,
+          scrollable: find.descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          ),
+        );
         expect(
           find.textContaining('TapItTrip Transit Adapter'),
           findsOneWidget,
         );
+      },
+    );
+
+    testWidgets(
+      'TransportComparisonSheet auto-selects detected airport origin with zero typing and allows switching origin',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1200);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final stationComparisonResult = TransportComparisonResult(
+          verified: true,
+          status: 'verified',
+          message: 'Found options from Ubud Central Shuttle Terminal',
+          origin: 'Ubud Central Shuttle Terminal',
+          destination: 'Hotel Kayon Resort Ubud',
+          googleMapsDirectionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=-8.4552,115.2678',
+          luggagePreset: 'heavy',
+          options: sampleTransportOptions,
+          providerAttribution: 'TapItTrip Transit Adapter',
+          lastRefreshedAt: DateTime.parse('2026-11-06T10:00:00Z'),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              transportComparisonProvider(
+                const TransportQueryParams(
+                  stayId: 'stay-1',
+                  origin: 'Ngurah Rai International Airport (DPS)',
+                  preset: 'heavy',
+                ),
+              ).overrideWith((ref) => Future.value(sampleComparisonResult)),
+              transportComparisonProvider(
+                const TransportQueryParams(
+                  stayId: 'stay-1',
+                  origin: 'Ubud Central Shuttle Terminal',
+                  preset: 'heavy',
+                ),
+              ).overrideWith((ref) => Future.value(stationComparisonResult)),
+            ],
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () =>
+                        TransportComparisonSheet.show(context, sampleStay),
+                    child: const Text('Open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        // Airport chip is selected by default (Zero-typing Arrival Transport)
+        final airportChipFinder = find.widgetWithText(
+          ChoiceChip,
+          '✈️ Ngurah Rai International Airport (DPS)',
+        );
+        expect(airportChipFinder, findsOneWidget);
+        final airportChip = tester.widget<ChoiceChip>(airportChipFinder);
+        expect(airportChip.selected, isTrue);
+
+        // Train station chip is unselected initially
+        final stationChipFinder = find.widgetWithText(
+          ChoiceChip,
+          '🚆 Ubud Central Shuttle Terminal',
+        );
+        expect(stationChipFinder, findsOneWidget);
+        final stationChipInitial = tester.widget<ChoiceChip>(stationChipFinder);
+        expect(stationChipInitial.selected, isFalse);
+
+        // Ensure station chip is scrolled into view horizontally, then tap it
+        await tester.ensureVisible(stationChipFinder);
+        await tester.pumpAndSettle();
+        await tester.tap(stationChipFinder);
+        await tester.pumpAndSettle();
+
+        // Station chip is now selected, airport chip is unselected
+        final stationChipUpdated = tester.widget<ChoiceChip>(stationChipFinder);
+        expect(stationChipUpdated.selected, isTrue);
+        final airportChipUpdated = tester.widget<ChoiceChip>(airportChipFinder);
+        expect(airportChipUpdated.selected, isFalse);
       },
     );
 
@@ -452,7 +585,11 @@ Phone: +62 361 479 2553
         ProviderScope(
           overrides: [
             transportComparisonProvider(
-              const TransportQueryParams(stayId: 'stay-1', preset: 'standard'),
+              const TransportQueryParams(
+                stayId: 'stay-1',
+                origin: 'Ngurah Rai International Airport (DPS)',
+                preset: 'standard',
+              ),
             ).overrideWith((ref) => Future.value(unverifiedResult)),
           ],
           child: MaterialApp(

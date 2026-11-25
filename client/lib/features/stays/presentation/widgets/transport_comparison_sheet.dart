@@ -43,6 +43,20 @@ class _TransportComparisonSheetState
     super.initState();
     _currentProfile =
         widget.stay.luggageProfile ?? LuggageProfile.fromPreset('standard');
+
+    final transit = widget.stay.nearestTransit;
+    if (transit != null) {
+      if (transit.nearestAirportName != null &&
+          transit.nearestAirportName!.trim().isNotEmpty) {
+        _selectedOrigin = transit.nearestAirportCode != null
+            ? '${transit.nearestAirportName} (${transit.nearestAirportCode})'
+            : transit.nearestAirportName;
+      } else if (transit.stationName.trim().isNotEmpty) {
+        _selectedOrigin = transit.stationName;
+      }
+    } else {
+      _selectedOrigin = 'Airport Terminal';
+    }
   }
 
   @override
@@ -896,7 +910,7 @@ class _TransportComparisonSheetState
                             ),
                           ),
                           if (option.lastMileDirectionsUrl != null)
-                            TextButton(
+                            TextButton.icon(
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                                 padding: const EdgeInsets.symmetric(
@@ -906,9 +920,16 @@ class _TransportComparisonSheetState
                               onPressed: () => _launchDirections(
                                 option.lastMileDirectionsUrl!,
                               ),
-                              child: const Text(
+                              icon: const Icon(
+                                Icons.navigation_outlined,
+                                size: 12,
+                              ),
+                              label: const Text(
                                 'Walk Map',
-                                style: TextStyle(fontSize: 11),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                         ],

@@ -12,6 +12,7 @@ import '../../domain/models/circle_member.dart';
 import '../../domain/models/trip_invitation.dart';
 import '../providers/trip_circle_provider.dart';
 import '../widgets/circle_announcements_section.dart';
+import '../widgets/location_sharing_section.dart';
 import '../widgets/managed_travelers_section.dart';
 
 class TripCirclePage extends ConsumerStatefulWidget {
@@ -464,11 +465,9 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: colorScheme.outlineVariant, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,6 +664,8 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
                     _confirmRemoveOrLeave(selfMember, isSelf: true),
               ),
             ],
+
+            LocationSharingSection(tripId: widget.tripId),
 
             if (isOrganizer) ...[
               const SizedBox(height: 24),
@@ -887,7 +888,7 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: colorScheme.surface,
+                color: colorScheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: colorScheme.primary.withValues(alpha: 0.4),
@@ -948,11 +949,9 @@ class _TripCirclePageState extends ConsumerState<TripCirclePage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: colorScheme.outlineVariant, width: 1),
       ),
       child: Row(
         children: [

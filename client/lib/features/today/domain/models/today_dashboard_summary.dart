@@ -1,3 +1,4 @@
+import '../../../flights/domain/models/flight.dart';
 import '../../../itinerary/domain/models/itinerary_item.dart';
 import '../../../stays/domain/models/stay.dart';
 import '../../../trips/domain/models/trip.dart';
@@ -122,6 +123,8 @@ class TodayDashboardSummary {
     this.todayItems = const [],
     this.nextUpcomingItem,
     this.currentStay,
+    this.upcomingFlight,
+    this.flights = const [],
     required this.metrics,
     required this.timezone,
     this.localTime,
@@ -136,6 +139,8 @@ class TodayDashboardSummary {
   final List<ItineraryItem> todayItems;
   final ItineraryItem? nextUpcomingItem;
   final Stay? currentStay;
+  final Flight? upcomingFlight;
+  final List<Flight> flights;
   final DashboardMetrics metrics;
   final String timezone;
   final DateTime? localTime;
@@ -173,6 +178,9 @@ class TodayDashboardSummary {
     final rawTodayItems = json['today_items'] is List
         ? (json['today_items'] as List)
         : const [];
+    final rawFlights = json['flights'] is List
+        ? (json['flights'] as List)
+        : const [];
 
     return TodayDashboardSummary(
       trip: Trip.fromJson(tripJson),
@@ -197,6 +205,15 @@ class TodayDashboardSummary {
               Map<String, dynamic>.from(json['current_stay'] as Map),
             )
           : null,
+      upcomingFlight: json['upcoming_flight'] is Map
+          ? Flight.fromJson(
+              Map<String, dynamic>.from(json['upcoming_flight'] as Map),
+            )
+          : null,
+      flights: rawFlights
+          .whereType<Map>()
+          .map((item) => Flight.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
       metrics: DashboardMetrics.fromJson(metricsJson),
       timezone: json['timezone'] as String? ?? 'UTC',
       localTime: DateTime.tryParse(json['local_time'] as String? ?? ''),
@@ -222,6 +239,8 @@ class TodayDashboardSummary {
       'today_items': todayItems.map((e) => e.toJson()).toList(),
       'next_upcoming_item': nextUpcomingItem?.toJson(),
       'current_stay': currentStay?.toJson(),
+      'upcoming_flight': upcomingFlight?.toJson(),
+      'flights': flights.map((e) => e.toJson()).toList(),
       'metrics': metrics.toJson(),
       'timezone': timezone,
       'local_time': localTime?.toIso8601String(),

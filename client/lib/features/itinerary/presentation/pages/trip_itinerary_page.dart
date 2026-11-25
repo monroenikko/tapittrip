@@ -1,4 +1,7 @@
 import 'package:flutter/foundation.dart';
+
+import '../../../stays/presentation/widgets/stay_recommendations_view.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,13 +19,18 @@ import 'package:tapittrip/features/itinerary/domain/models/ai_itinerary_plan.dar
 import 'package:tapittrip/features/itinerary/domain/models/itinerary_item.dart';
 import 'package:tapittrip/features/itinerary/domain/models/trip_day.dart';
 import 'package:tapittrip/features/itinerary/presentation/providers/itinerary_provider.dart';
+import 'package:tapittrip/features/itinerary/presentation/providers/recommendations_provider.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/trip_recommendations_view.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/activity_timeline_card.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/ai_itinerary_planner_dialog.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/ai_itinerary_preview_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/ask_tapittrip_sheet.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/food_discovery_section.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/itinerary_filter_tabs.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/route_optimization_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/route_summary_card.dart';
+import 'package:tapittrip/features/itinerary/presentation/widgets/smart_replan_sheet.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/timeline_day_badge.dart';
 import 'package:tapittrip/features/lounges/data/lounge_repository.dart';
 import 'package:tapittrip/features/lounges/presentation/providers/lounge_provider.dart';
@@ -36,10 +44,20 @@ import 'package:tapittrip/features/weather/presentation/providers/weather_provid
 import 'package:tapittrip/features/weather/presentation/widgets/trip_weather_view.dart';
 
 class TripItineraryPage extends ConsumerStatefulWidget {
-  const TripItineraryPage({super.key, required this.tripId, this.initialTrip});
+  const TripItineraryPage({
+    super.key,
+    required this.tripId,
+    this.initialTrip,
+    this.showStays = false,
+    this.initialTabIndex,
+    this.autoOpenAiPlanner = false,
+  });
 
   final String tripId;
   final Trip? initialTrip;
+  final bool showStays;
+  final int? initialTabIndex;
+  final bool autoOpenAiPlanner;
 
   @override
   ConsumerState<TripItineraryPage> createState() => _TripItineraryPageState();
@@ -53,8 +71,14 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
   @override
   void initState() {
     super.initState();
+    _selectedTabIndex = widget.initialTabIndex ?? (widget.showStays ? 2 : 0);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _prefetchLounges();
+      if (widget.autoOpenAiPlanner &&
+          mounted &&
+          _resolveTrip()?.role != 'viewer') {
+        _openAiPlanner();
+      }
     });
   }
 
@@ -164,6 +188,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
     final colorScheme = theme.colorScheme;
     final trip = _resolveTrip();
     final itemsAsync = ref.watch(itineraryListProvider(widget.tripId));
+    ref.watch(tripRecommendationsProvider(widget.tripId));
 
     return Scaffold(
       appBar: AppBar(
@@ -543,15 +568,21 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                       tripWeatherProvider(widget.tripId),
                     );
                     final curWeather = weatherAsync.asData?.value.current;
+                    final routeMetrics = RouteMetricsCalculator.computeForItems(
+                      items,
+                    );
 
                     return RouteSummaryCard(
-                      distance: '142 km',
+                      distance: routeMetrics.distanceLabel,
                       estimatedCost: formattedDest,
                       estimatedCostSubtitle: costSubtitle,
-                      co2Saved: '18 kg',
+                      co2Saved: routeMetrics.co2SavedLabel,
                       weatherText: curWeather?.tempString,
                       weatherIcon: curWeather?.weatherIcon,
                       weatherColor: curWeather?.weatherColor,
+                      onOptimizeTap: items.length >= 2
+                          ? () => _openRouteOptimizationSheet(items)
+                          : null,
                       onWeatherTap: () => setState(() => _selectedTabIndex = 3),
                     );
                   },
@@ -577,7 +608,32 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                 else if (_selectedTabIndex == 4)
                   ChecklistsView(tripId: widget.tripId)
                 else if (_selectedTabIndex == 5)
-                  _buildRecommendationsTab(theme, colorScheme)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TripRecommendationsView(
+                        tripId: widget.tripId,
+                        destination: trip == null
+                            ? null
+                            : [
+                                trip.title,
+                                if (trip.destinationCountry != null)
+                                  trip.destinationCountry!,
+                              ].join(', '),
+                      ),
+                      const SizedBox(height: 24),
+                      FoodDiscoverySection(
+                        tripId: widget.tripId,
+                        destination: trip == null
+                            ? null
+                            : [
+                                trip.title,
+                                if (trip.destinationCountry != null)
+                                  trip.destinationCountry!,
+                              ].join(', '),
+                      ),
+                    ],
+                  )
                 else
                   _buildItineraryTab(theme, colorScheme, items),
               ],
@@ -655,13 +711,16 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
       AddChecklistItemBottomSheet.show(
         context,
         checklistId: activeChecklist.id,
-        onSubmit:
+        onSubmitWithAssignee:
             ({
               required String title,
               required String category,
               required int quantity,
               String? notes,
               String? photoUrl,
+              String? assignedUserId,
+              String? assignedTravelerId,
+              bool clearAssignee = false,
             }) async {
               await ref
                   .read(checklistListProvider(widget.tripId).notifier)
@@ -672,6 +731,10 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                     quantity: quantity,
                     notes: notes,
                     photoUrl: photoUrl,
+                    assignedUserId: clearAssignee ? null : assignedUserId,
+                    assignedTravelerId: clearAssignee
+                        ? null
+                        : assignedTravelerId,
                   );
             },
       );
@@ -758,6 +821,7 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Add Accommodation'),
                   ),
+                  StayRecommendationsView(tripId: widget.tripId),
                 ],
               ),
             ),
@@ -771,84 +835,120 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
     );
   }
 
+  Future<void> _openRouteOptimizationSheet(List<ItineraryItem> items) async {
+    final applied = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) =>
+          RouteOptimizationSheet(tripId: widget.tripId, currentItems: items),
+    );
+
+    if (applied == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Itinerary route order optimized and updated.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _openSmartReplanSheet() async {
+    final applied = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => SmartReplanSheet(
+        tripId: widget.tripId,
+        tripDayId: _selectedDayFilterId,
+      ),
+    );
+
+    if (applied == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Smart itinerary replan applied (visited stops preserved).',
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildTransportTab(
     ThemeData theme,
     ColorScheme colorScheme,
-    List<dynamic> items,
+    List<ItineraryItem> items,
   ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.directions_transit_filled_rounded,
-              size: 48,
-              color: colorScheme.primary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Transit & Arrival Transport',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'View luggage-aware arrival options by visiting the "Stay" tab and selecting "Arrival Transport".',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.tonal(
-              onPressed: () => setState(() => _selectedTabIndex = 2),
-              child: const Text('Go to Stays'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final metrics = RouteMetricsCalculator.computeForItems(items);
 
-  Widget _buildRecommendationsTab(ThemeData theme, ColorScheme colorScheme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.explore_outlined,
-              size: 48,
-              color: colorScheme.secondary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Recommendations',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'Personalized destination highlights will appear here as you build your trip.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.directions_transit_filled_rounded,
+                  size: 48,
+                  color: colorScheme.primary,
                 ),
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  'Transit & Arrival Transport',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'View luggage-aware arrival options by visiting the "Stay" tab and selecting "Arrival Transport".',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    FilledButton.tonal(
+                      onPressed: () => setState(() => _selectedTabIndex = 2),
+                      child: const Text('Go to Stays'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _openSmartReplanSheet,
+                      icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+                      label: const Text('Smart Replan'),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        if (metrics.segments.isNotEmpty) ...[
+          const Divider(height: 24),
+          ItineraryTransitSegmentsSection(
+            segments: metrics.segments,
+            onOptimizeTap: items.length >= 2
+                ? () => _openRouteOptimizationSheet(items)
+                : null,
+          ),
+        ],
+      ],
     );
   }
 
@@ -1477,6 +1577,16 @@ class _TripItineraryPageState extends ConsumerState<TripItineraryPage> {
       dragHandle: dragHandle,
       highlightDrag: highlightDrag,
       onWeatherTap: () => setState(() => _selectedTabIndex = 3),
+      onVoteUp: () {
+        ref
+            .read(itineraryListProvider(widget.tripId).notifier)
+            .toggleVote(item, 'up');
+      },
+      onVoteDown: () {
+        ref
+            .read(itineraryListProvider(widget.tripId).notifier)
+            .toggleVote(item, 'down');
+      },
       onToggleVisited: () {
         ref
             .read(itineraryListProvider(widget.tripId).notifier)

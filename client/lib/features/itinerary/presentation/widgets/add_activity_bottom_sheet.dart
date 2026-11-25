@@ -215,6 +215,17 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
                     // Itinerary Day Selector
                     if (widget.days.isNotEmpty) ...[
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        itemHeight: null,
+                        selectedItemBuilder: (context) => widget.days
+                            .map(
+                              (day) => Text(
+                                day.displayHeader,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )
+                            .toList(),
                         initialValue:
                             widget.days.any((d) => d.id == _chosenDayId)
                             ? _chosenDayId
@@ -226,7 +237,10 @@ class _AddActivityBottomSheetState extends State<AddActivityBottomSheet> {
                         items: widget.days.map((day) {
                           return DropdownMenuItem<String>(
                             value: day.id,
-                            child: Text(day.displayHeader),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(day.displayHeader),
+                            ),
                           );
                         }).toList(),
                         onChanged: (val) {

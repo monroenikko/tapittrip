@@ -6,6 +6,7 @@ import '../../domain/models/activity_event.dart';
 import '../../domain/models/circle_member.dart';
 import '../../domain/models/trip_announcement.dart';
 import '../../domain/models/trip_invitation.dart';
+import '../../domain/models/trip_location_share.dart';
 import '../../domain/models/trip_traveler.dart';
 
 class CircleMembersNotifier extends AsyncNotifier<List<CircleMember>> {
@@ -489,3 +490,77 @@ final tripTravelersProvider =
       List<TripTraveler>,
       String
     >((tripId) => TripTravelersNotifier(tripId));
+
+class TripLocationShareNotifier extends AsyncNotifier<TripLocationShare> {
+  TripLocationShareNotifier(this.tripId);
+  final String tripId;
+
+  @override
+  Future<TripLocationShare> build() async {
+    final repo = ref.watch(tripCircleRepositoryProvider);
+    return repo.getLocationShare(tripId);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() {
+      final repo = ref.read(tripCircleRepositoryProvider);
+      return repo.getLocationShare(tripId);
+    });
+  }
+
+  Future<TripLocationShare> enable({
+    int durationMinutes = 60,
+    String audience = 'circle',
+    required double latitude,
+    required double longitude,
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final updated = await repo.enableLocationShare(
+      tripId,
+      durationMinutes: durationMinutes,
+      audience: audience,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    state = AsyncData(updated);
+    ref.invalidate(activeLocationSharesProvider(tripId));
+    return updated;
+  }
+
+  Future<TripLocationShare> disable() async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final updated = await repo.disableLocationShare(tripId);
+    state = AsyncData(updated);
+    ref.invalidate(activeLocationSharesProvider(tripId));
+    return updated;
+  }
+
+  Future<TripLocationShare> updateCoordinates({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final repo = ref.read(tripCircleRepositoryProvider);
+    final updated = await repo.updateLocationCoordinates(
+      tripId,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    state = AsyncData(updated);
+    ref.invalidate(activeLocationSharesProvider(tripId));
+    return updated;
+  }
+}
+
+final tripLocationShareProvider =
+    AsyncNotifierProvider.family<
+      TripLocationShareNotifier,
+      TripLocationShare,
+      String
+    >((tripId) => TripLocationShareNotifier(tripId));
+
+final activeLocationSharesProvider =
+    FutureProvider.family<List<TripLocationShare>, String>((ref, tripId) async {
+      final repo = ref.watch(tripCircleRepositoryProvider);
+      return repo.getActiveLocationShares(tripId);
+    });

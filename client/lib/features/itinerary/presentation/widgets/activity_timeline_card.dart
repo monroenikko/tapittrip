@@ -17,6 +17,8 @@ class ActivityTimelineCard extends StatelessWidget {
     this.onEdit,
     this.onDelete,
     this.onWeatherTap,
+    this.onVoteUp,
+    this.onVoteDown,
     this.dragHandle,
     this.highlightDrag = false,
   });
@@ -28,6 +30,8 @@ class ActivityTimelineCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onWeatherTap;
+  final VoidCallback? onVoteUp;
+  final VoidCallback? onVoteDown;
   final Widget? dragHandle;
   final bool highlightDrag;
 
@@ -83,8 +87,8 @@ class ActivityTimelineCard extends StatelessWidget {
         ),
       ),
       color: isVisited
-          ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
-          : colorScheme.surface,
+          ? colorScheme.surfaceContainerLow
+          : colorScheme.surfaceContainerLowest,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -238,6 +242,82 @@ class ActivityTimelineCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  if (onVoteUp != null)
+                    InkWell(
+                      key: Key('vote_up_${item.id}'),
+                      onTap: onVoteUp,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              item.viewerVote == 'up'
+                                  ? Icons.thumb_up_alt_rounded
+                                  : Icons.thumb_up_alt_outlined,
+                              size: 16,
+                              color: item.viewerVote == 'up'
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            if (item.upvotesCount > 0) ...[
+                              const SizedBox(width: 3),
+                              Text(
+                                '${item.upvotesCount}',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: item.viewerVote == 'up'
+                                      ? colorScheme.primary
+                                      : colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (onVoteDown != null)
+                    InkWell(
+                      key: Key('vote_down_${item.id}'),
+                      onTap: onVoteDown,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              item.viewerVote == 'down'
+                                  ? Icons.thumb_down_alt_rounded
+                                  : Icons.thumb_down_alt_outlined,
+                              size: 16,
+                              color: item.viewerVote == 'down'
+                                  ? colorScheme.error
+                                  : colorScheme.onSurfaceVariant,
+                            ),
+                            if (item.downvotesCount > 0) ...[
+                              const SizedBox(width: 3),
+                              Text(
+                                '${item.downvotesCount}',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: item.viewerVote == 'down'
+                                      ? colorScheme.error
+                                      : colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
                   // Visited Toggle Button
                   IconButton(
                     iconSize: 20,
@@ -394,6 +474,8 @@ class LiveWeatherActivityTimelineCard extends ConsumerWidget {
     this.onEdit,
     this.onDelete,
     this.onWeatherTap,
+    this.onVoteUp,
+    this.onVoteDown,
     this.dragHandle,
     this.highlightDrag = false,
   });
@@ -405,6 +487,8 @@ class LiveWeatherActivityTimelineCard extends ConsumerWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onWeatherTap;
+  final VoidCallback? onVoteUp;
+  final VoidCallback? onVoteDown;
   final Widget? dragHandle;
   final bool highlightDrag;
 
@@ -420,6 +504,8 @@ class LiveWeatherActivityTimelineCard extends ConsumerWidget {
       onEdit: onEdit,
       onDelete: onDelete,
       onWeatherTap: onWeatherTap,
+      onVoteUp: onVoteUp,
+      onVoteDown: onVoteDown,
       dragHandle: dragHandle,
       highlightDrag: highlightDrag,
     );

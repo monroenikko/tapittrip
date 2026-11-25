@@ -41,20 +41,12 @@ class TripCard extends StatelessWidget {
         CountryCurrencyHelper.resolveFlag(trip.title);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: colorScheme.outlineVariant, width: 1),
       ),
       child: Material(
         color: Colors.transparent,
@@ -70,54 +62,44 @@ class TripCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: colorScheme.primaryContainer.withValues(
-                          alpha: 0.4,
+                          alpha: 0.55,
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(
-                        Icons.travel_explore_rounded,
-                        color: colorScheme.primary,
-                        size: 26,
-                      ),
+                      child: flag != null
+                          ? Text(flag, style: const TextStyle(fontSize: 22))
+                          : Icon(
+                              Icons.flight_takeoff_rounded,
+                              color: colorScheme.primary,
+                              size: 22,
+                            ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              if (flag != null &&
-                                  !trip.title.startsWith(flag)) ...[
-                                Text(
-                                  flag,
-                                  style: const TextStyle(fontSize: 18),
-                                ),
-                                const SizedBox(width: 6),
-                              ],
-                              Expanded(
-                                child: Text(
-                                  trip.title,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: colorScheme.onSurface,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            trip.title,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.25,
+                              color: colorScheme.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
                               Icon(
                                 Icons.calendar_today_outlined,
-                                size: 14,
+                                size: 13,
                                 color: colorScheme.onSurfaceVariant,
                               ),
                               const SizedBox(width: 6),
@@ -136,7 +118,7 @@ class TripCard extends StatelessWidget {
                     ),
                     if (onEdit != null)
                       IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        icon: const Icon(Icons.edit_outlined, size: 19),
                         color: colorScheme.onSurfaceVariant,
                         tooltip: 'Edit trip',
                         onPressed: onEdit,
@@ -145,7 +127,7 @@ class TripCard extends StatelessWidget {
                       ),
                     if (onDelete != null)
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 20),
+                        icon: const Icon(Icons.delete_outline, size: 19),
                         color: colorScheme.error,
                         tooltip: 'Delete trip',
                         onPressed: onDelete,
@@ -203,7 +185,9 @@ class TripCard extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.teal.withValues(alpha: 0.12),
+                          color: colorScheme.primaryContainer.withValues(
+                            alpha: 0.7,
+                          ),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -211,8 +195,8 @@ class TripCard extends StatelessWidget {
                               ? 'SHARED • EDITOR'
                               : 'SHARED • VIEWER',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: Colors.teal.shade800,
-                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w700,
                             fontSize: 10,
                           ),
                         ),

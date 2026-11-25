@@ -1,6 +1,7 @@
 import '../../../core/network/api_client.dart';
 import '../domain/models/ai_itinerary_plan.dart';
 import '../domain/models/itinerary_item.dart';
+import '../domain/models/smart_replan_result.dart';
 import '../domain/models/trip_assistant_response.dart';
 
 class AiItineraryRepository {
@@ -104,5 +105,25 @@ class AiItineraryRepository {
     );
     final data = _extractMap(response);
     return TripAssistantResponse.fromJson(data);
+  }
+
+  Future<SmartReplanResult> replanItinerary(
+    String tripId, {
+    required String triggerReason,
+    String? tripDayId,
+    bool apply = false,
+    int? delayMinutes,
+  }) async {
+    final response = await apiClient.post(
+      '/trips/$tripId/ai-plan/replan',
+      data: {
+        'trigger_reason': triggerReason,
+        'trip_day_id': ?tripDayId,
+        'apply': apply,
+        'delay_minutes': ?delayMinutes,
+      },
+    );
+    final data = _extractMap(response);
+    return SmartReplanResult.fromJson(data);
   }
 }

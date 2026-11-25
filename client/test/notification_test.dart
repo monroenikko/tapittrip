@@ -8,6 +8,7 @@ import 'package:tapittrip/core/network/api_client.dart';
 import 'package:tapittrip/core/network/api_exceptions.dart';
 import 'package:tapittrip/core/storage/token_storage.dart';
 import 'package:tapittrip/core/theme/app_theme.dart';
+import 'package:tapittrip/features/circles/data/trip_circle_repository.dart';
 import 'package:tapittrip/features/notifications/data/notification_repository.dart';
 import 'package:tapittrip/features/notifications/domain/models/notification_preference.dart';
 import 'package:tapittrip/features/notifications/domain/models/trip_reminder.dart';
@@ -107,6 +108,18 @@ class FakeSecureStorage extends FlutterSecureStorage {
     WindowsOptions? wOptions,
   }) async {
     _data.remove(key);
+  }
+
+  @override
+  Future<Map<String, String>> readAll({
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    return Map<String, String>.from(_data);
   }
 }
 
@@ -256,6 +269,208 @@ void main() {
         expect(cleared.isEmpty, isTrue);
       },
     );
+
+    test('evaluates UTC triggers against destination and home timezones instead of raw UTC hours', () async {
+      final storage = FakeSecureStorage();
+      final service = LocalNotificationService(storage: storage);
+
+      // 14:30 UTC = 23:30 Asia/Tokyo (quiet in Tokyo 22:00-07:00), 14:30 Europe/London (daytime)
+      final tokyoNightReminder = TripReminder(
+        id: 'rem-tokyo-night',
+        tripId: 'trip-1',
+        type: 'activity_reminder',
+        title: 'Night Observatory',
+        body: 'Starts in 30 mins',
+        triggerAtUtc: DateTime.parse('2026-12-01T14:30:00Z'),
+        timezone: 'Asia/Tokyo',
+        dedupeKey: 'tokyo-night',
+      );
+
+      // 00:00 UTC = 09:00 Asia/Tokyo (daytime in Tokyo), 00:00 Europe/London (quiet at home!)
+      final tokyoMorningReminder = TripReminder(
+        id: 'rem-tokyo-morning',
+        tripId: 'trip-1',
+        type: 'morning_summary',
+        title: 'Tokyo Morning Summary',
+        body: 'Planned stops',
+        triggerAtUtc: DateTime.parse('2026-12-01T00:00:00Z'),
+        timezone: 'Asia/Tokyo',
+        dedupeKey: 'tokyo-morning',
+      );
+
+      const destPrefs = NotificationPreference(
+        id: 'pref-1',
+        userId: 'user-1',
+        quietHoursEnabled: true,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '07:00',
+        timezoneBehavior: 'destination',
+      );
+
+      final destScheduled = await service.scheduleRemindersForTrip(
+        tripId: 'trip-1',
+        reminders: [tokyoNightReminder, tokyoMorningReminder],
+        preferences: destPrefs,
+      );
+      expect(destScheduled.map((r) => r.id).toList(), ['rem-tokyo-morning']);
+
+      const homePrefs = NotificationPreference(
+        id: 'pref-1',
+        userId: 'user-1',
+        quietHoursEnabled: true,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '07:00',
+        timezoneBehavior: 'home',
+      );
+
+      final homeScheduled = await service.scheduleRemindersForTrip(
+        tripId: 'trip-1',
+        reminders: [tokyoNightReminder, tokyoMorningReminder],
+        preferences: homePrefs,
+        homeTimezone: 'Europe/London',
+      );
+      expect(homeScheduled.map((r) => r.id).toList(), ['rem-tokyo-night']);
+    });
+
+    test('purgeAllTripCachesForStorage scrubs dynamic weather subkeys and filters revoked-trip user notifications', () async {
+      final storage = FakeSecureStorage({
+        'cached_weather_trip-revoked_loc_35.690_139.700': '{"temp":18}',
+        'cached_weather_trip-active_loc_14.550_121.050': '{"temp":30}',
+        'scheduled_local_notifications_trip-revoked': '[{"id":"r1"}]',
+        'cached_user_notifications': jsonEncode([
+          {'id': 'n1', 'trip_id': 'trip-revoked', 'title': 'Revoked Notice'},
+          {'id': 'n2', 'trip_id': 'trip-active', 'title': 'Active Notice'},
+        ]),
+      });
+
+      await TripCircleRepository.purgeAllTripCachesForStorage(
+        storage: storage,
+        tripId: 'trip-revoked',
+      );
+
+      expect(
+        await storage.read(
+          key: 'cached_weather_trip-revoked_loc_35.690_139.700',
+        ),
+        isNull,
+      );
+      expect(
+        await storage.read(key: 'scheduled_local_notifications_trip-revoked'),
+        isNull,
+      );
+      expect(
+        await storage.read(
+          key: 'cached_weather_trip-active_loc_14.550_121.050',
+        ),
+        isNotNull,
+      );
+
+      final rawNotices = await storage.read(key: 'cached_user_notifications');
+      final remaining = jsonDecode(rawNotices!) as List<dynamic>;
+      expect(remaining.length, 1);
+      expect((remaining.first as Map)['trip_id'], 'trip-active');
+    });
+
+    test('evaluates UTC triggers against destination and home timezones instead of raw UTC hours', () async {
+      final storage = FakeSecureStorage();
+      final service = LocalNotificationService(storage: storage);
+
+      // 14:30 UTC = 23:30 Asia/Tokyo (quiet in Tokyo 22:00-07:00), 14:30 Europe/London (daytime)
+      final tokyoNightReminder = TripReminder(
+        id: 'rem-tokyo-night',
+        tripId: 'trip-1',
+        type: 'activity_reminder',
+        title: 'Night Observatory',
+        body: 'Starts in 30 mins',
+        triggerAtUtc: DateTime.parse('2026-12-01T14:30:00Z'),
+        timezone: 'Asia/Tokyo',
+        dedupeKey: 'tokyo-night',
+      );
+
+      // 00:00 UTC = 09:00 Asia/Tokyo (daytime in Tokyo), 00:00 Europe/London (quiet at home!)
+      final tokyoMorningReminder = TripReminder(
+        id: 'rem-tokyo-morning',
+        tripId: 'trip-1',
+        type: 'morning_summary',
+        title: 'Tokyo Morning Summary',
+        body: 'Planned stops',
+        triggerAtUtc: DateTime.parse('2026-12-01T00:00:00Z'),
+        timezone: 'Asia/Tokyo',
+        dedupeKey: 'tokyo-morning',
+      );
+
+      const destPrefs = NotificationPreference(
+        id: 'pref-1',
+        userId: 'user-1',
+        quietHoursEnabled: true,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '07:00',
+        timezoneBehavior: 'destination',
+      );
+
+      final destScheduled = await service.scheduleRemindersForTrip(
+        tripId: 'trip-1',
+        reminders: [tokyoNightReminder, tokyoMorningReminder],
+        preferences: destPrefs,
+      );
+      expect(destScheduled.map((r) => r.id).toList(), ['rem-tokyo-morning']);
+
+      const homePrefs = NotificationPreference(
+        id: 'pref-1',
+        userId: 'user-1',
+        quietHoursEnabled: true,
+        quietHoursStart: '22:00',
+        quietHoursEnd: '07:00',
+        timezoneBehavior: 'home',
+      );
+
+      final homeScheduled = await service.scheduleRemindersForTrip(
+        tripId: 'trip-1',
+        reminders: [tokyoNightReminder, tokyoMorningReminder],
+        preferences: homePrefs,
+        homeTimezone: 'Europe/London',
+      );
+      expect(homeScheduled.map((r) => r.id).toList(), ['rem-tokyo-night']);
+    });
+
+    test('purgeAllTripCachesForStorage scrubs dynamic weather subkeys and filters revoked-trip user notifications', () async {
+      final storage = FakeSecureStorage({
+        'cached_weather_trip-revoked_loc_35.690_139.700': '{"temp":18}',
+        'cached_weather_trip-active_loc_14.550_121.050': '{"temp":30}',
+        'scheduled_local_notifications_trip-revoked': '[{"id":"r1"}]',
+        'cached_user_notifications': jsonEncode([
+          {'id': 'n1', 'trip_id': 'trip-revoked', 'title': 'Revoked Notice'},
+          {'id': 'n2', 'trip_id': 'trip-active', 'title': 'Active Notice'},
+        ]),
+      });
+
+      await TripCircleRepository.purgeAllTripCachesForStorage(
+        storage: storage,
+        tripId: 'trip-revoked',
+      );
+
+      expect(
+        await storage.read(
+          key: 'cached_weather_trip-revoked_loc_35.690_139.700',
+        ),
+        isNull,
+      );
+      expect(
+        await storage.read(key: 'scheduled_local_notifications_trip-revoked'),
+        isNull,
+      );
+      expect(
+        await storage.read(
+          key: 'cached_weather_trip-active_loc_14.550_121.050',
+        ),
+        isNotNull,
+      );
+
+      final rawNotices = await storage.read(key: 'cached_user_notifications');
+      final remaining = jsonDecode(rawNotices!) as List<dynamic>;
+      expect(remaining.length, 1);
+      expect((remaining.first as Map)['trip_id'], 'trip-active');
+    });
   });
 
   group('NotificationRepository', () {

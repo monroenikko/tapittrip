@@ -99,6 +99,9 @@ class _AddExpenseBottomSheetState extends ConsumerState<AddExpenseBottomSheet> {
     'MYR',
     'AED',
     'CHF',
+    'VND',
+    'CLP',
+    'ISK',
   ];
 
   @override

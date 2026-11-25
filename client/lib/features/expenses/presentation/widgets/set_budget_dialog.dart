@@ -64,6 +64,9 @@ class _SetBudgetDialogState extends ConsumerState<SetBudgetDialog> {
     'MYR',
     'AED',
     'CHF',
+    'VND',
+    'CLP',
+    'ISK',
   ];
 
   @override

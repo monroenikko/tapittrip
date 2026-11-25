@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:tapittrip/core/theme/app_theme.dart';
 import 'package:tapittrip/core/utils/map_launcher.dart';
+import 'package:tapittrip/features/flights/domain/models/flight.dart';
 import 'package:tapittrip/features/itinerary/domain/models/itinerary_item.dart';
 import 'package:tapittrip/features/itinerary/domain/models/place.dart';
 import 'package:tapittrip/features/stays/domain/models/stay.dart';
@@ -13,6 +14,7 @@ import 'package:tapittrip/features/today/presentation/providers/today_provider.d
 import 'package:tapittrip/features/today/presentation/widgets/current_stay_banner.dart';
 import 'package:tapittrip/features/today/presentation/widgets/next_stop_card.dart';
 import 'package:tapittrip/features/today/presentation/widgets/quick_actions_grid.dart';
+import 'package:tapittrip/features/today/presentation/widgets/today_flight_card.dart';
 import 'package:tapittrip/features/today/presentation/widgets/today_hero_card.dart';
 import 'package:tapittrip/features/today/presentation/widgets/trip_progress_card.dart';
 import 'package:tapittrip/features/trips/data/trip_repository.dart';
@@ -543,6 +545,57 @@ void main() {
         expect(find.text('No budget set yet'), findsOneWidget);
         expect(find.text('Set Budget'), findsOneWidget);
         expect(find.text('Log Expense'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'TodayFlightCard renders scheduled flight details, non-live disclaimer, and terminal lounge handoff',
+      (tester) async {
+        final flight = Flight(
+          id: 'flight-1',
+          tripId: 'trip-101',
+          airline: 'Philippine Airlines',
+          bookingReference: 'PR-7788',
+          segments: [
+            FlightSegment(
+              id: 'seg-1',
+              flightNumber: 'PR428',
+              originAirport: 'MNL',
+              destinationAirport: 'NRT',
+              scheduledDepartureUtc: DateTime.parse('2026-11-06T06:00:00Z'),
+              scheduledArrivalUtc: DateTime.parse('2026-11-06T10:30:00Z'),
+              originTimezone: 'Asia/Manila',
+              destinationTimezone: 'Asia/Tokyo',
+              terminal: '1',
+              gate: '14',
+            ),
+          ],
+        );
+
+        final summaryWithFlight = TodayDashboardSummary.fromJson({
+          ...testSummary.toJson(),
+          'upcoming_flight': flight.toJson(),
+          'flights': [flight.toJson()],
+        });
+
+        expect(summaryWithFlight.upcomingFlight?.id, 'flight-1');
+        expect(summaryWithFlight.flights.length, 1);
+
+        await tester.pumpWidget(
+          _buildTestApp(TodayFlightCard(summary: summaryWithFlight)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('UPCOMING FLIGHT'), findsOneWidget);
+        expect(find.text('PR428 • MNL → NRT'), findsOneWidget);
+        expect(find.text('Terminal 1'), findsOneWidget);
+        expect(find.text('Gate 14'), findsOneWidget);
+        expect(find.text('Ref: PR-7788'), findsOneWidget);
+        expect(
+          find.text('Scheduled booking details • Not live airline status'),
+          findsOneWidget,
+        );
+        expect(find.text('Explore MNL T1 Lounges'), findsOneWidget);
       },
     );
   });

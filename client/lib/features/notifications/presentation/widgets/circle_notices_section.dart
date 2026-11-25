@@ -133,4 +133,3 @@ class _NoticeCard extends StatelessWidget {
     );
   }
 }
-

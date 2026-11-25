@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exceptions.dart';
+import '../../flights/data/flight_repository.dart';
 import '../../lounges/data/lounge_repository.dart';
 import '../data/outbox_storage.dart';
 import '../domain/models/outbox_operation.dart';
@@ -28,6 +29,7 @@ class SyncService {
     required this.apiClient,
     required this.outboxStorage,
     this.loungeRepository,
+    this.flightRepository,
     this.onTripAccessRevoked,
     String? deviceKey,
   }) : deviceKey = deviceKey ?? _generateDeviceKey();
@@ -35,6 +37,7 @@ class SyncService {
   final ApiClient apiClient;
   final OutboxStorage outboxStorage;
   final LoungeRepository? loungeRepository;
+  final FlightRepository? flightRepository;
   final Future<void> Function(String tripId)? onTripAccessRevoked;
   final String deviceKey;
 
@@ -48,6 +51,38 @@ class SyncService {
   static String _generateDeviceKey() {
     final rand = Random();
     return 'device_${DateTime.now().millisecondsSinceEpoch}_${rand.nextInt(999999)}';
+  }
+
+  /// Records an outbox operation, chaining `baseVersion` past any prior
+  /// queued pending updates for the same entity so consecutive offline edits
+  /// sync sequentially without self-conflicts.
+  static Future<OutboxOperation> saveWithChainedVersion(
+    OutboxStorage storage,
+    OutboxOperation operation,
+  ) async {
+    var effective = operation;
+    if (operation.status == 'pending' &&
+        (operation.operationType == 'update' ||
+            operation.operationType == 'delete')) {
+      final all = await storage.getAllOperations();
+      final priorPendingUpdates = all
+          .where(
+            (op) =>
+                op.operationId != operation.operationId &&
+                op.status == 'pending' &&
+                op.entityType == operation.entityType &&
+                op.entityId == operation.entityId &&
+                op.operationType == 'update',
+          )
+          .length;
+      if (priorPendingUpdates > 0) {
+        effective = operation.copyWith(
+          baseVersion: operation.baseVersion + priorPendingUpdates,
+        );
+      }
+    }
+    await storage.saveOperation(effective);
+    return effective;
   }
 
   /// Queues a local offline mutation to the durable outbox.
@@ -72,68 +107,81 @@ class SyncService {
       createdAt: DateTime.now(),
     );
 
-    await outboxStorage.saveOperation(operation);
-    return operation;
+    return saveWithChainedVersion(outboxStorage, operation);
   }
 
-  /// Pushes all pending outbox operations to the server.
+  static const int maxPushBatchSize = 25;
+
+  /// Pushes all pending outbox operations to the server in bounded chunks so
+  /// network interruptions preserve incremental progress without re-pushing
+  /// already-accepted chunks.
   Future<List<SyncOperationResult>> pushPending() async {
     final pending = await outboxStorage.getPendingOperations();
     final toSend = pending.where((op) => op.status == 'pending').toList();
 
     if (toSend.isEmpty) return [];
 
-    final payload = {
-      'device_key': deviceKey,
-      'operations': toSend.map((op) => op.toJson()).toList(),
-    };
+    final allResults = <SyncOperationResult>[];
+    for (var offset = 0; offset < toSend.length; offset += maxPushBatchSize) {
+      final chunk = toSend.sublist(
+        offset,
+        min(offset + maxPushBatchSize, toSend.length),
+      );
+      final payload = {
+        'device_key': deviceKey,
+        'operations': chunk.map((op) => op.toJson()).toList(),
+      };
 
-    final response = await apiClient.post('/sync/push', data: payload);
-    final data = _extractData(response) as Map<String, dynamic>;
-    final rawResults = (data['results'] as List<dynamic>? ?? [])
-        .map(
-          (e) =>
-              SyncOperationResult.fromJson(Map<String, dynamic>.from(e as Map)),
-        )
-        .toList();
+      final response = await apiClient.post('/sync/push', data: payload);
+      final data = _extractData(response) as Map<String, dynamic>;
+      final rawResults = (data['results'] as List<dynamic>? ?? [])
+          .map(
+            (e) => SyncOperationResult.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
+          .toList();
 
-    for (final result in rawResults) {
-      if (result.status == 'accepted') {
-        await outboxStorage.removeOperation(result.operationId);
-      } else if (result.status == 'conflict') {
-        final existing = toSend.firstWhere(
-          (op) => op.operationId == result.operationId,
-          orElse: () => toSend.first,
-        );
-        await outboxStorage.updateOperation(
-          existing.copyWith(
-            status: 'conflict',
-            conflictDetails: result.conflictDetails,
-          ),
-        );
-      } else if (result.status == 'rejected') {
-        final existing = toSend.firstWhere(
-          (op) => op.operationId == result.operationId,
-          orElse: () => toSend.first,
-        );
-        await outboxStorage.updateOperation(
-          existing.copyWith(
-            status: 'rejected',
-            conflictDetails: result.conflictDetails,
-          ),
-        );
-        final reason =
-            result.conflictDetails?['reason']?.toString().toLowerCase() ?? '';
-        if (existing.tripId != null &&
-            (reason.contains('forbidden') ||
-                reason.contains('not a member') ||
-                reason.contains('not authorized'))) {
-          await onTripAccessRevoked?.call(existing.tripId!);
+      for (final result in rawResults) {
+        if (result.status == 'accepted') {
+          await outboxStorage.removeOperation(result.operationId);
+        } else if (result.status == 'conflict') {
+          final existing = chunk.firstWhere(
+            (op) => op.operationId == result.operationId,
+            orElse: () => chunk.first,
+          );
+          await outboxStorage.updateOperation(
+            existing.copyWith(
+              status: 'conflict',
+              conflictDetails: result.conflictDetails,
+            ),
+          );
+        } else if (result.status == 'rejected') {
+          final existing = chunk.firstWhere(
+            (op) => op.operationId == result.operationId,
+            orElse: () => chunk.first,
+          );
+          await outboxStorage.updateOperation(
+            existing.copyWith(
+              status: 'rejected',
+              conflictDetails: result.conflictDetails,
+            ),
+          );
+          final reason =
+              result.conflictDetails?['reason']?.toString().toLowerCase() ?? '';
+          if (existing.tripId != null &&
+              (reason.contains('forbidden') ||
+                  reason.contains('not a member') ||
+                  reason.contains('not authorized'))) {
+            await onTripAccessRevoked?.call(existing.tripId!);
+          }
         }
       }
+
+      allResults.addAll(rawResults);
     }
 
-    return rawResults;
+    return allResults;
   }
 
   Future<void> dismissRejectedOperation(String operationId) async {
@@ -166,6 +214,10 @@ class SyncService {
     }
     final data = _extractData(response) as Map<String, dynamic>;
     final pullResult = PullResult.fromJson(data);
+
+    if (pullResult.operations.isNotEmpty && flightRepository != null) {
+      await flightRepository!.applyPulledOperations(pullResult.operations);
+    }
 
     if (pullResult.cursor > cursor) {
       await outboxStorage.saveCursor(pullResult.cursor, tripId);

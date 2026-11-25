@@ -16,6 +16,9 @@ class ItineraryItem {
     this.sortOrder = 0,
     this.status = 'planned',
     this.version = 1,
+    this.upvotesCount = 0,
+    this.downvotesCount = 0,
+    this.viewerVote,
     this.place,
     this.day,
   });
@@ -33,6 +36,9 @@ class ItineraryItem {
   final int sortOrder;
   final String status;
   final int version;
+  final int upvotesCount;
+  final int downvotesCount;
+  final String? viewerVote;
   final Place? place;
   final TripDay? day;
 
@@ -51,6 +57,9 @@ class ItineraryItem {
       sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'planned',
       version: (json['version'] as num?)?.toInt() ?? 1,
+      upvotesCount: (json['upvotes_count'] as num?)?.toInt() ?? 0,
+      downvotesCount: (json['downvotes_count'] as num?)?.toInt() ?? 0,
+      viewerVote: json['viewer_vote'] as String?,
       place: json['place'] is Map
           ? Place.fromJson(Map<String, dynamic>.from(json['place'] as Map))
           : null,
@@ -75,6 +84,9 @@ class ItineraryItem {
       'sort_order': sortOrder,
       'status': status,
       'version': version,
+      'upvotes_count': upvotesCount,
+      'downvotes_count': downvotesCount,
+      if (viewerVote != null) 'viewer_vote': viewerVote,
       if (place != null) 'place': place!.toJson(),
       if (day != null) 'day': day!.toJson(),
     };
@@ -95,6 +107,10 @@ class ItineraryItem {
     int? sortOrder,
     String? status,
     int? version,
+    int? upvotesCount,
+    int? downvotesCount,
+    String? viewerVote,
+    bool clearViewerVote = false,
     Place? place,
     TripDay? day,
   }) {
@@ -112,6 +128,9 @@ class ItineraryItem {
       sortOrder: sortOrder ?? this.sortOrder,
       status: status ?? this.status,
       version: version ?? this.version,
+      upvotesCount: upvotesCount ?? this.upvotesCount,
+      downvotesCount: downvotesCount ?? this.downvotesCount,
+      viewerVote: clearViewerVote ? null : (viewerVote ?? this.viewerVote),
       place: place ?? this.place,
       day: clearTripDay ? null : (day ?? this.day),
     );

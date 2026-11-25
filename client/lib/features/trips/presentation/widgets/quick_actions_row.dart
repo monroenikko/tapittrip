@@ -35,22 +35,19 @@ class QuickActionsRow extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 60,
+                    height: 60,
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withValues(
-                        alpha: 0.35,
-                      ),
+                      color: colorScheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(
-                          alpha: 0.4,
-                        ),
+                        color: colorScheme.outlineVariant,
+                        width: 1,
                       ),
                     ),
                     child: Icon(
                       action.icon,
-                      size: 26,
+                      size: 24,
                       color: colorScheme.primary,
                     ),
                   ),

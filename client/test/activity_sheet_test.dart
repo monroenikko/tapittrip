@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tapittrip/core/theme/app_theme.dart';
+import 'package:tapittrip/features/itinerary/domain/models/trip_day.dart';
 import 'package:tapittrip/features/itinerary/presentation/widgets/add_activity_bottom_sheet.dart';
 
 void main() {
@@ -31,6 +32,20 @@ void main() {
                     backgroundColor: Colors.transparent,
                     builder: (_) => AddActivityBottomSheet(
                       tripId: 'trip-1',
+                      days: const [
+                        TripDay(
+                          id: 'day-1',
+                          tripId: 'trip-1',
+                          localDate: '2026-11-10',
+                          title: 'Day 1: Iconic Towers & Heritage Culture',
+                        ),
+                        TripDay(
+                          id: 'day-2',
+                          tripId: 'trip-1',
+                          localDate: '2026-11-11',
+                          title: 'Day 2: Gardens & Neighborhood Exploration',
+                        ),
+                      ],
                       onSubmit: ({
                         required title,
                         required kind,
@@ -49,6 +64,20 @@ void main() {
       );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final dropdown = find.byType(DropdownButtonFormField<String>);
+      await tester.ensureVisible(dropdown);
+      await tester.tap(dropdown);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.tap(
+        find
+            .text('Day 2: Gardens & Neighborhood Exploration • Wed, Nov 11')
+            .last,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(tester.state<FormFieldState<String>>(dropdown).value, 'day-2');
       final surface = find.byKey(const ValueKey('activity-sheet-surface'));
       final material = tester.widget<Material>(surface);
       expect(material.color!.a, 1);

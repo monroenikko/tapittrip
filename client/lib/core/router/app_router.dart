@@ -9,13 +9,17 @@ import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/circles/presentation/pages/circle_inbox_page.dart';
 import '../../features/circles/presentation/pages/trip_circle_page.dart';
+import '../../features/documents/presentation/pages/trip_documents_vault_page.dart';
 import '../../features/expenses/presentation/pages/trip_expenses_page.dart';
+import '../../features/imports/presentation/pages/trip_inbox_page.dart';
 import '../../features/itinerary/presentation/pages/trip_itinerary_page.dart';
 import '../../features/journal/presentation/pages/trip_journal_page.dart';
 import '../../features/journal/presentation/pages/trip_recap_page.dart';
 import '../../features/lounges/presentation/pages/airport_lounge_finder_page.dart';
 import '../../features/notifications/presentation/pages/notification_preferences_page.dart';
+import '../../features/safety/presentation/pages/destination_safety_page.dart';
 import '../../features/today/presentation/pages/today_dashboard_page.dart';
+import '../../features/translation/presentation/pages/translator_phrasebook_page.dart';
 import '../../features/trips/domain/models/trip.dart';
 import '../../features/trips/presentation/pages/trip_create_page.dart';
 import '../../features/trips/presentation/pages/trip_list_page.dart';
@@ -80,6 +84,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/safety',
+        builder: (context, state) {
+          final tripId = state.uri.queryParameters['tripId'];
+          final country = state.uri.queryParameters['country'];
+          return DestinationSafetyPage(tripId: tripId, initialCountry: country);
+        },
+      ),
+      GoRoute(
+        path: '/translator',
+        builder: (context, state) {
+          final tripId = state.uri.queryParameters['tripId'];
+          final lang = state.uri.queryParameters['lang'];
+          return TranslatorPhrasebookPage(
+            tripId: tripId,
+            initialLanguageOrCountry: lang,
+          );
+        },
+      ),
+      GoRoute(
         path: '/trips',
         builder: (context, state) => const TripListPage(),
         routes: [
@@ -92,7 +115,23 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final tripId = state.pathParameters['tripId']!;
               final trip = state.extra as Trip?;
-              return TripItineraryPage(tripId: tripId, initialTrip: trip);
+              final tab = state.uri.queryParameters['tab'];
+              final initialTabIndex = switch (tab) {
+                'transport' => 1,
+                'stays' => 2,
+                'weather' => 3,
+                'checklists' => 4,
+                'recommendations' => 5,
+                _ => null,
+              };
+              return TripItineraryPage(
+                tripId: tripId,
+                initialTrip: trip,
+                showStays: tab == 'stays',
+                initialTabIndex: initialTabIndex,
+                autoOpenAiPlanner:
+                    state.uri.queryParameters['action'] == 'ai-plan',
+              );
             },
           ),
           GoRoute(
@@ -121,6 +160,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final tripId = state.pathParameters['tripId']!;
               return TripCirclePage(tripId: tripId);
+            },
+          ),
+          GoRoute(
+            path: ':tripId/documents',
+            builder: (context, state) {
+              final tripId = state.pathParameters['tripId']!;
+              return TripDocumentsVaultPage(tripId: tripId);
+            },
+          ),
+          GoRoute(
+            path: ':tripId/inbox',
+            builder: (context, state) {
+              final tripId = state.pathParameters['tripId']!;
+              return TripInboxPage(tripId: tripId);
             },
           ),
         ],

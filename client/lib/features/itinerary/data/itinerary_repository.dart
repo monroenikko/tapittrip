@@ -7,8 +7,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exceptions.dart';
 import '../../circles/data/trip_circle_repository.dart';
+import '../domain/models/food_suggestion.dart';
 import '../domain/models/itinerary_item.dart';
 import '../domain/models/place.dart';
+import '../domain/models/route_optimization_result.dart';
 import '../domain/models/trip_day.dart';
 import '../domain/models/visit_event.dart';
 
@@ -21,6 +23,10 @@ class ItineraryRepository {
 
   String _cacheKey(String tripId) => 'cached_itinerary_$tripId';
   String _daysCacheKey(String tripId) => 'cached_days_$tripId';
+  String _foodCacheKey(String tripId, String mealType) =>
+      'cached_food_suggestions_${tripId}_$mealType';
+  String _routeOptimizationCacheKey(String tripId) =>
+      'cached_route_optimization_$tripId';
 
   /// Fetch all scheduled days for a trip with offline cache support.
   Future<List<TripDay>> fetchDays(String tripId) async {
@@ -308,5 +314,158 @@ class ItineraryRepository {
     );
 
     return VisitEvent.fromJson(Map<String, dynamic>.from(response as Map));
+  }
+
+  /// Cast or clear a Trip Circle member vote ('up', 'down', or 'none') on an itinerary item.
+  Future<ItineraryItem> voteItem(String itemId, {required String? vote}) async {
+    final response = await apiClient.post(
+      '/itinerary-items/$itemId/vote',
+      data: {'vote': vote ?? 'none'},
+    );
+
+    final Map<String, dynamic> map;
+    if (response is Map && response['data'] is Map) {
+      map = Map<String, dynamic>.from(response['data'] as Map);
+    } else if (response is Map) {
+      map = Map<String, dynamic>.from(response);
+    } else {
+      map = const {};
+    }
+
+    return ItineraryItem.fromJson(map);
+  }
+
+  /// Evaluate stop-to-stop transit mode comparisons and optimize itinerary route order with constraints.
+  Future<RouteOptimizationResult> optimizeRoute(
+    String tripId, {
+    String? tripDayId,
+    bool apply = false,
+    bool preserveFixedTimes = true,
+    int maxWalkingMetersPerLeg = 1500,
+    Map<String, int>? expectedVersions,
+  }) async {
+    try {
+      final response = await apiClient.post(
+        '/trips/$tripId/itinerary-items/optimize-route',
+        data: {
+          if (tripDayId != null) 'trip_day_id': tripDayId,
+          'apply': apply,
+          'preserve_fixed_times': preserveFixedTimes,
+          'max_walking_meters_per_leg': maxWalkingMetersPerLeg,
+          if (expectedVersions != null && expectedVersions.isNotEmpty)
+            'expected_versions': expectedVersions,
+        },
+      );
+
+      final Map<String, dynamic> map;
+      if (response is Map && response['data'] is Map) {
+        map = Map<String, dynamic>.from(response['data'] as Map);
+      } else if (response is Map) {
+        map = Map<String, dynamic>.from(response);
+      } else {
+        map = const {};
+      }
+
+      final result = RouteOptimizationResult.fromJson(map);
+
+      if (tripDayId == null) {
+        await _storage.write(
+          key: _routeOptimizationCacheKey(tripId),
+          value: jsonEncode(result.toJson()),
+        );
+      }
+      if (result.applied && result.items.isNotEmpty && tripDayId == null) {
+        await cacheItems(tripId, result.items);
+      }
+
+      return result;
+    } on ApiException catch (e) {
+      if (e.statusCode == 403 || e.code == 'forbidden') {
+        await TripCircleRepository.purgeAllTripCachesForStorage(
+          storage: _storage,
+          tripId: tripId,
+        );
+        rethrow;
+      }
+      if (!apply) {
+        final cached = await _storage.read(
+          key: _routeOptimizationCacheKey(tripId),
+        );
+        if (cached != null) {
+          return RouteOptimizationResult.fromJson(
+            Map<String, dynamic>.from(jsonDecode(cached) as Map),
+          );
+        }
+      }
+      rethrow;
+    } catch (_) {
+      if (!apply) {
+        final cached = await _storage.read(
+          key: _routeOptimizationCacheKey(tripId),
+        );
+        if (cached != null) {
+          return RouteOptimizationResult.fromJson(
+            Map<String, dynamic>.from(jsonDecode(cached) as Map),
+          );
+        }
+      }
+      rethrow;
+    }
+  }
+
+  /// Fetch curated destination and stay-aware restaurant & food suggestions.
+  Future<FoodSuggestionsResult> fetchFoodSuggestions(
+    String tripId, {
+    String mealType = 'all',
+    String? dietary,
+    String near = 'stay',
+  }) async {
+    final cacheKey = _foodCacheKey(tripId, mealType);
+    try {
+      final response = await apiClient.get(
+        '/trips/$tripId/food-suggestions',
+        queryParameters: {
+          'meal_type': mealType,
+          if (dietary != null && dietary.isNotEmpty) 'dietary': dietary,
+          'near': near,
+        },
+      );
+
+      final Map<String, dynamic> map;
+      if (response is Map && response['data'] is Map) {
+        map = Map<String, dynamic>.from(response['data'] as Map);
+      } else if (response is Map) {
+        map = Map<String, dynamic>.from(response);
+      } else {
+        map = const {};
+      }
+
+      final result = FoodSuggestionsResult.fromJson(map);
+      await _storage.write(key: cacheKey, value: jsonEncode(result.toJson()));
+      return result;
+    } on ApiException catch (e) {
+      if (e.statusCode == 403 || e.code == 'forbidden') {
+        await TripCircleRepository.purgeAllTripCachesForStorage(
+          storage: _storage,
+          tripId: tripId,
+        );
+        rethrow;
+      }
+      final cached = await _storage.read(key: cacheKey);
+      if (cached != null) {
+        return FoodSuggestionsResult.fromJson(
+          Map<String, dynamic>.from(jsonDecode(cached) as Map),
+        );
+      }
+      rethrow;
+    } catch (_) {
+      final cached = await _storage.read(key: cacheKey);
+      if (cached != null) {
+        return FoodSuggestionsResult.fromJson(
+          Map<String, dynamic>.from(jsonDecode(cached) as Map),
+        );
+      }
+      rethrow;
+    }
   }
 }

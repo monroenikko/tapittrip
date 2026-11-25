@@ -38,6 +38,21 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<({AuthUser user, String token, bool isNewUser})> exchangeOAuthToken({
+    required String provider,
+    required String idToken,
+    String? deviceName,
+    String? displayName,
+    String? locale,
+    String? homeTimezone,
+  }) async {
+    if (shouldFail) {
+      throw ApiException(code: 'invalid_credentials', message: failureMessage);
+    }
+    return (user: testUser, token: 'mock-oauth-token', isNewUser: false);
+  }
+
+  @override
   Future<({AuthUser user, String token})> register({
     required String name,
     required String email,
@@ -361,6 +376,56 @@ void main() {
           .deleteAccount();
       expect(cleared, isNull);
       expect(container.read(authProvider), isA<Unauthenticated>());
+    });
+
+    test(
+      'exchangeOAuthToken updates state to Authenticated on success',
+      () async {
+        final fakeTokenStorage = InMemoryTokenStorage();
+        final fakeRepo = FakeAuthRepository();
+
+        final container = ProviderContainer(
+          overrides: [
+            tokenStorageProvider.overrideWithValue(fakeTokenStorage),
+            authRepositoryProvider.overrideWithValue(fakeRepo),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final ok = await container
+            .read(authProvider.notifier)
+            .exchangeOAuthToken(provider: 'google', idToken: 'valid-id-token');
+
+        expect(ok, isTrue);
+        final state = container.read(authProvider);
+        expect(state, isA<Authenticated>());
+        expect((state as Authenticated).token, 'mock-oauth-token');
+      },
+    );
+
+    test('exchangeOAuthToken transitions to AuthFailure on error', () async {
+      final fakeTokenStorage = InMemoryTokenStorage();
+      final fakeRepo = FakeAuthRepository(
+        shouldFail: true,
+        failureMessage: 'Invalid OAuth token.',
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(fakeTokenStorage),
+          authRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final ok = await container
+          .read(authProvider.notifier)
+          .exchangeOAuthToken(provider: 'google', idToken: 'bad-token');
+
+      expect(ok, isFalse);
+      final state = container.read(authProvider);
+      expect(state, isA<AuthFailure>());
+      expect((state as AuthFailure).errorMessage, 'Invalid OAuth token.');
     });
   });
 }

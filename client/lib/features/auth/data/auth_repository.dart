@@ -22,6 +22,15 @@ abstract interface class AuthRepository {
     String? homeCurrency,
   });
 
+  Future<({AuthUser user, String token, bool isNewUser})> exchangeOAuthToken({
+    required String provider,
+    required String idToken,
+    String? deviceName,
+    String? displayName,
+    String? locale,
+    String? homeTimezone,
+  });
+
   Future<AuthUser> getProfile();
 
   Future<AuthUser> updateProfile({
@@ -107,6 +116,36 @@ class RemoteAuthRepository implements AuthRepository {
 
     await tokenStorage.writeToken(token);
     return (user: user, token: token);
+  }
+
+  @override
+  Future<({AuthUser user, String token, bool isNewUser})> exchangeOAuthToken({
+    required String provider,
+    required String idToken,
+    String? deviceName,
+    String? displayName,
+    String? locale,
+    String? homeTimezone,
+  }) async {
+    final response = await apiClient.post(
+      '/auth/$provider/exchange',
+      data: {
+        'id_token': idToken,
+        'device_name': deviceName ?? 'TapItTrip Mobile',
+        if (displayName != null && displayName.isNotEmpty)
+          'display_name': displayName,
+        'locale': ?locale,
+        'home_timezone': ?homeTimezone,
+      },
+    );
+
+    final token = response['token'] as String;
+    final userJson = response['user'] as Map<String, dynamic>;
+    final isNewUser = response['is_new_user'] as bool? ?? false;
+    final user = AuthUser.fromJson(userJson);
+
+    await tokenStorage.writeToken(token);
+    return (user: user, token: token, isNewUser: isNewUser);
   }
 
   @override

@@ -18,18 +18,9 @@ class TripProgressCard extends StatelessWidget {
       Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colorScheme.surface,
+          color: colorScheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          border: Border.all(color: colorScheme.outlineVariant, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,21 +28,21 @@ class TripProgressCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  Icons.wb_sunny_rounded,
-                  size: 20,
-                  color: colorScheme.secondary,
+                  Icons.public_rounded,
+                  size: 16,
+                  color: colorScheme.primary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   'Destination',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               summary.trip.destinationCountry != null
                   ? 'Country • ${summary.trip.destinationCountry}'
@@ -59,7 +50,7 @@ class TripProgressCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 2),
@@ -80,24 +71,15 @@ class TripProgressCard extends StatelessWidget {
       Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: colorScheme.surface,
+          color: colorScheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          border: Border.all(color: colorScheme.outlineVariant, width: 1),
         ),
         child: Row(
           children: [
             SizedBox(
-              width: 44,
-              height: 44,
+              width: 46,
+              height: 46,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -106,16 +88,18 @@ class TripProgressCard extends StatelessWidget {
                         ? metrics.progressPercentage / 100.0
                         : 0.0,
                     backgroundColor: colorScheme.outlineVariant.withValues(
-                      alpha: 0.4,
+                      alpha: 0.5,
                     ),
                     color: colorScheme.secondary,
                     strokeWidth: 4.5,
+                    strokeCap: StrokeCap.round,
                   ),
                   Text(
                     '${metrics.progressPercentage}%',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                 ],

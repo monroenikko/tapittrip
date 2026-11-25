@@ -25,14 +25,18 @@ class QuickActionsGrid extends ConsumerWidget {
     required BuildContext context,
     required IconData icon,
     required String label,
-    required Color color,
     required VoidCallback onTap,
+    bool isAccent = false,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final iconColor = isAccent ? colorScheme.secondary : colorScheme.primary;
+    final iconBg = isAccent
+        ? colorScheme.secondaryContainer.withValues(alpha: 0.65)
+        : colorScheme.primaryContainer.withValues(alpha: 0.55);
 
     return Material(
-      color: colorScheme.surface,
+      color: colorScheme.surfaceContainerLowest,
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -41,29 +45,21 @@ class QuickActionsGrid extends ConsumerWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
           decoration: BoxDecoration(
-            color: colorScheme.surface,
+            color: colorScheme.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            border: Border.all(color: colorScheme.outlineVariant, width: 1),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(icon, color: iconColor, size: 20),
               ),
               const SizedBox(height: 8),
               Text(
@@ -71,6 +67,7 @@ class QuickActionsGrid extends ConsumerWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -84,35 +81,30 @@ class QuickActionsGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     final actions = <Widget>[
       _buildActionButton(
         context: context,
         icon: Icons.calendar_month_rounded,
         label: 'Itinerary',
-        color: colorScheme.primary,
         onTap: () => onViewItinerary?.call(),
       ),
       _buildActionButton(
         context: context,
         icon: Icons.hotel_rounded,
         label: 'Stays',
-        color: colorScheme.secondary,
         onTap: () => onViewStays?.call(),
       ),
       _buildActionButton(
         context: context,
         icon: Icons.account_balance_wallet_outlined,
         label: 'Expenses',
-        color: Colors.teal.shade700,
         onTap: () => context.push('/trips/${summary.trip.id}/expenses'),
       ),
       _buildActionButton(
         context: context,
         icon: Icons.add_location_alt_rounded,
         label: '+ Stop',
-        color: colorScheme.tertiary,
+        isAccent: true,
         onTap: () {
           showModalBottomSheet(
             context: context,
@@ -149,7 +141,6 @@ class QuickActionsGrid extends ConsumerWidget {
         context: context,
         icon: Icons.map_outlined,
         label: 'Directions',
-        color: colorScheme.primary,
         onTap: () {
           final dest =
               summary.nextUpcomingItem?.place?.formattedAddress ??

@@ -38,16 +38,53 @@ class CurrencyFormatter {
         return 'CHF ';
       case 'VND':
         return '₫';
+      case 'CLP':
+        return '\$';
+      case 'ISK':
+        return 'kr ';
+      case 'PYG':
+        return '₲';
+      case 'UGX':
+        return 'USh ';
+      case 'RWF':
+        return 'RF ';
+      case 'VUV':
+        return 'VT ';
+      case 'XAF':
+        return 'FCFA ';
+      case 'XOF':
+        return 'CFA ';
+      case 'XPF':
+        return 'CFPF ';
       default:
         return '$currency ';
     }
   }
 
+  /// Standard ISO 4217 zero-decimal currencies.
+  static const Set<String> zeroDecimalCurrencies = {
+    'BIF',
+    'CLP',
+    'DJF',
+    'GNF',
+    'ISK',
+    'JPY',
+    'KMF',
+    'KRW',
+    'PYG',
+    'RWF',
+    'UGX',
+    'VND',
+    'VUV',
+    'XAF',
+    'XOF',
+    'XPF',
+  };
+
   /// Whether the currency does not use decimal fractions (cents).
   static bool isZeroDecimal(String? currency) {
     if (currency == null) return false;
-    final cur = currency.trim().toUpperCase();
-    return cur == 'JPY' || cur == 'KRW' || cur == 'VND';
+    return zeroDecimalCurrencies.contains(currency.trim().toUpperCase());
   }
 
   /// Format an amount into a localized currency string.

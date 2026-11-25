@@ -88,6 +88,8 @@ class StayListNotifier extends AsyncNotifier<List<Stay>> {
       'name': ?name,
       'stay_type': ?stayType,
       'address': ?address,
+      'latitude': ?latitude,
+      'longitude': ?longitude,
       if (checkInAt != null) 'check_in_at': checkInAt.toIso8601String(),
       if (checkOutAt != null) 'check_out_at': checkOutAt.toIso8601String(),
       'timezone': ?timezone,
@@ -172,7 +174,10 @@ class StayListNotifier extends AsyncNotifier<List<Stay>> {
 
   Future<void> _recordOutboxOperation(OutboxOperation operation) async {
     try {
-      await ref.read(outboxStorageProvider).saveOperation(operation);
+      await SyncService.saveWithChainedVersion(
+        ref.read(outboxStorageProvider),
+        operation,
+      );
       await ref.read(syncProvider.notifier).refresh();
     } catch (_) {}
   }

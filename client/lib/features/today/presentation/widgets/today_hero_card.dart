@@ -12,154 +12,154 @@ class TodayHeroCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final trip = summary.trip;
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Editorial deep-navy hero surface in light mode, rich elevated navy container in dark mode.
+    final heroBackground = isDark
+        ? colorScheme.primaryContainer
+        : colorScheme.primary;
+    final heroForeground = isDark
+        ? colorScheme.onPrimaryContainer
+        : colorScheme.onPrimary;
+    final mutedForeground = heroForeground.withValues(alpha: 0.78);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        color: heroBackground,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: heroForeground.withValues(alpha: 0.08),
+          width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Status Badge & Weather Badge
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top metadata rail: status pill + weather pill
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: summary.isActive
+                        ? colorScheme.secondary
+                        : heroForeground.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    summary.statusBadgeText,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: summary.isActive
+                          ? colorScheme.onSecondary
+                          : heroForeground,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                if (summary.weather != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: heroForeground.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: heroForeground.withValues(alpha: 0.16),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: summary.isActive
-                                ? colorScheme.primary
-                                : (summary.isPreTrip
-                                      ? colorScheme.secondaryContainer
-                                      : colorScheme.surfaceContainerHighest),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            summary.statusBadgeText,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: summary.isActive
-                                  ? Colors.white
-                                  : (summary.isPreTrip
-                                        ? colorScheme.onSecondaryContainer
-                                        : colorScheme.onSurfaceVariant),
-                              fontWeight: FontWeight.bold,
-                            ),
+                        Icon(
+                          summary.weather!.weatherIcon,
+                          size: 14,
+                          color: heroForeground,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          summary.weather!.tempString,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: heroForeground,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
-                        if (summary.weather != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: summary.weather!.weatherColor.withValues(
-                                alpha: 0.15,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  summary.weather!.weatherIcon,
-                                  size: 13,
-                                  color: summary.weather!.weatherColor,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  summary.weather!.tempString,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: summary.weather!.weatherColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      trip.title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Editorial Trip Headline
+            Text(
+              trip.title,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+                color: heroForeground,
+              ),
+            ),
+            if (trip.dateRangeFormatted != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 13,
+                    color: mutedForeground,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      trip.dateRangeFormatted!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: mutedForeground,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (trip.dateRangeFormatted != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        trip.dateRangeFormatted!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              // Brand Icon / Image Container
+            ],
+            if (summary.activeDay?.notes != null &&
+                summary.activeDay!.notes!.isNotEmpty) ...[
+              const SizedBox(height: 14),
               Container(
-                width: 68,
-                height: 52,
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 9,
+                ),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: colorScheme.primaryContainer.withValues(alpha: 0.8),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/images/logo_icon.png'),
-                    fit: BoxFit.cover,
+                  color: heroForeground.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: heroForeground.withValues(alpha: 0.14),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  summary.activeDay!.notes!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: heroForeground.withValues(alpha: 0.92),
+                    height: 1.35,
                   ),
                 ),
               ),
             ],
-          ),
-          if (summary.activeDay?.notes != null &&
-              summary.activeDay!.notes!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                summary.activeDay!.notes!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

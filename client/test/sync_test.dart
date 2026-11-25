@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tapittrip/core/network/api_client.dart';
+import 'package:tapittrip/core/network/api_exceptions.dart';
 import 'package:tapittrip/core/storage/token_storage.dart';
+import 'package:tapittrip/features/stays/data/stay_repository.dart';
+import 'package:tapittrip/features/stays/domain/models/stay.dart';
+import 'package:tapittrip/features/stays/presentation/providers/stay_provider.dart';
 import 'package:tapittrip/features/sync/data/outbox_storage.dart';
 import 'package:tapittrip/features/sync/domain/models/outbox_operation.dart';
 import 'package:tapittrip/features/sync/presentation/providers/sync_provider.dart';
@@ -15,6 +19,7 @@ class FakeSyncApiClient extends ApiClient {
 
   dynamic getResponse;
   dynamic postResponse;
+  Future<dynamic> Function(String path, Map<String, dynamic>? data)? onPost;
   Map<String, dynamic>? lastPostData;
   Map<String, dynamic>? lastGetParams;
 
@@ -25,6 +30,9 @@ class FakeSyncApiClient extends ApiClient {
     Map<String, dynamic>? queryParameters,
   }) async {
     lastPostData = data as Map<String, dynamic>?;
+    if (onPost != null) {
+      return onPost!(path, lastPostData);
+    }
     return postResponse ??
         {
           'data': {
@@ -354,6 +362,81 @@ void main() {
       await syncService.dismissRejectedOperation(op.operationId);
       expect(await storage.getAllOperations(), isEmpty);
     });
+
+    test('pushPending chunks large queues and preserves un-pushed chunks after network interruption', () async {
+      // Queue 30 operations (> maxPushBatchSize = 25)
+      for (var i = 0; i < 30; i++) {
+        await syncService.queueMutation(
+          tripId: 'trip-1',
+          entityType: 'checklist_item',
+          entityId: 'item-$i',
+          operationType: 'update',
+          payload: {'title': 'Item $i'},
+          baseVersion: 1,
+        );
+      }
+
+      var chunkCalls = 0;
+      fakeClient.onPost = (path, data) async {
+        chunkCalls++;
+        final ops = List<Map<String, dynamic>>.from(
+          data?['operations'] as List? ?? const [],
+        );
+        if (chunkCalls == 1) {
+          expect(ops.length, 25);
+          return {
+            'data': {
+              'results': [
+                for (var i = 0; i < ops.length; i++)
+                  {
+                    'operation_id': ops[i]['operation_id'],
+                    'status': 'accepted',
+                    'server_sequence': i + 1,
+                    'current_version': 2,
+                  },
+              ],
+            },
+          };
+        }
+        // Simulate sudden network drop on second chunk (ops 25..29)
+        throw const NetworkException();
+      };
+
+      await expectLater(
+        syncService.pushPending(),
+        throwsA(isA<NetworkException>()),
+      );
+
+      // First chunk (25 ops) removed cleanly; remaining 5 ops stay pending for retry
+      final remaining = await storage.getPendingOperations();
+      expect(remaining.length, 5);
+      expect(remaining.first.entityId, 'item-25');
+
+      // Reconnect and finish remaining chunk cleanly
+      fakeClient.onPost = (path, data) async {
+        final ops = List<Map<String, dynamic>>.from(
+          data?['operations'] as List? ?? const [],
+        );
+        expect(ops.length, 5);
+        return {
+          'data': {
+            'results': [
+              for (var i = 0; i < ops.length; i++)
+                {
+                  'operation_id': ops[i]['operation_id'],
+                  'status': 'accepted',
+                  'server_sequence': 26 + i,
+                  'current_version': 2,
+                },
+            ],
+          },
+        };
+      };
+
+      final finalResults = await syncService.pushPending();
+      expect(finalResults.length, 5);
+      expect(await storage.getPendingOperations(), isEmpty);
+    });
   });
 
   group('Presentation Widgets', () {
@@ -549,5 +632,141 @@ void main() {
         expect(await storage.getAllOperations(), isEmpty);
       },
     );
+
+    testWidgets(
+      'ConflictResolutionDialog surfaces remote deletion status cleanly',
+      (tester) async {
+        final conflict = OutboxOperation(
+          operationId: 'conflict-del-1',
+          entityType: 'checklist_item',
+          entityId: 'item-del-1',
+          operationType: 'update',
+          baseVersion: 1,
+          status: 'conflict',
+          payload: {'title': 'Kept Item'},
+          conflictDetails: {
+            'server_version': 2,
+            'server_payload': {
+              'id': 'item-del-1',
+              'title': 'Original Item',
+              'deleted': true,
+            },
+          },
+          createdAt: DateTime.now(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: Scaffold(
+                body: ConflictResolutionDialog(conflict: conflict),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining(
+            'Status: Deleted on another device while offline',
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Original Item'), findsOneWidget);
+        expect(find.textContaining('Kept Item'), findsOneWidget);
+      },
+    );
   });
+
+  group('Offline Version Hardening', () {
+    test('consecutive offline stay edits bump optimistic version and include coordinates', () async {
+      final storage = InMemoryOutboxStorage();
+      final apiClient = FakeSyncApiClient();
+      final repo = _FakeOfflineStayRepository(apiClient: apiClient);
+
+      final container = ProviderContainer(
+        overrides: [
+          outboxStorageProvider.overrideWithValue(storage),
+          apiClientProvider.overrideWithValue(apiClient),
+          stayRepositoryProvider.overrideWithValue(repo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final initialStays = await container.read(
+        stayListProvider('trip-1').future,
+      );
+      expect(initialStays.first.version, 1);
+
+      final notifier = container.read(stayListProvider('trip-1').notifier);
+
+      // First offline update (queues baseVersion: 1 while local state preserves confirmed server version 1)
+      final first = await notifier.updateStay(
+        'stay-1',
+        name: 'Tokyo Inn',
+        latitude: 35.6945,
+        longitude: 139.7006,
+      );
+      expect(first.version, 1);
+
+      // Second offline update while still offline (chains outbox baseVersion: 2)
+      final second = await notifier.updateStay(
+        'stay-1',
+        notes: 'Ask for quiet room',
+      );
+      expect(second.version, 1);
+
+      final pending = await storage.getPendingOperations();
+      expect(pending.length, 2);
+      expect(pending[0].baseVersion, 1);
+      expect(pending[0].payload?['name'], 'Tokyo Inn');
+      expect(pending[0].payload?['latitude'], 35.6945);
+      expect(pending[0].payload?['longitude'], 139.7006);
+      expect(pending[1].baseVersion, 2);
+      expect(pending[1].payload?['notes'], 'Ask for quiet room');
+    });
+  });
+}
+
+class _FakeOfflineStayRepository extends StayRepository {
+  _FakeOfflineStayRepository({required super.apiClient});
+
+  List<Stay> cached = [
+    const Stay(
+      id: 'stay-1',
+      tripId: 'trip-1',
+      name: 'Shinjuku Hotel',
+      stayType: 'hotel',
+      version: 1,
+    ),
+  ];
+
+  @override
+  Future<List<Stay>> fetchStays(String tripId) async => cached;
+
+  @override
+  Future<void> cacheStays(String tripId, List<Stay> stays) async {
+    cached = stays;
+  }
+
+  @override
+  Future<Stay> updateStay(
+    String stayId, {
+    String? name,
+    String? stayType,
+    String? address,
+    double? latitude,
+    double? longitude,
+    DateTime? checkInAt,
+    DateTime? checkOutAt,
+    String? timezone,
+    String? phone,
+    String? bookingReference,
+    String? notes,
+    dynamic luggageProfile,
+    int? baseVersion,
+  }) async {
+    throw const NetworkException();
+  }
 }

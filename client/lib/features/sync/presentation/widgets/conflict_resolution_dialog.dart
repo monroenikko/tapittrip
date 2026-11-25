@@ -122,6 +122,10 @@ class ConflictResolutionDialog extends ConsumerWidget {
   }
 
   static String _formatPayloadSummary(Map<String, dynamic> payload) {
+    final buffer = StringBuffer();
+    if (payload['deleted'] == true) {
+      buffer.writeln('Status: Deleted on another device while offline');
+    }
     const keys = [
       'title',
       'name',
@@ -140,7 +144,6 @@ class ConflictResolutionDialog extends ConsumerWidget {
       'is_packed',
       'notes',
     ];
-    final buffer = StringBuffer();
     for (final key in keys) {
       if (payload.containsKey(key) && payload[key] != null) {
         buffer.writeln('$key: ${payload[key]}');

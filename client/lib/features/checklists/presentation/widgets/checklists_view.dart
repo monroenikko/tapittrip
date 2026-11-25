@@ -367,11 +367,9 @@ class _ChecklistsViewState extends ConsumerState<ChecklistsView> {
           return Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: colorScheme.surface,
+              color: colorScheme.surfaceContainerLowest,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-              ),
+              border: Border.all(color: colorScheme.outlineVariant, width: 1),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

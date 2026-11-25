@@ -291,7 +291,10 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
 
   Future<void> _recordOutboxOperation(OutboxOperation operation) async {
     try {
-      await ref.read(outboxStorageProvider).saveOperation(operation);
+      await SyncService.saveWithChainedVersion(
+        ref.read(outboxStorageProvider),
+        operation,
+      );
       await ref.read(syncProvider.notifier).refresh();
     } catch (_) {}
   }
@@ -365,6 +368,22 @@ class ItineraryListNotifier extends AsyncNotifier<List<ItineraryItem>> {
       reordered,
       dayAssignments: dayAssignments.isNotEmpty ? dayAssignments : null,
     );
+  }
+
+  /// Toggle a Trip Circle member vote ('up' or 'down') on an itinerary item.
+  Future<void> toggleVote(ItineraryItem item, String direction) async {
+    final targetVote = item.viewerVote == direction ? 'none' : direction;
+    try {
+      final updated = await _repository.voteItem(item.id, vote: targetVote);
+      final current = state.asData?.value ?? const <ItineraryItem>[];
+      final list = [
+        for (final entry in current) entry.id == item.id ? updated : entry,
+      ];
+      state = AsyncValue.data(list);
+      await _repository.cacheItems(tripId, list);
+    } catch (_) {
+      await refresh();
+    }
   }
 }
 

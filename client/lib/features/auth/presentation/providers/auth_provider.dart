@@ -50,6 +50,38 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  Future<bool> exchangeOAuthToken({
+    required String provider,
+    required String idToken,
+    String? displayName,
+    String? locale,
+    String? homeTimezone,
+  }) async {
+    state = const AuthLoading('Signing in...');
+    try {
+      final result = await _repository.exchangeOAuthToken(
+        provider: provider,
+        idToken: idToken,
+        displayName: displayName,
+        locale: locale,
+        homeTimezone: homeTimezone,
+      );
+      state = Authenticated(user: result.user, token: result.token);
+      return true;
+    } on ValidationException catch (e) {
+      state = AuthFailure(
+        e.fieldErrors.isNotEmpty ? e.fieldErrors.join('\n') : e.message,
+      );
+      return false;
+    } on ApiException catch (e) {
+      state = AuthFailure(e.message);
+      return false;
+    } catch (e) {
+      state = AuthFailure('Unable to complete sign-in right now.');
+      return false;
+    }
+  }
+
   Future<bool> register({
     required String name,
     required String email,

@@ -496,8 +496,11 @@ class _AiItineraryPlannerDialogState
     required IconData icon,
   }) {
     final selected = _selectedInterests.contains(value);
+    final colorScheme = Theme.of(context).colorScheme;
     return FilterChip(
-      avatar: Icon(icon, size: 16),
+      avatar: selected
+          ? null
+          : Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
       label: Text(label),
       selected: selected,
       onSelected: _isLoading

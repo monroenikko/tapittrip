@@ -405,7 +405,10 @@ class ChecklistListNotifier extends AsyncNotifier<List<Checklist>> {
 
   Future<void> _recordOutboxOperation(OutboxOperation operation) async {
     try {
-      await ref.read(outboxStorageProvider).saveOperation(operation);
+      await SyncService.saveWithChainedVersion(
+        ref.read(outboxStorageProvider),
+        operation,
+      );
       await ref.read(syncProvider.notifier).refresh();
     } catch (_) {}
   }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_client.dart';
 import '../../../circles/data/trip_circle_repository.dart';
+import '../../../flights/presentation/providers/flight_provider.dart';
 import '../../../lounges/presentation/providers/lounge_provider.dart';
 import '../../data/outbox_storage.dart';
 import '../../domain/models/outbox_operation.dart';
@@ -61,11 +62,13 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   final outboxStorage = ref.watch(outboxStorageProvider);
   final loungeRepo = ref.watch(loungeRepositoryProvider);
+  final flightRepo = ref.watch(flightRepositoryProvider);
   final circleRepo = ref.watch(tripCircleRepositoryProvider);
   return SyncService(
     apiClient: apiClient,
     outboxStorage: outboxStorage,
     loungeRepository: loungeRepo,
+    flightRepository: flightRepo,
     onTripAccessRevoked: (tripId) => circleRepo.purgeTripCircleCaches(tripId),
   );
 });
