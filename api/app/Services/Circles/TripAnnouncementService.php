@@ -187,4 +187,3 @@ final class TripAnnouncementService
         });
     }
 }
-

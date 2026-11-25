@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\DTOs\Identity\LoginUserData;
 use App\DTOs\Identity\RegisterUserData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Auth\ExchangeOAuthRequest;
 use App\Http\Requests\Api\V1\Auth\LoginRequest;
 use App\Http\Requests\Api\V1\Auth\RegisterRequest;
 use App\Http\Resources\Api\V1\UserResource;
@@ -47,6 +48,18 @@ final class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => new UserResource($result->user),
         ]);
+    }
+
+    public function exchangeOAuth(ExchangeOAuthRequest $request, string $provider): JsonResponse
+    {
+        $exchanged = $this->authService->exchangeOAuth($provider, $request->validated());
+
+        return $this->response->success([
+            'token' => $exchanged['result']->plainTextToken,
+            'token_type' => 'Bearer',
+            'is_new_user' => $exchanged['is_new_user'],
+            'user' => new UserResource($exchanged['result']->user),
+        ], $exchanged['is_new_user'] ? 201 : 200);
     }
 
     public function logout(Request $request): Response

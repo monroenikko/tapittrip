@@ -23,7 +23,7 @@ final class PushSyncOperationsRequest extends FormRequest
             'operations' => ['required', 'array', 'min:1'],
             'operations.*.operation_id' => ['required', 'uuid'],
             'operations.*.trip_id' => ['nullable', 'uuid'],
-            'operations.*.entity_type' => ['required', 'string', 'in:trip,itinerary_item,stay,checklist_item,expense'],
+            'operations.*.entity_type' => ['required', 'string', 'in:trip,itinerary_item,stay,flight,checklist_item,expense'],
             'operations.*.entity_id' => ['required', 'uuid'],
             'operations.*.operation_type' => ['required', 'string', 'in:create,update,delete'],
             'operations.*.payload' => ['nullable', 'array'],

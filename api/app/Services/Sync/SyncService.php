@@ -15,9 +15,12 @@ use App\DTOs\Sync\SyncOperationResult;
 use App\Exceptions\VersionConflictException;
 use App\Http\Requests\Api\V1\Expenses\CreateExpenseRequest;
 use App\Http\Requests\Api\V1\Expenses\UpdateExpenseRequest;
+use App\Http\Requests\Api\V1\Flights\StoreFlightRequest;
+use App\Http\Requests\Api\V1\Flights\UpdateFlightRequest;
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
 use App\Models\Expense;
+use App\Models\Flight;
 use App\Models\ItineraryItem;
 use App\Models\Stay;
 use App\Models\SyncCursor;
@@ -53,9 +56,9 @@ final class SyncService
     {
         $user = User::findOrFail($data->userId);
         $results = [];
-        $maxSequence = 0;
+        $maxSequenceByTrip = [];
 
-        DB::transaction(function () use ($data, $user, &$results, &$maxSequence): void {
+        DB::transaction(function () use ($data, $user, &$results, &$maxSequenceByTrip): void {
             foreach ($data->operations as $operation) {
                 // 1. Idempotency Check: deduplicate if operation_id already processed
                 $existing = SyncOperation::where('operation_id', $operation->operationId)
@@ -70,8 +73,11 @@ final class SyncService
                         currentVersion: null,
                         conflictDetails: $existing->conflict_details,
                     );
-                    if ($existing->server_sequence > $maxSequence) {
-                        $maxSequence = $existing->server_sequence;
+                    if ($existing->server_sequence !== null) {
+                        $cursorTripKey = $operation->tripId ?? '__global__';
+                        if (! isset($maxSequenceByTrip[$cursorTripKey]) || $existing->server_sequence > $maxSequenceByTrip[$cursorTripKey]) {
+                            $maxSequenceByTrip[$cursorTripKey] = $existing->server_sequence;
+                        }
                     }
 
                     continue;
@@ -104,7 +110,7 @@ final class SyncService
                             'entity_type' => $operation->entityType,
                             'entity_id' => $operation->entityId,
                             'operation_type' => $operation->operationType,
-                            'payload' => $operation->payload,
+                            'payload' => $this->sanitizeSyncPayload($operation),
                             'base_version' => $operation->baseVersion,
                             'status' => 'rejected',
                             'conflict_details' => ['reason' => 'Unauthorized trip membership or insufficient permissions'],
@@ -128,23 +134,29 @@ final class SyncService
                 $result = $this->applyMutation($user, $data->deviceKey, $operation);
                 $results[] = $result;
 
-                if ($result->serverSequence !== null && $result->serverSequence > $maxSequence) {
-                    $maxSequence = $result->serverSequence;
+                if ($result->serverSequence !== null) {
+                    $cursorTripKey = $operation->tripId ?? '__global__';
+                    if (! isset($maxSequenceByTrip[$cursorTripKey]) || $result->serverSequence > $maxSequenceByTrip[$cursorTripKey]) {
+                        $maxSequenceByTrip[$cursorTripKey] = $result->serverSequence;
+                    }
                 }
             }
 
-            // Update SyncCursor if operations were processed
-            if ($maxSequence > 0) {
-                SyncCursor::updateOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'device_key' => $data->deviceKey,
-                        'trip_id' => $data->operations[0]->tripId ?? null,
-                    ],
-                    [
-                        'last_server_sequence' => $maxSequence,
-                    ]
-                );
+            // Update SyncCursor per affected trip
+            foreach ($maxSequenceByTrip as $cursorTripKey => $tripMaxSequence) {
+                if ($tripMaxSequence > 0) {
+                    $cursorTripId = $cursorTripKey === '__global__' ? null : (string) $cursorTripKey;
+                    SyncCursor::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'device_key' => $data->deviceKey,
+                            'trip_id' => $cursorTripId,
+                        ],
+                        [
+                            'last_server_sequence' => $tripMaxSequence,
+                        ]
+                    );
+                }
             }
         });
 
@@ -208,6 +220,20 @@ final class SyncService
                 ->keyBy('id')
             : collect();
 
+        $stayIds = $items
+            ->where('entity_type', 'stay')
+            ->pluck('entity_id')
+            ->filter(static fn (mixed $id): bool => is_string($id) && $id !== '')
+            ->values()
+            ->all();
+        $staysById = $stayIds !== []
+            ? Stay::withTrashed()
+                ->with('trip:id,owner_id')
+                ->whereIn('id', $stayIds)
+                ->get(['id', 'trip_id', 'stay_type'])
+                ->keyBy('id')
+            : collect();
+
         $newCursor = $data->cursor;
         $operations = [];
 
@@ -230,6 +256,29 @@ final class SyncService
                 }
             }
 
+            $sanitizedPulledPayload = $op->payload;
+            if (is_array($sanitizedPulledPayload) && $op->user_id !== $user->id) {
+                if ($op->entity_type === 'flight') {
+                    unset($sanitizedPulledPayload['booking_reference']);
+                } elseif ($op->entity_type === 'stay') {
+                    $stayModel = $staysById->get($op->entity_id);
+                    $isOwner = $stayModel instanceof Stay && StayPrivacy::isOwner($stayModel, $user);
+                    if (! $isOwner) {
+                        unset($sanitizedPulledPayload['booking_reference'], $sanitizedPulledPayload['phone']);
+                        $isFriendsFamily = ($stayModel instanceof Stay && $stayModel->stay_type === 'friends_family')
+                            || (($sanitizedPulledPayload['stay_type'] ?? null) === 'friends_family');
+                        if ($isFriendsFamily) {
+                            unset(
+                                $sanitizedPulledPayload['address'],
+                                $sanitizedPulledPayload['latitude'],
+                                $sanitizedPulledPayload['longitude'],
+                                $sanitizedPulledPayload['notes']
+                            );
+                        }
+                    }
+                }
+            }
+
             $operations[] = [
                 'id' => $op->id,
                 'operation_id' => $op->operation_id,
@@ -238,7 +287,7 @@ final class SyncService
                 'entity_type' => $op->entity_type,
                 'entity_id' => $op->entity_id,
                 'operation_type' => $op->operation_type,
-                'payload' => $op->payload,
+                'payload' => $sanitizedPulledPayload,
                 'base_version' => $op->base_version,
                 'server_sequence' => $op->server_sequence,
                 'created_at' => $op->created_at?->toIso8601String(),
@@ -271,6 +320,7 @@ final class SyncService
         return match ($op->entityType) {
             'checklist_item' => $this->handleChecklistItem($user, $deviceKey, $op),
             'expense' => $this->handleExpense($user, $deviceKey, $op),
+            'flight' => $this->handleFlight($user, $deviceKey, $op),
             'itinerary_item' => $this->handleItineraryItem($user, $deviceKey, $op),
             'stay' => $this->handleStay($user, $deviceKey, $op),
             'trip' => $this->handleTrip($user, $deviceKey, $op),
@@ -327,12 +377,27 @@ final class SyncService
         }
 
         if ($op->operationType === 'update') {
-            $expense = Expense::find($op->entityId);
+            $expense = Expense::withTrashed()->lockForUpdate()->find($op->entityId);
             if ($expense === null) {
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Expense not found');
             }
             if ($expense->trip_id !== $op->tripId) {
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Expense does not belong to the specified trip');
+            }
+            if ($expense->trashed()) {
+                if ($expense->visibility === 'private' && ! $expense->isOwnedBy($user)) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'Personal expenses can only be updated by their creator.');
+                }
+                if ($op->baseVersion < $expense->version) {
+                    return $this->recordConflict($user, $deviceKey, $op, $expense->version, [
+                        'id' => $expense->id,
+                        'trip_id' => $expense->trip_id,
+                        'title' => $expense->title,
+                        'deleted' => true,
+                        'version' => $expense->version,
+                    ]);
+                }
+                $expense->restore();
             }
 
             $rawPayload = $op->payload ?? [];
@@ -360,7 +425,7 @@ final class SyncService
         }
 
         if ($op->operationType === 'delete') {
-            $expense = Expense::withTrashed()->find($op->entityId);
+            $expense = Expense::withTrashed()->lockForUpdate()->find($op->entityId);
             if ($expense === null) {
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Expense not found');
             }
@@ -379,6 +444,10 @@ final class SyncService
                 return $this->rejectUnsupported($user, $deviceKey, $op, $e->getMessage());
             }
 
+            $expense->refresh();
+            $expense->version = $expense->version + 1;
+            $expense->saveQuietly();
+
             return $this->recordAccepted($user, $deviceKey, $op, $expense->version);
         }
 
@@ -392,7 +461,7 @@ final class SyncService
         }
 
         if ($op->operationType === 'update') {
-            $item = ChecklistItem::find($op->entityId);
+            $item = ChecklistItem::withTrashed()->lockForUpdate()->find($op->entityId);
             if ($item === null) {
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item not found');
             }
@@ -400,9 +469,17 @@ final class SyncService
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item does not belong to the specified trip');
             }
 
-            // Conflict detection
+            // Conflict detection (including remote soft-delete while offline)
             if ($op->baseVersion < $item->version) {
-                return $this->recordConflict($user, $deviceKey, $op, $item->version, $this->serializeChecklistConflictPayload($item));
+                $conflictPayload = $this->serializeChecklistConflictPayload($item);
+                if ($item->trashed()) {
+                    $conflictPayload['deleted'] = true;
+                }
+
+                return $this->recordConflict($user, $deviceKey, $op, $item->version, $conflictPayload);
+            }
+            if ($item->trashed()) {
+                $item->restore();
             }
 
             $payload = $op->payload ?? [];
@@ -523,14 +600,19 @@ final class SyncService
         }
 
         if ($op->operationType === 'delete') {
-            $item = ChecklistItem::find($op->entityId);
+            $item = ChecklistItem::withTrashed()->lockForUpdate()->find($op->entityId);
             if ($item !== null) {
                 if ($item->trip_id !== $op->tripId) {
                     return $this->rejectUnsupported($user, $deviceKey, $op, 'Checklist item does not belong to the specified trip');
                 }
+                if ($item->trashed()) {
+                    return $this->recordAccepted($user, $deviceKey, $op, $item->version);
+                }
                 if ($op->baseVersion < $item->version) {
                     return $this->recordConflict($user, $deviceKey, $op, $item->version, $this->serializeChecklistConflictPayload($item));
                 }
+                $item->version = $item->version + 1;
+                $item->save();
                 $item->delete();
             }
 
@@ -614,11 +696,15 @@ final class SyncService
             $item->id = $op->entityId;
             $item->save();
 
+            if ($item->starts_at_utc !== null) {
+                app(NotificationService::class)->syncRemindersForItineraryItem($item);
+            }
+
             return $this->recordAccepted($user, $deviceKey, $op, $item->version);
         }
 
         if ($op->operationType === 'update') {
-            $item = ItineraryItem::find($op->entityId);
+            $item = ItineraryItem::withTrashed()->lockForUpdate()->find($op->entityId);
             if ($item === null) {
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Itinerary item not found');
             }
@@ -627,7 +713,15 @@ final class SyncService
             }
 
             if ($op->baseVersion < $item->version) {
-                return $this->recordConflict($user, $deviceKey, $op, $item->version, $this->serializeItineraryConflictPayload($item));
+                $conflictPayload = $this->serializeItineraryConflictPayload($item);
+                if ($item->trashed()) {
+                    $conflictPayload['deleted'] = true;
+                }
+
+                return $this->recordConflict($user, $deviceKey, $op, $item->version, $conflictPayload);
+            }
+            if ($item->trashed()) {
+                $item->restore();
             }
 
             $payload = $op->payload ?? [];
@@ -684,16 +778,21 @@ final class SyncService
         }
 
         if ($op->operationType === 'delete') {
-            $item = ItineraryItem::find($op->entityId);
+            $item = ItineraryItem::withTrashed()->lockForUpdate()->find($op->entityId);
             if ($item !== null) {
                 if ($item->trip_id !== $op->tripId) {
                     return $this->rejectUnsupported($user, $deviceKey, $op, 'Itinerary item does not belong to the specified trip');
+                }
+                if ($item->trashed()) {
+                    return $this->recordAccepted($user, $deviceKey, $op, $item->version);
                 }
                 if ($op->baseVersion < $item->version) {
                     return $this->recordConflict($user, $deviceKey, $op, $item->version, $this->serializeItineraryConflictPayload($item));
                 }
 
                 app(NotificationService::class)->cancelRemindersForItineraryItem($item);
+                $item->version = $item->version + 1;
+                $item->save();
                 $item->delete();
             }
 
@@ -722,6 +821,136 @@ final class SyncService
             'status' => $item->status,
             'version' => $item->version,
             'updated_at' => $item->updated_at?->toIso8601String(),
+        ];
+    }
+
+    private function handleFlight(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult
+    {
+        if ($op->tripId === null) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'trip_id is required for flight sync operations');
+        }
+
+        if ($op->operationType === 'create') {
+            $existing = Flight::query()->find($op->entityId);
+            if ($existing !== null) {
+                return $existing->trip_id === $op->tripId
+                    ? $this->recordAccepted($user, $deviceKey, $op, $existing->version)
+                    : $this->rejectUnsupported($user, $deviceKey, $op, 'Flight does not belong to the specified trip');
+            }
+
+            $payload = $op->payload ?? [];
+            $validator = Validator::make($payload, (new StoreFlightRequest)->rules());
+            if ($validator->fails()) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, $validator->errors()->first());
+            }
+            foreach ($payload['segments'] ?? [] as $segment) {
+                if (strtoupper((string) ($segment['origin_airport'] ?? '')) === strtoupper((string) ($segment['destination_airport'] ?? ''))) {
+                    return $this->rejectUnsupported($user, $deviceKey, $op, 'The destination airport must differ from the origin airport.');
+                }
+            }
+
+            $trip = Trip::find($op->tripId);
+            if ($trip === null) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, 'Trip not found');
+            }
+
+            $flight = new Flight([
+                'trip_id' => $trip->id,
+                'airline' => $payload['airline'] ?? null,
+                'booking_reference' => $trip->owner_id === $user->id ? ($payload['booking_reference'] ?? null) : null,
+                'client_operation_id' => $op->operationId,
+                'version' => 1,
+            ]);
+            $flight->id = $op->entityId;
+            $flight->save();
+            foreach ($payload['segments'] as $segment) {
+                $flight->segments()->create([
+                    ...$segment,
+                    'origin_airport' => strtoupper((string) $segment['origin_airport']),
+                    'destination_airport' => strtoupper((string) $segment['destination_airport']),
+                ]);
+            }
+
+            app(NotificationService::class)->syncRemindersForFlight($flight);
+
+            return $this->recordAccepted($user, $deviceKey, $op, $flight->version);
+        }
+
+        $flight = Flight::query()->with('segments')->lockForUpdate()->find($op->entityId);
+        if ($flight === null) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'Flight not found');
+        }
+        if ($flight->trip_id !== $op->tripId) {
+            return $this->rejectUnsupported($user, $deviceKey, $op, 'Flight does not belong to the specified trip');
+        }
+        if ($op->baseVersion < $flight->version) {
+            return $this->recordConflict($user, $deviceKey, $op, $flight->version, $this->serializeFlightConflictPayload($flight, $user));
+        }
+
+        if ($op->operationType === 'update') {
+            $payload = $op->payload ?? [];
+            $payload['base_version'] = $op->baseVersion;
+            $validator = Validator::make($payload, (new UpdateFlightRequest)->rules());
+            if ($validator->fails()) {
+                return $this->rejectUnsupported($user, $deviceKey, $op, $validator->errors()->first());
+            }
+
+            if (array_key_exists('airline', $payload)) {
+                $flight->airline = $payload['airline'];
+            }
+            if ($flight->trip->owner_id === $user->id && array_key_exists('booking_reference', $payload)) {
+                $flight->booking_reference = $payload['booking_reference'];
+            }
+            if (array_key_exists('segments', $payload)) {
+                $flight->segments()->delete();
+                foreach ($payload['segments'] as $segment) {
+                    $flight->segments()->create([
+                        ...$segment,
+                        'origin_airport' => strtoupper((string) $segment['origin_airport']),
+                        'destination_airport' => strtoupper((string) $segment['destination_airport']),
+                    ]);
+                }
+            }
+            $flight->version++;
+            $flight->save();
+
+            app(NotificationService::class)->syncRemindersForFlight($flight->fresh('segments'));
+
+            return $this->recordAccepted($user, $deviceKey, $op, $flight->version);
+        }
+
+        if ($op->operationType === 'delete') {
+            app(NotificationService::class)->cancelRemindersForFlight($flight);
+            $flight->delete();
+
+            return $this->recordAccepted($user, $deviceKey, $op, 0);
+        }
+
+        return $this->rejectUnsupported($user, $deviceKey, $op, "Unsupported operation type: {$op->operationType}");
+    }
+
+    /** @return array<string, mixed> */
+    private function serializeFlightConflictPayload(Flight $flight, User $user): array
+    {
+        $flight->loadMissing(['segments', 'trip']);
+
+        return [
+            'id' => $flight->id,
+            'trip_id' => $flight->trip_id,
+            'airline' => $flight->airline,
+            'booking_reference' => $flight->trip?->owner_id === $user->id ? $flight->booking_reference : null,
+            'segments' => $flight->segments->map(static fn ($segment): array => [
+                'flight_number' => $segment->flight_number,
+                'origin_airport' => $segment->origin_airport,
+                'destination_airport' => $segment->destination_airport,
+                'scheduled_departure_utc' => $segment->scheduled_departure_utc?->toIso8601String(),
+                'scheduled_arrival_utc' => $segment->scheduled_arrival_utc?->toIso8601String(),
+                'origin_timezone' => $segment->origin_timezone,
+                'destination_timezone' => $segment->destination_timezone,
+                'terminal' => $segment->terminal,
+                'gate' => $segment->gate,
+            ])->all(),
+            'version' => $flight->version,
         ];
     }
 
@@ -776,11 +1005,13 @@ final class SyncService
             $stay->id = $op->entityId;
             $stay->save();
 
+            app(NotificationService::class)->syncRemindersForStay($stay);
+
             return $this->recordAccepted($user, $deviceKey, $op, $stay->version);
         }
 
         if ($op->operationType === 'update') {
-            $stay = Stay::with('trip')->find($op->entityId);
+            $stay = Stay::withTrashed()->with('trip')->lockForUpdate()->find($op->entityId);
             if ($stay === null) {
                 return $this->rejectUnsupported($user, $deviceKey, $op, 'Stay not found');
             }
@@ -789,13 +1020,21 @@ final class SyncService
             }
 
             if ($op->baseVersion < $stay->version) {
+                $conflictPayload = StayPrivacy::redactServerPayload($stay, $user);
+                if ($stay->trashed()) {
+                    $conflictPayload['deleted'] = true;
+                }
+
                 return $this->recordConflict(
                     $user,
                     $deviceKey,
                     $op,
                     $stay->version,
-                    StayPrivacy::redactServerPayload($stay, $user),
+                    $conflictPayload,
                 );
+            }
+            if ($stay->trashed()) {
+                $stay->restore();
             }
 
             $payload = $op->payload ?? [];
@@ -851,10 +1090,13 @@ final class SyncService
         }
 
         if ($op->operationType === 'delete') {
-            $stay = Stay::with('trip')->find($op->entityId);
+            $stay = Stay::withTrashed()->with('trip')->lockForUpdate()->find($op->entityId);
             if ($stay !== null) {
                 if ($stay->trip_id !== $op->tripId) {
                     return $this->rejectUnsupported($user, $deviceKey, $op, 'Stay does not belong to the specified trip');
+                }
+                if ($stay->trashed()) {
+                    return $this->recordAccepted($user, $deviceKey, $op, $stay->version);
                 }
                 if ($op->baseVersion < $stay->version) {
                     return $this->recordConflict(
@@ -868,6 +1110,8 @@ final class SyncService
 
                 app(NotificationService::class)->cancelRemindersForStay($stay);
                 $stay->itineraryItems()->update(['stay_id' => null]);
+                $stay->version = $stay->version + 1;
+                $stay->save();
                 $stay->delete();
             }
 
@@ -879,7 +1123,7 @@ final class SyncService
 
     private function handleTrip(User $user, string $deviceKey, SyncOperationItemData $op): SyncOperationResult
     {
-        $trip = Trip::find($op->entityId);
+        $trip = Trip::lockForUpdate()->find($op->entityId);
         if ($trip === null) {
             return $this->rejectUnsupported($user, $deviceKey, $op, 'Trip not found');
         }
@@ -935,7 +1179,7 @@ final class SyncService
             'entity_type' => $op->entityType,
             'entity_id' => $op->entityId,
             'operation_type' => $op->operationType,
-            'payload' => $op->payload,
+            'payload' => $this->sanitizeSyncPayload($op),
             'base_version' => $op->baseVersion,
             'status' => 'conflict',
             'conflict_details' => $conflictDetails,
@@ -966,7 +1210,7 @@ final class SyncService
             'entity_type' => $op->entityType,
             'entity_id' => $op->entityId,
             'operation_type' => $op->operationType,
-            'payload' => $op->payload,
+            'payload' => $this->sanitizeSyncPayload($op),
             'base_version' => $op->baseVersion,
             'status' => 'accepted',
             'conflict_details' => null,
@@ -997,7 +1241,7 @@ final class SyncService
             'entity_type' => $op->entityType,
             'entity_id' => $op->entityId,
             'operation_type' => $op->operationType,
-            'payload' => $op->payload,
+            'payload' => $this->sanitizeSyncPayload($op),
             'base_version' => $op->baseVersion,
             'status' => 'rejected',
             'conflict_details' => ['reason' => $reason],
@@ -1012,5 +1256,22 @@ final class SyncService
             currentVersion: null,
             conflictDetails: ['reason' => $reason],
         );
+    }
+
+    /** @return array<string, mixed>|null */
+    private function sanitizeSyncPayload(SyncOperationItemData $op): ?array
+    {
+        if ($op->payload === null) {
+            return null;
+        }
+        $sanitized = $op->payload;
+        if ($op->entityType === 'flight' || $op->entityType === 'stay') {
+            unset($sanitized['booking_reference']);
+        }
+        if ($op->entityType === 'stay') {
+            unset($sanitized['phone']);
+        }
+
+        return $sanitized;
     }
 }

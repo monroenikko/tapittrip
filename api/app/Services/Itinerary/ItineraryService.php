@@ -9,6 +9,7 @@ use App\DTOs\Itinerary\RecordVisitEventData;
 use App\DTOs\Itinerary\UpdateItineraryItemData;
 use App\Exceptions\VersionConflictException;
 use App\Models\ItineraryItem;
+use App\Models\ItineraryItemVote;
 use App\Models\Trip;
 use App\Models\TripDay;
 use App\Models\User;
@@ -33,7 +34,7 @@ final class ItineraryService
      */
     public function getTripItems(Trip $trip, ?string $tripDayId = null): Collection
     {
-        $query = $trip->itineraryItems()->with(['place', 'day']);
+        $query = $trip->itineraryItems()->with(['place', 'day', 'votes']);
 
         if ($tripDayId !== null && trim($tripDayId) !== '') {
             $query->where('trip_day_id', $tripDayId);
@@ -146,6 +147,10 @@ final class ItineraryService
                 'status' => $data->status,
                 'version' => 1,
             ]);
+
+            if ($item->starts_at_utc !== null) {
+                app(NotificationService::class)->syncRemindersForItineraryItem($item);
+            }
 
             return $item->load(['place', 'day']);
         });
@@ -361,9 +366,39 @@ final class ItineraryService
             return ItineraryItem::query()
                 ->where('trip_id', $trip->id)
                 ->whereIn('id', $orderedItemIds)
-                ->with(['place', 'day'])
+                ->with(['place', 'day', 'votes'])
                 ->orderBy('sort_order')
                 ->get();
+        });
+    }
+
+    /**
+     * Cast or clear a Trip Circle member vote ('up', 'down', or null/'none') on an itinerary item.
+     */
+    public function voteItem(ItineraryItem $item, User $voter, ?string $vote): ItineraryItem
+    {
+        return DB::transaction(function () use ($item, $voter, $vote): ItineraryItem {
+            $normalized = $vote !== null ? strtolower(trim($vote)) : 'none';
+
+            if ($normalized === 'none' || $normalized === '') {
+                ItineraryItemVote::query()
+                    ->where('itinerary_item_id', $item->id)
+                    ->where('user_id', $voter->id)
+                    ->delete();
+            } else {
+                ItineraryItemVote::query()->updateOrCreate(
+                    [
+                        'itinerary_item_id' => $item->id,
+                        'user_id' => $voter->id,
+                    ],
+                    [
+                        'trip_id' => $item->trip_id,
+                        'vote' => $normalized,
+                    ],
+                );
+            }
+
+            return $item->load(['place', 'day', 'votes']);
         });
     }
 

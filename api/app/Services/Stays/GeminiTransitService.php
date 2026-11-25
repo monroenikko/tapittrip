@@ -52,7 +52,7 @@ final class GeminiTransitService
                 ]);
 
             if (! $response->successful()) {
-                Log::warning('GeminiTransitService HTTP error: '.$response->status().' '.$response->body());
+                Log::warning('GeminiTransitService HTTP error', ['status' => $response->status()]);
 
                 return null;
             }
@@ -68,8 +68,8 @@ final class GeminiTransitService
             }
 
             return $this->sanitizeAndScoreOptions($decoded, $stay, $data, $transitInfo, $origin, $destinationCurrency, $isHeavyLuggage);
-        } catch (\Throwable $e) {
-            Log::warning('GeminiTransitService exception: '.$e->getMessage());
+        } catch (\Throwable) {
+            Log::warning('GeminiTransitService request failed');
 
             return null;
         }
@@ -84,7 +84,9 @@ final class GeminiTransitService
         bool $isHeavyLuggage,
     ): string {
         $stayName = $stay->name ?? 'Hotel / Accommodation';
-        $stayAddress = $stay->address ?? $stayName;
+        $stayAddress = $stay->stay_type === 'friends_family'
+            ? $stayName
+            : ($stay->address ?? $stayName);
         $country = $stay->trip?->destination_country ?? $stay->trip?->title ?? 'Destination';
         $strollerText = $data->stroller ? 'with stroller' : 'no stroller';
 

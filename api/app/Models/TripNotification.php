@@ -71,4 +71,3 @@ final class TripNotification extends Model
         return $this->belongsTo(TripAnnouncement::class, 'announcement_id');
     }
 }
-

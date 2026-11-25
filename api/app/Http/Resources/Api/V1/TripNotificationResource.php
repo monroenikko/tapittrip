@@ -36,4 +36,3 @@ final class TripNotificationResource extends JsonResource
         ];
     }
 }
-

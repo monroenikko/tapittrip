@@ -32,4 +32,3 @@ final class TripAnnouncementFactory extends Factory
         ];
     }
 }
-

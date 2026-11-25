@@ -165,8 +165,8 @@ final class PlaceService
             }
 
             return new Collection($created);
-        } catch (\Throwable $e) {
-            Log::warning('Nominatim place search failed gracefully: '.$e->getMessage());
+        } catch (\Throwable) {
+            Log::warning('Nominatim place search failed gracefully');
 
             return new Collection;
         }
@@ -217,8 +217,8 @@ final class PlaceService
             }
 
             return new Collection($created);
-        } catch (\Throwable $e) {
-            Log::warning('Google Places search failed gracefully: '.$e->getMessage());
+        } catch (\Throwable) {
+            Log::warning('Google Places search failed gracefully');
 
             return new Collection;
         }

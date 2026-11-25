@@ -7,13 +7,17 @@ namespace App\Http\Controllers\Api\V1;
 use App\DTOs\Itinerary\CreateItineraryItemData;
 use App\DTOs\Itinerary\UpdateItineraryItemData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Itinerary\OptimizeItineraryRouteRequest;
 use App\Http\Requests\Api\V1\Itinerary\ReorderItineraryItemsRequest;
 use App\Http\Requests\Api\V1\Itinerary\StoreItineraryItemRequest;
 use App\Http\Requests\Api\V1\Itinerary\UpdateItineraryItemRequest;
+use App\Http\Requests\Api\V1\Itinerary\VoteItineraryItemRequest;
 use App\Http\Resources\Api\V1\ItineraryItemResource;
 use App\Models\ItineraryItem;
 use App\Models\Trip;
 use App\Services\Itinerary\ItineraryService;
+use App\Services\Itinerary\RouteOptimizationService;
+use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -114,5 +118,43 @@ final class ItineraryItemController extends Controller
         $reordered = $this->itineraryService->reorderItems($trip, $itemIds, $dayAssignments, $expectedVersions);
 
         return ItineraryItemResource::collection($reordered);
+    }
+
+    /**
+     * Evaluate stop-to-stop transit mode comparisons and optimize itinerary route with constraints.
+     */
+    public function optimizeRoute(
+        OptimizeItineraryRouteRequest $request,
+        Trip $trip,
+        RouteOptimizationService $routeOptimizationService,
+        ApiResponse $response,
+    ): JsonResponse {
+        $validated = $request->validated();
+        $apply = (bool) ($validated['apply'] ?? false);
+
+        Gate::authorize($apply ? 'update' : 'view', $trip);
+
+        $result = $routeOptimizationService->optimize($trip, $validated, $request->user());
+
+        return $response->success($result);
+    }
+
+    /**
+     * Cast or clear a Trip Circle member vote (up / down / none) on an itinerary item.
+     */
+    public function vote(
+        VoteItineraryItemRequest $request,
+        ItineraryItem $item,
+    ): JsonResponse {
+        Gate::authorize('view', $item->trip);
+
+        $updated = $this->itineraryService->voteItem(
+            $item,
+            $request->user(),
+            $request->validated('vote'),
+        );
+
+        return (new ItineraryItemResource($updated))
+            ->response();
     }
 }

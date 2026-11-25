@@ -10,6 +10,30 @@ use Illuminate\Support\Facades\Cache;
 final class CountryCurrencyResolver
 {
     /**
+     * Standard ISO 4217 zero-decimal currencies (currencies where 1 unit is not subdivided into cents).
+     *
+     * @var list<string>
+     */
+    public const ZERO_DECIMAL_CURRENCIES = [
+        'BIF',
+        'CLP',
+        'DJF',
+        'GNF',
+        'ISK',
+        'JPY',
+        'KMF',
+        'KRW',
+        'PYG',
+        'RWF',
+        'UGX',
+        'VND',
+        'VUV',
+        'XAF',
+        'XOF',
+        'XPF',
+    ];
+
+    /**
      * Get the cached lookup map of countries, currencies, and destination aliases.
      *
      * @return array{
@@ -25,7 +49,7 @@ final class CountryCurrencyResolver
             $codes = [];
             $names = [];
             $aliases = [];
-            $zeroDecimals = ['JPY', 'KRW', 'VND'];
+            $zeroDecimals = self::ZERO_DECIMAL_CURRENCIES;
 
             try {
                 $countries = Country::query()->get();
@@ -164,6 +188,10 @@ final class CountryCurrencyResolver
     public static function isZeroDecimal(string $currency): bool
     {
         $cur = strtoupper(trim($currency));
+        if (in_array($cur, self::ZERO_DECIMAL_CURRENCIES, true)) {
+            return true;
+        }
+
         $map = self::getLookupMap();
 
         return in_array($cur, $map['zero_decimals'], true);

@@ -112,6 +112,16 @@ final class Trip extends Model
     }
 
     /**
+     * Temporary opt-in location shares for members of this trip (TC-9).
+     *
+     * @return HasMany<TripLocationShare, $this>
+     */
+    public function locationShares(): HasMany
+    {
+        return $this->hasMany(TripLocationShare::class);
+    }
+
+    /**
      * Check if a given user is an accepted member of this trip.
      */
     public function hasMember(User|string $user): bool
@@ -173,6 +183,17 @@ final class Trip extends Model
         return $this->hasMany(Stay::class)
             ->orderBy('check_in_at')
             ->orderBy('created_at');
+    }
+
+    /**
+     * Saved manual or imported flight bookings for this trip.
+     *
+     * @return HasMany<Flight, $this>
+     */
+    public function flights(): HasMany
+    {
+        return $this->hasMany(Flight::class)
+            ->orderByDesc('created_at');
     }
 
     /**
@@ -299,5 +320,27 @@ final class Trip extends Model
     {
         return $this->hasMany(TripTraveler::class)
             ->orderBy('created_at');
+    }
+
+    /**
+     * Encrypted travel documents stored in this trip's vault.
+     *
+     * @return HasMany<TravelDocument, $this>
+     */
+    public function travelDocuments(): HasMany
+    {
+        return $this->hasMany(TravelDocument::class)
+            ->orderByDesc('created_at');
+    }
+
+    /**
+     * Smart booking imports and trip inbox records.
+     *
+     * @return HasMany<BookingImport, $this>
+     */
+    public function bookingImports(): HasMany
+    {
+        return $this->hasMany(BookingImport::class)
+            ->orderByDesc('created_at');
     }
 }

@@ -33,4 +33,3 @@ final class TripNotificationController extends Controller
         return $this->response->success(new TripNotificationResource($updated));
     }
 }
-

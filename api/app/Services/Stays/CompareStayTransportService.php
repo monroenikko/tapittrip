@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Stays;
 
+use App\Domain\Stays\StayPrivacy;
 use App\DTOs\Stays\CompareStayTransportData;
 use App\Models\Stay;
+use App\Models\User;
 use App\Services\Expenses\CountryCurrencyResolver;
 
 final class CompareStayTransportService
@@ -21,8 +23,23 @@ final class CompareStayTransportService
      *
      * @return array<string, mixed>
      */
-    public function handle(Stay $stay, CompareStayTransportData $data): array
+    public function handle(Stay $stay, CompareStayTransportData $data, ?User $viewer = null): array
     {
+        if ($viewer !== null && StayPrivacy::hidesPrivateAddress($stay, $viewer)) {
+            return [
+                'verified' => false,
+                'status' => 'unverified',
+                'message' => 'Private host address is hidden for Friends & Family stays.',
+                'origin' => $data->originName,
+                'destination' => $stay->name,
+                'google_maps_directions_url' => null,
+                'nearest_transit' => null,
+                'options' => [],
+                'provider_attribution' => 'TapItTrip Privacy Guard',
+                'last_refreshed_at' => now()->toIso8601String(),
+            ];
+        }
+
         $transitService = new StayTransitService;
         $transitInfo = $transitService->resolve($stay);
         $suggestedAirport = $transitInfo['nearest_airport_name'].($transitInfo['nearest_airport_code'] ? " ({$transitInfo['nearest_airport_code']})" : '');
@@ -120,21 +137,41 @@ final class CompareStayTransportService
         string $destinationCurrency,
         bool $isHeavyLuggage,
     ): array {
-        $text = mb_strtolower(($stay->name ?? '').' '.($stay->address ?? '').' '.($stay->trip?->destination_country ?? '').' '.($stay->trip?->title ?? '').' '.$origin);
+        $text = mb_strtolower(($stay->name ?? '').' '.($stay->address ?? '').' '.$origin.' '.($stay->trip?->destination_country ?? '').' '.($stay->trip?->title ?? ''));
         $airportCode = strtoupper((string) ($transitInfo['nearest_airport_code'] ?? ''));
 
+        // Exact airport code match takes priority over trip title keywords
+        if ($airportCode === 'HND' || $airportCode === 'NRT' || str_contains($origin, 'HND') || str_contains($origin, 'NRT')) {
+            return $this->buildTokyoOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
+        }
+        if ($airportCode === 'MNL') {
+            return $this->buildManilaOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
+        }
+        if ($airportCode === 'DPS') {
+            return $this->buildBaliOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
+        }
+        if ($airportCode === 'LHR') {
+            return $this->buildLondonOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
+        }
+        if ($airportCode === 'SIN') {
+            return $this->buildSingaporeOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
+        }
+        if ($airportCode === 'HKG') {
+            return $this->buildHongKongOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
+        }
+
         // 1. MANILA / PHILIPPINES (NAIA / MNL): No airport rail exists; recommend Grab, P2P bus, or city transit
-        if ($airportCode === 'MNL' || str_contains($text, 'manila') || str_contains($text, 'makati') || str_contains($text, 'taguig') || str_contains($text, 'bgc') || str_contains($text, 'pasay') || str_contains($text, 'naia') || str_contains($text, 'philippines')) {
+        if (str_contains($text, 'manila') || str_contains($text, 'makati') || str_contains($text, 'taguig') || str_contains($text, 'bgc') || str_contains($text, 'pasay') || str_contains($text, 'naia') || str_contains($text, 'philippines')) {
             return $this->buildManilaOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
         }
 
         // 2. BALI / INDONESIA (DPS): No train network; recommend Private Driver, Grab/Gojek, and Airport Taxi
-        if ($airportCode === 'DPS' || str_contains($text, 'bali') || str_contains($text, 'ubud') || str_contains($text, 'denpasar') || str_contains($text, 'kuta') || str_contains($text, 'seminyak') || str_contains($text, 'canggu')) {
+        if (str_contains($text, 'bali') || str_contains($text, 'ubud') || str_contains($text, 'denpasar') || str_contains($text, 'kuta') || str_contains($text, 'seminyak') || str_contains($text, 'canggu')) {
             return $this->buildBaliOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
         }
 
         // 3. TOKYO / JAPAN (HND / NRT): Has dedicated express rail (Keikyu / Monorail / N'EX)
-        if ($airportCode === 'HND' || $airportCode === 'NRT' || str_contains($text, 'tokyo') || str_contains($text, 'shinjuku') || str_contains($text, 'shibuya')) {
+        if (str_contains($text, 'tokyo') || str_contains($text, 'shinjuku') || str_contains($text, 'shibuya')) {
             return $this->buildTokyoOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
         }
 
@@ -148,7 +185,12 @@ final class CompareStayTransportService
             return $this->buildSingaporeOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
         }
 
-        // 6. Generic Global AI Transit Generator based on rail capability
+        // 6. HONG KONG (HKG): Has MTR Airport Express Line
+        if ($airportCode === 'HKG' || str_contains($text, 'hong kong') || str_contains($text, 'hongkong') || str_contains($text, 'kowloon') || str_contains($text, 'tsim sha tsui')) {
+            return $this->buildHongKongOptions($stay, $data, $transitInfo, $origin, $isHeavyLuggage);
+        }
+
+        // 7. Generic Global AI Transit Generator based on rail capability
         $hasRail = (bool) ($transitInfo['has_airport_rail'] ?? false);
 
         return $hasRail
@@ -223,7 +265,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Makati / Taguig Hub',
                 'last_mile_walk_meters' => $transitInfo['walking_distance_meters'] ?? 380,
                 'last_mile_walk_minutes' => $transitInfo['walking_minutes'] ?? 5,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Dedicated underfloor luggage stowage bay for large suitcases',
                 'accessibility_notes' => 'Low-floor boarding ramps at designated NAIA airport bus bays',
                 'convenience_score' => $isHeavyLuggage ? 52 : 82,
@@ -247,7 +289,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Transit Hub',
                 'last_mile_walk_meters' => ($transitInfo['walking_distance_meters'] ?? 380) + 250,
                 'last_mile_walk_minutes' => ($transitInfo['walking_minutes'] ?? 5) + 4,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Standard passenger space; must carry luggage in lap or beside seat',
                 'accessibility_notes' => 'High curbs and stairs; not recommended with heavy bags or stroller',
                 'convenience_score' => $isHeavyLuggage ? 15 : 55,
@@ -423,7 +465,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Tokyo Metro Line',
                 'last_mile_walk_meters' => $transitInfo['walking_distance_meters'] ?? 350,
                 'last_mile_walk_minutes' => $transitInfo['walking_minutes'] ?? 4,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Dedicated overhead luggage racks and car vestibule bays',
                 'accessibility_notes' => 'Elevator access verified at airport and interchange stations',
                 'convenience_score' => $isHeavyLuggage ? 55 : 92,
@@ -447,7 +489,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Station',
                 'last_mile_walk_meters' => ($transitInfo['walking_distance_meters'] ?? 350) + 150,
                 'last_mile_walk_minutes' => ($transitInfo['walking_minutes'] ?? 4) + 2,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Under-bus storage compartment with luggage porter assistance',
                 'accessibility_notes' => 'Step-free bus boarding curbside at airport arrival terminal',
                 'convenience_score' => $isHeavyLuggage ? 40 : 70,
@@ -518,7 +560,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Station',
                 'last_mile_walk_meters' => $transitInfo['walking_distance_meters'] ?? 310,
                 'last_mile_walk_minutes' => $transitInfo['walking_minutes'] ?? 4,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Dedicated overhead luggage racks and wide vestibules',
                 'accessibility_notes' => 'Step-free platform access and elevators across Elizabeth Line hubs',
                 'convenience_score' => $isHeavyLuggage ? 60 : 94,
@@ -542,7 +584,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Station',
                 'last_mile_walk_meters' => ($transitInfo['walking_distance_meters'] ?? 310) + 100,
                 'last_mile_walk_minutes' => ($transitInfo['walking_minutes'] ?? 4) + 1,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Tube carriage floor space; keep luggage by hand',
                 'accessibility_notes' => 'Many deep tube stations have escalators and stairs without elevators',
                 'convenience_score' => $isHeavyLuggage ? 25 : 70,
@@ -613,7 +655,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'MRT Station',
                 'last_mile_walk_meters' => $transitInfo['walking_distance_meters'] ?? 240,
                 'last_mile_walk_minutes' => $transitInfo['walking_minutes'] ?? 3,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Level barrier-free train boarding with designated priority bays',
                 'accessibility_notes' => '100% barrier-free with elevators at all Changi MRT interchange stations',
                 'convenience_score' => $isHeavyLuggage ? 68 : 94,
@@ -637,7 +679,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Bus Stop',
                 'last_mile_walk_meters' => ($transitInfo['walking_distance_meters'] ?? 240) + 100,
                 'last_mile_walk_minutes' => ($transitInfo['walking_minutes'] ?? 3) + 1,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Luggage racks located near front bus entrance',
                 'accessibility_notes' => 'Wheelchair accessible low-floor buses',
                 'convenience_score' => $isHeavyLuggage ? 40 : 68,
@@ -645,6 +687,109 @@ final class CompareStayTransportService
                 'is_fastest' => false,
                 'is_cheapest' => true,
                 'explanation' => 'Scenic, direct bus from Changi basement to city center; lowest fare option in Singapore.',
+            ],
+        ];
+    }
+
+    /**
+     * Hong Kong ground transport (MTR Airport Express, Urban Red Taxi, Cityflyer Bus).
+     *
+     * @param  array<string, mixed>  $transitInfo
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildHongKongOptions(
+        Stay $stay,
+        CompareStayTransportData $data,
+        array $transitInfo,
+        string $origin,
+        bool $isHeavyLuggage,
+    ): array {
+        $taxiCost = $data->partySize > 4 ? 48000 : 38000; // HK$380 - HK$480 in minor units (HKD has 2 decimals)
+        $railCostPerPerson = 11500; // HK$115
+        $railTotalCost = $railCostPerPerson * $data->partySize;
+        $busCostPerPerson = 4500; // HK$45
+        $busTotalCost = $busCostPerPerson * $data->partySize;
+
+        $taxiExplanation = $isHeavyLuggage
+            ? "Direct door-to-door Urban Red Taxi with boot space for {$data->checkedBags} checked bag(s)".($data->stroller ? ' and stroller.' : '.')
+            : 'Direct air-conditioned taxi avoiding station transfers and Hong Kong pedestrian crowds.';
+
+        if ($data->partySize >= 4 && $taxiCost < $railTotalCost) {
+            $taxiExplanation .= " Group taxi rate is more economical than individual Airport Express tickets for {$data->partySize} passengers.";
+        }
+
+        return [
+            [
+                'id' => 'opt-hk-taxi',
+                'mode' => 'private_transfer',
+                'title' => 'Direct Urban Taxi (Red Taxi)',
+                'provider' => 'Hong Kong Transport Department & Urban Taxis',
+                'estimated_duration_minutes' => 35,
+                'estimated_cost_minor' => $taxiCost,
+                'currency' => 'HKD',
+                'transfers' => 0,
+                'walking_meters' => 40,
+                'boarding_location' => "{$origin} Terminal Taxi Station (Red Taxi Rank)",
+                'dropoff_location' => "{$stay->name} (Front Entrance)",
+                'dropoff_address' => $stay->address ?? $stay->name,
+                'last_mile_walk_meters' => 15,
+                'last_mile_walk_minutes' => 1,
+                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'luggage_capacity' => 'Fits 3-4 large suitcases in vehicle boot',
+                'accessibility_notes' => 'Step-free curbside taxi loading at terminal exit',
+                'convenience_score' => $isHeavyLuggage ? 98 : 86,
+                'is_most_convenient' => $isHeavyLuggage,
+                'is_fastest' => false,
+                'is_cheapest' => false,
+                'explanation' => $taxiExplanation,
+            ],
+            [
+                'id' => 'opt-hk-rail',
+                'mode' => 'express_rail',
+                'title' => 'MTR Airport Express',
+                'provider' => 'MTR Corporation',
+                'estimated_duration_minutes' => 24,
+                'estimated_cost_minor' => $railTotalCost,
+                'currency' => 'HKD',
+                'transfers' => 1,
+                'walking_meters' => $transitInfo['walking_distance_meters'] ?? 310,
+                'boarding_location' => "{$origin} Airport Express Platform",
+                'dropoff_location' => $transitInfo['station_name'] ?? 'Hong Kong Station',
+                'dropoff_address' => $transitInfo['station_address'] ?? 'Central',
+                'last_mile_walk_meters' => $transitInfo['walking_distance_meters'] ?? 310,
+                'last_mile_walk_minutes' => $transitInfo['walking_minutes'] ?? 4,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
+                'luggage_capacity' => 'Dedicated luggage racks and free high-speed in-train Wi-Fi',
+                'accessibility_notes' => '100% barrier-free with level roll-on train boarding and station lifts',
+                'convenience_score' => $isHeavyLuggage ? 65 : 94,
+                'is_most_convenient' => ! $isHeavyLuggage,
+                'is_fastest' => true,
+                'is_cheapest' => false,
+                'explanation' => 'Fastest rail link into Central Hong Kong in 24 minutes with level barrier-free platform boarding.',
+            ],
+            [
+                'id' => 'opt-hk-bus',
+                'mode' => 'public_transit',
+                'title' => 'Cityflyer Airport Bus (A11 / A21)',
+                'provider' => 'Citybus Hong Kong',
+                'estimated_duration_minutes' => 55,
+                'estimated_cost_minor' => $busTotalCost,
+                'currency' => 'HKD',
+                'transfers' => 1,
+                'walking_meters' => ($transitInfo['walking_distance_meters'] ?? 310) + 120,
+                'boarding_location' => "{$origin} Ground Transportation Centre (Bay 1/2)",
+                'dropoff_location' => $transitInfo['station_name'] ?? 'Central / Kowloon Bus Stop',
+                'dropoff_address' => $transitInfo['station_address'] ?? 'Bus Stop',
+                'last_mile_walk_meters' => ($transitInfo['walking_distance_meters'] ?? 310) + 120,
+                'last_mile_walk_minutes' => ($transitInfo['walking_minutes'] ?? 4) + 2,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
+                'luggage_capacity' => 'Large underfloor luggage racks with CCTV monitoring on upper deck',
+                'accessibility_notes' => 'Low-floor double-decker buses with wheelchair ramp',
+                'convenience_score' => $isHeavyLuggage ? 42 : 72,
+                'is_most_convenient' => false,
+                'is_fastest' => false,
+                'is_cheapest' => true,
+                'explanation' => 'Scenic double-decker express coach with dedicated luggage racks; economical alternative into downtown.',
             ],
         ];
     }
@@ -713,7 +858,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Transit Hub',
                 'last_mile_walk_meters' => $transitInfo['walking_distance_meters'] ?? 350,
                 'last_mile_walk_minutes' => $transitInfo['walking_minutes'] ?? 4,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Dedicated overhead luggage racks and car vestibule bays',
                 'accessibility_notes' => 'Elevator access verified at airport and interchange stations',
                 'convenience_score' => $isHeavyLuggage ? 55 : 92,
@@ -737,7 +882,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Address',
                 'last_mile_walk_meters' => ($transitInfo['walking_distance_meters'] ?? 350) + 300,
                 'last_mile_walk_minutes' => ($transitInfo['walking_minutes'] ?? 4) + 4,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Standard passenger space; must keep luggage by your seat',
                 'accessibility_notes' => 'Stairs and turnstiles; elevator availability unverified at local street exits',
                 'convenience_score' => $isHeavyLuggage ? 20 : 65,
@@ -809,7 +954,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Central Terminal',
                 'last_mile_walk_meters' => $transitInfo['walking_distance_meters'] ?? 350,
                 'last_mile_walk_minutes' => $transitInfo['walking_minutes'] ?? 4,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Under-floor luggage stowage bay for large suitcases',
                 'accessibility_notes' => 'Designated airport shuttle stop with baggage loading assistance',
                 'convenience_score' => $isHeavyLuggage ? 50 : 80,
@@ -833,7 +978,7 @@ final class CompareStayTransportService
                 'dropoff_address' => $transitInfo['station_address'] ?? 'Station',
                 'last_mile_walk_meters' => ($transitInfo['walking_distance_meters'] ?? 350) + 250,
                 'last_mile_walk_minutes' => ($transitInfo['walking_minutes'] ?? 4) + 4,
-                'last_mile_directions_url' => $stay->google_maps_directions_url,
+                'last_mile_directions_url' => $this->buildWalkingDirectionsUrl($stay, $transitInfo['station_name'] ?? null),
                 'luggage_capacity' => 'Standard passenger cabin; keep bags close to seat',
                 'accessibility_notes' => 'Street curbs and stairs; transfers can be difficult with multiple bags',
                 'convenience_score' => $isHeavyLuggage ? 15 : 55,
@@ -843,5 +988,25 @@ final class CompareStayTransportService
                 'explanation' => 'Lowest cost public transit, but requires multiple street transfers and carrying bags through crowds.',
             ],
         ];
+    }
+
+    /**
+     * Build dedicated walking directions URL from drop-off station to stay lobby.
+     */
+    private function buildWalkingDirectionsUrl(Stay $stay, ?string $dropoffLocation): ?string
+    {
+        $destination = ($stay->latitude !== null && $stay->longitude !== null)
+            ? "{$stay->latitude},{$stay->longitude}"
+            : ($stay->address ?: $stay->name);
+
+        if ($dropoffLocation !== null && trim($dropoffLocation) !== '') {
+            return 'https://www.google.com/maps/dir/?api=1&origin='
+                .urlencode($dropoffLocation)
+                .'&destination='
+                .urlencode($destination)
+                .'&travelmode=walking';
+        }
+
+        return $stay->google_maps_directions_url;
     }
 }

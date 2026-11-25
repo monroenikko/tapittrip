@@ -11,11 +11,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Itinerary\ApplyAiItineraryRequest;
 use App\Http\Requests\Api\V1\Itinerary\AskTripAssistantRequest;
 use App\Http\Requests\Api\V1\Itinerary\GenerateAiItineraryRequest;
+use App\Http\Requests\Api\V1\Itinerary\SmartReplanItineraryRequest;
 use App\Http\Resources\Api\V1\ItineraryItemResource;
 use App\Models\Trip;
 use App\Services\Itinerary\ApplyAiItineraryService;
 use App\Services\Itinerary\AskTapItTripService;
 use App\Services\Itinerary\GenerateAiItineraryService;
+use App\Services\Itinerary\SmartReplanService;
 use App\Support\Http\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -73,5 +75,23 @@ final class AiItineraryController extends Controller
         $result = $this->assistantService->ask($trip, $data);
 
         return $this->response->success($result->toArray());
+    }
+
+    /**
+     * Propose or apply a non-destructive in-trip itinerary replan (weather, delay, skipped stop, pacing).
+     */
+    public function replan(
+        Trip $trip,
+        SmartReplanItineraryRequest $request,
+        SmartReplanService $replanService,
+    ): JsonResponse {
+        $validated = $request->validated();
+        $apply = (bool) ($validated['apply'] ?? false);
+
+        Gate::authorize($apply ? 'update' : 'view', $trip);
+
+        $result = $replanService->replan($trip, $validated);
+
+        return $this->response->success($result);
     }
 }

@@ -26,4 +26,3 @@ final class UpdateAnnouncementRequest extends FormRequest
         ];
     }
 }
-

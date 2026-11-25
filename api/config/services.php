@@ -37,6 +37,11 @@ return [
 
     'google' => [
         'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
+        'oauth_client_id' => env('GOOGLE_OAUTH_CLIENT_ID'),
+    ],
+
+    'apple' => [
+        'client_id' => env('APPLE_OAUTH_CLIENT_ID'),
     ],
 
     'gemini' => [

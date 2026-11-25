@@ -74,8 +74,8 @@ final class WeatherService
                     return $weather;
                 }
             }
-        } catch (\Throwable $e) {
-            Log::warning("Open-Meteo weather fetch failed for trip {$trip->id}: ".$e->getMessage());
+        } catch (\Throwable) {
+            Log::warning("Open-Meteo weather fetch failed for trip {$trip->id}");
         }
 
         $fallback = $this->buildFallbackWeather($destName, $lat, $lng, $timezone, $now);

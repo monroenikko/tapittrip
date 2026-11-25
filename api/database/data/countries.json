@@ -146,7 +146,7 @@
         "name": "Burkina Faso",
         "currency_code": "XOF",
         "flag_emoji": "🇧🇫",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -170,7 +170,7 @@
         "name": "Burundi",
         "currency_code": "BIF",
         "flag_emoji": "🇧🇮",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -178,7 +178,7 @@
         "name": "Benin",
         "currency_code": "XOF",
         "flag_emoji": "🇧🇯",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -278,7 +278,7 @@
         "name": "Central African Republic",
         "currency_code": "XAF",
         "flag_emoji": "🇨🇫",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -286,7 +286,7 @@
         "name": "Congo (Republic)",
         "currency_code": "XAF",
         "flag_emoji": "🇨🇬",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -306,7 +306,7 @@
         "name": "Ivory Coast",
         "currency_code": "XOF",
         "flag_emoji": "🇨🇮",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -314,7 +314,7 @@
         "name": "Chile",
         "currency_code": "CLP",
         "flag_emoji": "🇨🇱",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -322,7 +322,7 @@
         "name": "Cameroon",
         "currency_code": "XAF",
         "flag_emoji": "🇨🇲",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -407,7 +407,7 @@
         "name": "Djibouti",
         "currency_code": "DJF",
         "flag_emoji": "🇩🇯",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -544,7 +544,7 @@
         "name": "Gabon",
         "currency_code": "XAF",
         "flag_emoji": "🇬🇦",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -624,7 +624,7 @@
         "name": "Guinea",
         "currency_code": "GNF",
         "flag_emoji": "🇬🇳",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -632,7 +632,7 @@
         "name": "Equatorial Guinea",
         "currency_code": "XAF",
         "flag_emoji": "🇬🇶",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -664,7 +664,7 @@
         "name": "Guinea-Bissau",
         "currency_code": "XOF",
         "flag_emoji": "🇬🇼",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -792,7 +792,7 @@
         "name": "Iceland",
         "currency_code": "ISK",
         "flag_emoji": "🇮🇸",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -891,7 +891,7 @@
         "name": "Comoros",
         "currency_code": "KMF",
         "flag_emoji": "🇰🇲",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1102,7 +1102,7 @@
         "name": "Mali",
         "currency_code": "XOF",
         "flag_emoji": "🇲🇱",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1210,7 +1210,7 @@
         "name": "New Caledonia",
         "currency_code": "XPF",
         "flag_emoji": "🇳🇨",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1218,7 +1218,7 @@
         "name": "Niger",
         "currency_code": "XOF",
         "flag_emoji": "🇳🇪",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1309,7 +1309,7 @@
         "name": "French Polynesia",
         "currency_code": "XPF",
         "flag_emoji": "🇵🇫",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1400,7 +1400,7 @@
         "name": "Paraguay",
         "currency_code": "PYG",
         "flag_emoji": "🇵🇾",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1440,7 +1440,7 @@
         "name": "Rwanda",
         "currency_code": "RWF",
         "flag_emoji": "🇷🇼",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1532,7 +1532,7 @@
         "name": "Senegal",
         "currency_code": "XOF",
         "flag_emoji": "🇸🇳",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1596,7 +1596,7 @@
         "name": "Chad",
         "currency_code": "XAF",
         "flag_emoji": "🇹🇩",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1604,7 +1604,7 @@
         "name": "Togo",
         "currency_code": "XOF",
         "flag_emoji": "🇹🇬",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1719,7 +1719,7 @@
         "name": "Uganda",
         "currency_code": "UGX",
         "flag_emoji": "🇺🇬",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {
@@ -1815,7 +1815,7 @@
         "name": "Vanuatu",
         "currency_code": "VUV",
         "flag_emoji": "🇻🇺",
-        "is_zero_decimal": false,
+        "is_zero_decimal": true,
         "aliases": []
     },
     {

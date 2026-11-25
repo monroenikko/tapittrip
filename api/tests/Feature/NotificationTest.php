@@ -10,7 +10,10 @@ use App\Models\NotificationPreference;
 use App\Models\Reminder;
 use App\Models\Stay;
 use App\Models\Trip;
+use App\Models\TripAnnouncement;
 use App\Models\TripDay;
+use App\Models\TripMember;
+use App\Models\TripNotification;
 use App\Models\User;
 use App\Models\UserDevice;
 use Carbon\Carbon;
@@ -264,5 +267,210 @@ final class NotificationTest extends TestCase
 
         $this->getJson("/api/v1/trips/{$trip->id}/reminders")->assertStatus(403);
         $this->postJson("/api/v1/trips/{$trip->id}/reminders/generate")->assertStatus(403);
+    }
+
+    public function test_creating_and_updating_stay_timezone_schedules_and_reschedules_stay_and_linked_item_reminders(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $trip = Trip::factory()->create([
+            'owner_id' => $owner->id,
+            'primary_timezone' => 'Asia/Tokyo',
+        ]);
+
+        // Creating a stay via REST automatically schedules stay check-in/check-out & linked itinerary item reminders
+        $createRes = $this->postJson("/api/v1/trips/{$trip->id}/stays", [
+            'name' => 'Park Hyatt Kyoto',
+            'stay_type' => 'hotel',
+            'check_in_at' => '2026-12-10T15:00:00+09:00',
+            'check_out_at' => '2026-12-12T11:00:00+09:00',
+            'timezone' => 'Asia/Tokyo',
+            'create_itinerary_events' => true,
+        ]);
+
+        $createRes->assertCreated();
+        $stayId = (string) $createRes->json('data.id');
+
+        $scheduledStayReminders = Reminder::where('trip_id', $trip->id)
+            ->whereIn('type', ['stay_checkin', 'stay_checkout'])
+            ->where('status', 'scheduled')
+            ->get();
+        $this->assertCount(2, $scheduledStayReminders);
+        $this->assertSame('Asia/Tokyo', $scheduledStayReminders->first()->timezone);
+        $this->assertSame('14:00', Carbon::parse($scheduledStayReminders->firstWhere('type', 'stay_checkin')->trigger_at_utc)->setTimezone('Asia/Tokyo')->format('H:i'));
+
+        $linkedItems = ItineraryItem::where('stay_id', $stayId)->get();
+        $this->assertCount(2, $linkedItems);
+        $this->assertSame(2, Reminder::whereIn('itinerary_item_id', $linkedItems->pluck('id'))->where('status', 'scheduled')->count());
+
+        // Changing stay timezone propagates to linked itinerary items and reschedules both stay + item reminders cleanly
+        $this->patchJson("/api/v1/stays/{$stayId}", [
+            'timezone' => 'Asia/Seoul',
+            'base_version' => 1,
+        ])->assertOk();
+
+        $freshStayReminders = Reminder::where('trip_id', $trip->id)
+            ->whereIn('type', ['stay_checkin', 'stay_checkout'])
+            ->where('status', 'scheduled')
+            ->get();
+        $this->assertCount(2, $freshStayReminders);
+        $this->assertTrue($freshStayReminders->every(fn (Reminder $r): bool => $r->timezone === 'Asia/Seoul'));
+        $this->assertSame(2, Reminder::where('trip_id', $trip->id)->whereIn('type', ['stay_checkin', 'stay_checkout'])->count());
+
+        foreach ($linkedItems->fresh() as $item) {
+            $this->assertSame('Asia/Seoul', $item->timezone);
+            $itemRem = Reminder::where('itinerary_item_id', $item->id)->where('status', 'scheduled')->firstOrFail();
+            $this->assertSame('Asia/Seoul', $itemRem->timezone);
+        }
+
+        // Shifting check-in time cancels old stay check-in reminder and schedules the new time
+        $this->patchJson("/api/v1/stays/{$stayId}", [
+            'check_in_at' => '2026-12-10T16:30:00+09:00',
+            'base_version' => 2,
+        ])->assertOk();
+
+        $this->assertSame(1, Reminder::where('trip_id', $trip->id)->where('type', 'stay_checkin')->where('status', 'cancelled')->count());
+        $newCheckInRem = Reminder::where('trip_id', $trip->id)->where('type', 'stay_checkin')->where('status', 'scheduled')->firstOrFail();
+        $this->assertSame('15:30', Carbon::parse($newCheckInRem->trigger_at_utc)->setTimezone('Asia/Seoul')->format('H:i'));
+    }
+
+    public function test_updating_trip_timezone_reschedules_active_reminders(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $trip = Trip::factory()->create([
+            'owner_id' => $owner->id,
+            'primary_timezone' => 'Asia/Tokyo',
+            'start_date' => '2026-12-01',
+            'end_date' => '2026-12-02',
+        ]);
+        TripDay::create([
+            'trip_id' => $trip->id,
+            'local_date' => '2026-12-01',
+        ]);
+
+        // Generate morning summary reminder in Asia/Tokyo (08:00 JST)
+        $this->postJson("/api/v1/trips/{$trip->id}/reminders/generate")->assertOk();
+        $initialSummary = Reminder::where('trip_id', $trip->id)
+            ->where('type', 'morning_summary')
+            ->where('status', 'scheduled')
+            ->firstOrFail();
+        $this->assertSame('Asia/Tokyo', $initialSummary->timezone);
+
+        // Update trip primary_timezone -> old morning summary is cancelled, new one scheduled in Europe/Paris
+        $this->patchJson("/api/v1/trips/{$trip->id}", [
+            'primary_timezone' => 'Europe/Paris',
+        ])->assertOk();
+
+        $this->assertSame('cancelled', $initialSummary->fresh()->status);
+        $updatedSummary = Reminder::where('trip_id', $trip->id)
+            ->where('type', 'morning_summary')
+            ->where('status', 'scheduled')
+            ->firstOrFail();
+        $this->assertSame('Europe/Paris', $updatedSummary->timezone);
+    }
+
+    public function test_updating_preferences_recalculates_reminders_and_cancels_opted_out_announcements(): void
+    {
+        $owner = User::factory()->create(['home_timezone' => 'Europe/London']);
+        $companion = User::factory()->create();
+
+        $trip = Trip::factory()->create([
+            'owner_id' => $owner->id,
+            'primary_timezone' => 'Asia/Tokyo',
+        ]);
+        TripMember::factory()->create([
+            'trip_id' => $trip->id,
+            'user_id' => $companion->id,
+            'role' => 'viewer',
+            'invitation_status' => 'accepted',
+        ]);
+
+        // 14:30 UTC = 23:30 JST (quiet in Tokyo), 14:30 London (not quiet at home)
+        $item = ItineraryItem::factory()->create([
+            'trip_id' => $trip->id,
+            'title' => 'Late Observatory',
+            'starts_at_utc' => '2026-12-01T14:30:00Z',
+            'timezone' => 'Asia/Tokyo',
+            'status' => 'planned',
+        ]);
+
+        Sanctum::actingAs($owner);
+        NotificationPreference::create([
+            'user_id' => $owner->id,
+            'quiet_hours_enabled' => false,
+            'timezone_behavior' => 'destination',
+        ]);
+        $this->postJson("/api/v1/trips/{$trip->id}/reminders/generate")->assertOk();
+        $this->assertTrue(Reminder::where('itinerary_item_id', $item->id)->where('status', 'scheduled')->exists());
+
+        // Enabling quiet hours immediately cancels the active reminder overlapping destination quiet hours
+        $this->putJson('/api/v1/me/notification-preferences', [
+            'quiet_hours_enabled' => true,
+            'quiet_hours_start' => '22:00',
+            'quiet_hours_end' => '07:00',
+        ])->assertOk();
+        $this->assertFalse(Reminder::where('itinerary_item_id', $item->id)->where('status', 'scheduled')->exists());
+
+        // Opting out of circle announcements cancels pending in-app circle_announcement deliveries
+        $announcement = TripAnnouncement::factory()->create([
+            'trip_id' => $trip->id,
+            'author_id' => $owner->id,
+        ]);
+        $notice = TripNotification::factory()->create([
+            'trip_id' => $trip->id,
+            'user_id' => $companion->id,
+            'announcement_id' => $announcement->id,
+            'category' => 'circle_announcement',
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($companion);
+        $this->putJson('/api/v1/me/notification-preferences', [
+            'circle_announcements_enabled' => false,
+        ])->assertOk();
+
+        $this->assertSame('cancelled', $notice->fresh()->status);
+    }
+
+    public function test_deleting_trip_cancels_scheduled_reminders_and_pending_notifications(): void
+    {
+        $owner = User::factory()->create();
+        $companion = User::factory()->create();
+
+        $trip = Trip::factory()->create([
+            'owner_id' => $owner->id,
+            'primary_timezone' => 'Asia/Tokyo',
+        ]);
+        $reminder = Reminder::create([
+            'trip_id' => $trip->id,
+            'type' => 'morning_summary',
+            'title' => 'Today',
+            'body' => 'Summary',
+            'trigger_at_utc' => now()->addDay(),
+            'timezone' => 'Asia/Tokyo',
+            'delivery_channel' => 'local',
+            'status' => 'scheduled',
+            'dedupe_key' => 'trip-del-1',
+            'source_version' => 1,
+        ]);
+        $announcement = TripAnnouncement::factory()->create([
+            'trip_id' => $trip->id,
+            'author_id' => $owner->id,
+        ]);
+        $notice = TripNotification::factory()->create([
+            'trip_id' => $trip->id,
+            'user_id' => $companion->id,
+            'announcement_id' => $announcement->id,
+            'status' => 'suppressed_quiet_hours',
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->deleteJson("/api/v1/trips/{$trip->id}")->assertNoContent();
+
+        $this->assertSame('cancelled', $reminder->fresh()->status);
+        $this->assertSame('cancelled', $notice->fresh()->status);
     }
 }

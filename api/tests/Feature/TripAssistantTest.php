@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Airport;
 use App\Models\AirportLounge;
 use App\Models\AirportTerminal;
+use App\Models\ItineraryItem;
 use App\Models\Stay;
 use App\Models\Trip;
 use App\Models\User;
@@ -60,6 +61,7 @@ final class TripAssistantTest extends TestCase
         ]);
 
         $response->assertOk()
+            ->assertJsonPath('data.context_summary.source', 'local_fallback')
             ->assertJsonPath('data.category', 'dining')
             ->assertJsonPath('data.context_summary.has_stay', true)
             ->assertJsonPath('data.context_summary.stay_name', 'Shinjuku Granbell Hotel');
@@ -206,16 +208,50 @@ final class TripAssistantTest extends TestCase
             'generativelanguage.googleapis.com/*' => Http::response($fakeAiResponse, 200),
         ]);
 
+        Stay::create([
+            'trip_id' => $this->trip->id,
+            'name' => 'Example Stay',
+            'stay_type' => 'hotel',
+            'address' => 'PRIVATE ADDRESS SENTINEL',
+            'check_in_at' => '2026-11-10 15:00:00',
+            'check_out_at' => '2026-11-15 11:00:00',
+            'timezone' => 'Asia/Tokyo',
+            'version' => 1,
+        ]);
+
+        ItineraryItem::factory()->count(7)->create(['trip_id' => $this->trip->id, 'title' => 'Planned stop']);
+        ItineraryItem::factory()->create(['trip_id' => $this->trip->id, 'title' => 'Eighth planned stop', 'sort_order' => 8]);
+        ItineraryItem::factory()->create(['title' => 'Other trip private stop']);
+
         $response = $this->postJson("/api/v1/trips/{$this->trip->id}/assistant/query", [
             'query' => 'Should I carry cash or use cards in Tokyo?',
         ]);
 
         $response->assertOk()
+            ->assertJsonPath('data.context_summary.source', 'gemini')
             ->assertJsonPath('data.category', 'transit')
             ->assertJsonPath('data.suggested_actions.0.label', 'Add Dinner at Ichiran Ramen')
             ->assertJsonPath('data.suggested_actions.0.payload.kind', 'meal');
 
+        Http::assertSent(function ($request): bool {
+            $prompt = $request['contents'][0]['parts'][0]['text'];
+
+            return str_contains($prompt, 'Eighth planned stop')
+                && ! str_contains($prompt, 'Other trip private stop')
+                && ! str_contains($prompt, 'PRIVATE ADDRESS SENTINEL');
+        });
+
         $this->assertStringContainsString('Welcome Suica card', $response->json('data.reply'));
+    }
+
+    public function test_provider_failure_is_labeled_as_fallback(): void
+    {
+        Config::set('services.gemini.api_key', 'mock-key');
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response([], 503)]);
+
+        $this->postJson("/api/v1/trips/{$this->trip->id}/assistant/query", [
+            'query' => 'Suggest additional activities that complement my saved itinerary.',
+        ])->assertOk()->assertJsonPath('data.context_summary.source', 'local_fallback');
     }
 
     public function test_assistant_polite_guardrail_when_asking_non_travel_question(): void

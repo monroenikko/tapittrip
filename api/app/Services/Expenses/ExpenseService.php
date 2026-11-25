@@ -624,12 +624,24 @@ final class ExpenseService
                         (float) $settlement->exchange_rate,
                     );
                 } else {
-                    $settlementBaseMinor = $settlement->amount_minor;
+                    $rateData = $this->rateService->getRate($setCur, $baseCurrency);
+                    if ($rateData !== null && $rateData->rate > 0) {
+                        $settlementBaseMinor = CountryCurrencyResolver::convertAmountMinor(
+                            $settlement->amount_minor,
+                            $setCur,
+                            $baseCurrency,
+                            $rateData->rate,
+                        );
+                    } else {
+                        $settlementBaseMinor = null;
+                    }
                 }
             }
 
-            $netBalances[$settlement->payer_id] = ($netBalances[$settlement->payer_id] ?? 0) + (int) $settlementBaseMinor;
-            $netBalances[$settlement->payee_id] = ($netBalances[$settlement->payee_id] ?? 0) - (int) $settlementBaseMinor;
+            if ($settlementBaseMinor !== null) {
+                $netBalances[$settlement->payer_id] = ($netBalances[$settlement->payer_id] ?? 0) + (int) $settlementBaseMinor;
+                $netBalances[$settlement->payee_id] = ($netBalances[$settlement->payee_id] ?? 0) - (int) $settlementBaseMinor;
+            }
         }
 
         // 4. Construct balances array without exposing member email PII

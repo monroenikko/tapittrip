@@ -33,4 +33,3 @@ final class TripAnnouncementResource extends JsonResource
         ];
     }
 }
-

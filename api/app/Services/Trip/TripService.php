@@ -8,11 +8,14 @@ use App\DTOs\Trip\CreateTripData;
 use App\DTOs\Trip\TodaySummaryResult;
 use App\DTOs\Trip\UpdateTripData;
 use App\Models\ItineraryItem;
+use App\Models\Reminder;
 use App\Models\Stay;
 use App\Models\Trip;
+use App\Models\TripNotification;
 use App\Models\User;
 use App\Services\Expenses\CountryCurrencyResolver;
 use App\Services\Itinerary\ItineraryService;
+use App\Services\Notifications\NotificationService;
 use App\Services\Weather\WeatherService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -92,6 +95,18 @@ final class TripService
                 $this->itineraryService->ensureDaysForTrip($refreshed);
             }
 
+            if (
+                $refreshed->owner !== null &&
+                (
+                    array_key_exists('primary_timezone', $updates) ||
+                    array_key_exists('start_date', $updates) ||
+                    array_key_exists('title', $updates)
+                ) &&
+                Reminder::query()->where('trip_id', $refreshed->id)->where('status', 'scheduled')->exists()
+            ) {
+                app(NotificationService::class)->scheduleTripReminders($refreshed, $refreshed->owner);
+            }
+
             return $refreshed;
         });
     }
@@ -102,6 +117,16 @@ final class TripService
     public function delete(Trip $trip): void
     {
         DB::transaction(function () use ($trip): void {
+            Reminder::query()
+                ->where('trip_id', $trip->id)
+                ->where('status', 'scheduled')
+                ->update(['status' => 'cancelled']);
+
+            TripNotification::query()
+                ->where('trip_id', $trip->id)
+                ->whereIn('status', ['pending', 'suppressed_quiet_hours'])
+                ->update(['status' => 'cancelled']);
+
             $trip->delete();
         });
     }
@@ -254,6 +279,20 @@ final class TripService
 
         $weather = $this->weatherService->getCurrentWeather($trip);
 
+        // Flights (ordered by earliest segment departure)
+        $flights = $trip->flights()
+            ->with(['segments', 'trip'])
+            ->get()
+            ->sortBy(fn ($flight) => $flight->segments->first()?->scheduled_departure_utc?->timestamp ?? PHP_INT_MAX)
+            ->values();
+
+        $cutoffUtc = $now->utc()->subHours(6);
+        $upcomingFlight = $flights->first(function ($flight) use ($cutoffUtc): bool {
+            return $flight->segments->contains(
+                fn ($seg) => $seg->scheduled_departure_utc !== null && $seg->scheduled_departure_utc->greaterThanOrEqualTo($cutoffUtc)
+            );
+        }) ?? $flights->first();
+
         return new TodaySummaryResult(
             trip: $trip,
             tripStatus: $tripStatus,
@@ -267,6 +306,8 @@ final class TripService
             localTime: $now->toIso8601String(),
             budgetPacing: $budgetPacing,
             weather: $weather,
+            upcomingFlight: $upcomingFlight,
+            flights: $flights,
         );
     }
 }

@@ -13,4 +13,3 @@ final readonly class CreateAnnouncementData
         public ?string $clientOperationId = null,
     ) {}
 }
-

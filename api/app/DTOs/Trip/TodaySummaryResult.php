@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\DTOs\Trip;
 
 use App\DTOs\Weather\WeatherConditionData;
+use App\Models\Flight;
 use App\Models\ItineraryItem;
 use App\Models\Stay;
 use App\Models\Trip;
@@ -14,6 +15,7 @@ final readonly class TodaySummaryResult
 {
     /**
      * @param  Collection<int, ItineraryItem>  $todayItems
+     * @param  Collection<int, Flight>  $flights
      * @param  array{day_number: int, total_days: int, date: string, title: ?string}|null  $activeDay
      * @param  array{total_activities: int, completed_activities: int, progress_percentage: int}  $metrics
      */
@@ -30,5 +32,7 @@ final readonly class TodaySummaryResult
         public string $localTime,
         public ?array $budgetPacing = null,
         public ?WeatherConditionData $weather = null,
+        public ?Flight $upcomingFlight = null,
+        public Collection $flights = new Collection,
     ) {}
 }

@@ -20,6 +20,17 @@ final class ItineraryItemResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $votes = $this->relationLoaded('votes')
+            ? $this->votes
+            : $this->votes()->get();
+
+        $viewerId = $request->user()?->id;
+        $upvotesCount = $votes->where('vote', 'up')->count();
+        $downvotesCount = $votes->where('vote', 'down')->count();
+        $viewerVote = $viewerId !== null
+            ? $votes->firstWhere('user_id', $viewerId)?->vote
+            : null;
+
         return [
             'id' => $this->id,
             'trip_id' => $this->trip_id,
@@ -34,6 +45,9 @@ final class ItineraryItemResource extends JsonResource
             'sort_order' => $this->sort_order,
             'status' => $this->status,
             'version' => $this->version,
+            'upvotes_count' => $upvotesCount,
+            'downvotes_count' => $downvotesCount,
+            'viewer_vote' => $viewerVote,
             'place' => new PlaceResource($this->whenLoaded('place')),
             'day' => new TripDayResource($this->whenLoaded('day')),
             'created_at' => $this->created_at?->toIso8601String(),

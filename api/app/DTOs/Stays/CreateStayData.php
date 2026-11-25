@@ -45,10 +45,10 @@ final readonly class CreateStayData
             latitude: isset($data['latitude']) && $data['latitude'] !== null ? (float) $data['latitude'] : null,
             longitude: isset($data['longitude']) && $data['longitude'] !== null ? (float) $data['longitude'] : null,
             checkInAt: isset($data['check_in_at']) && $data['check_in_at'] !== null
-                ? Carbon::parse((string) $data['check_in_at'])
+                ? Carbon::parse((string) $data['check_in_at'])->utc()
                 : null,
             checkOutAt: isset($data['check_out_at']) && $data['check_out_at'] !== null
-                ? Carbon::parse((string) $data['check_out_at'])
+                ? Carbon::parse((string) $data['check_out_at'])->utc()
                 : null,
             timezone: $timezone,
             phone: isset($data['phone']) ? (string) $data['phone'] : null,

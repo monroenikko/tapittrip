@@ -54,7 +54,7 @@ final class GeminiItineraryService
                 ]);
 
             if (! $response->successful()) {
-                Log::warning('GeminiItineraryService HTTP error: '.$response->status().' '.$response->body());
+                Log::warning('GeminiItineraryService HTTP error', ['status' => $response->status()]);
 
                 return null;
             }
@@ -70,8 +70,8 @@ final class GeminiItineraryService
             }
 
             return $this->parseDays($decoded, $destination, $currency, $isFamily);
-        } catch (\Throwable $e) {
-            Log::warning('GeminiItineraryService exception: '.$e->getMessage());
+        } catch (\Throwable) {
+            Log::warning('GeminiItineraryService request failed');
 
             return null;
         }

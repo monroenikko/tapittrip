@@ -26,4 +26,3 @@ final class StoreAnnouncementRequest extends FormRequest
         ];
     }
 }
-

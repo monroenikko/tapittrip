@@ -114,7 +114,10 @@ final class StayService
                 }
             }
 
-            return $stay->load(['place', 'itineraryItems']);
+            $fresh = $stay->load(['place', 'itineraryItems']);
+            app(NotificationService::class)->syncRemindersForStay($fresh);
+
+            return $fresh;
         });
     }
 
@@ -193,19 +196,21 @@ final class StayService
 
             $locked->update($updates);
 
-            // Update linked check-in and check-out itinerary item titles/times if name or dates changed
-            if ($data->name !== null || $data->checkInAt !== null || $data->checkOutAt !== null) {
+            // Update linked check-in and check-out itinerary item titles/times/timezones if changed
+            if ($data->name !== null || $data->checkInAt !== null || $data->checkOutAt !== null || $data->timezone !== null) {
                 foreach ($locked->itineraryItems as $item) {
                     if (str_starts_with($item->title, 'Check-in:')) {
                         $item->update([
                             'title' => 'Check-in: '.$locked->name,
                             'starts_at_utc' => $locked->check_in_at?->copy()->utc() ?? $item->starts_at_utc,
+                            'timezone' => $locked->timezone,
                             'version' => $item->version + 1,
                         ]);
                     } elseif (str_starts_with($item->title, 'Check-out:')) {
                         $item->update([
                             'title' => 'Check-out: '.$locked->name,
                             'starts_at_utc' => $locked->check_out_at?->copy()->utc() ?? $item->starts_at_utc,
+                            'timezone' => $locked->timezone,
                             'version' => $item->version + 1,
                         ]);
                     }
@@ -241,8 +246,8 @@ final class StayService
      *
      * @return array<string, mixed>
      */
-    public function compareTransport(Stay $stay, CompareStayTransportData $data): array
+    public function compareTransport(Stay $stay, CompareStayTransportData $data, ?User $viewer = null): array
     {
-        return $this->compareStayTransportService->handle($stay, $data);
+        return $this->compareStayTransportService->handle($stay, $data, $viewer);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Domain\Expenses\ExpenseSplitCalculator;
 use App\Models\Trip;
 use App\Models\User;
 use App\Services\Expenses\CountryCurrencyResolver;
@@ -136,5 +137,57 @@ final class CurrencyTest extends TestCase
         // Same currency returns exact amount
         $same = CountryCurrencyResolver::convertAmountMinor(5000, 'PHP', 'PHP', 1.0);
         $this->assertSame(5000, $same);
+
+        // Zero-decimal to zero-decimal: 1,000 JPY to KRW at rate 8.95
+        $krwMinor = CountryCurrencyResolver::convertAmountMinor(1000, 'JPY', 'KRW', 8.95);
+        $this->assertSame(8950, $krwMinor);
+
+        // Zero-decimal to 2-decimal: 50,000 CLP to USD at rate 0.00105: 50000 * 0.00105 = 52.50 USD -> 5250 cents
+        $usdFromClp = CountryCurrencyResolver::convertAmountMinor(50000, 'CLP', 'USD', 0.00105);
+        $this->assertSame(5250, $usdFromClp);
+
+        // 2-decimal to zero-decimal: $100.00 USD (10000 cents) to ISK at rate 138.5: 100 * 138.5 = 13850 ISK
+        $iskFromUsd = CountryCurrencyResolver::convertAmountMinor(10000, 'USD', 'ISK', 138.5);
+        $this->assertSame(13850, $iskFromUsd);
+    }
+
+    public function test_zero_decimal_currency_detection_is_exhaustive_and_accurate(): void
+    {
+        $expectedZeroDecimals = [
+            'BIF', 'CLP', 'DJF', 'GNF', 'ISK', 'JPY', 'KMF', 'KRW',
+            'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+        ];
+
+        foreach ($expectedZeroDecimals as $code) {
+            $this->assertTrue(CountryCurrencyResolver::isZeroDecimal($code), "Expected {$code} to be zero-decimal");
+        }
+
+        $standardDecimals = ['USD', 'EUR', 'GBP', 'PHP', 'SGD', 'AUD', 'CAD', 'HKD', 'THB', 'CHF', 'AED'];
+        foreach ($standardDecimals as $code) {
+            $this->assertFalse(CountryCurrencyResolver::isZeroDecimal($code), "Expected {$code} to be standard decimal");
+        }
+    }
+
+    public function test_expense_split_calculator_guarantees_exact_integer_distribution_without_drift(): void
+    {
+        // 100 minor units split equally among 3 travelers -> exactly 100 with no rounding loss
+        $threeWay = ExpenseSplitCalculator::allocateEqual(100, ['user-1', 'user-2', 'user-3']);
+        $this->assertSame(['user-1' => 34, 'user-2' => 33, 'user-3' => 33], $threeWay);
+        $this->assertSame(100, array_sum($threeWay));
+
+        // 1,000 minor units split equally among 7 travelers -> exactly 1000 with no rounding loss
+        $sevenWay = ExpenseSplitCalculator::allocateEqual(1000, ['u1', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7']);
+        $this->assertSame(1000, array_sum($sevenWay));
+        $this->assertSame(143, $sevenWay['u1']);
+        $this->assertSame(143, $sevenWay['u6']);
+        $this->assertSame(142, $sevenWay['u7']);
+
+        // Proportional conversion of source shares to 100 base minor units
+        $proportional = ExpenseSplitCalculator::allocateProportional(100, [
+            'u1' => 333,
+            'u2' => 333,
+            'u3' => 334,
+        ]);
+        $this->assertSame(100, array_sum($proportional));
     }
 }

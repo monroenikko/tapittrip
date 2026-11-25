@@ -19,12 +19,24 @@
             <file>tests/Feature/AirportLoungeTest.php</file>
             <file>tests/Feature/AiItineraryTest.php</file>
             <file>tests/Feature/TripAssistantTest.php</file>
+            <file>tests/Feature/StayRecommendationTest.php</file>
             <file>tests/Feature/TripBudgetTest.php</file>
             <file>tests/Feature/TripExpenseTest.php</file>
             <file>tests/Feature/GroupSettlementTest.php</file>
             <file>tests/Feature/CurrencyTest.php</file>
             <file>tests/Feature/TripJournalTest.php</file>
             <file>tests/Feature/TripWeatherTest.php</file>
+            <file>tests/Feature/TripCollaborationSlice6Test.php</file>
+            <file>tests/Feature/FlightTest.php</file>
+            <file>tests/Feature/DestinationSafetyTest.php</file>
+            <file>tests/Feature/TranslationTest.php</file>
+            <file>tests/Feature/TravelDocumentTest.php</file>
+            <file>tests/Feature/BookingImportTest.php</file>
+            <file>tests/Feature/RouteOptimizationAndFoodSuggestionsTest.php</file>
+            <file>tests/Feature/SecurityAndPrivacyAuditTest.php</file>
+            <file>tests/Feature/ActivityVotingAndSmartReplanTest.php</file>
+            <file>tests/Feature/EncryptedAttachmentsTest.php</file>
+            <file>tests/Feature/OAuthExchangeTest.php</file>
         </testsuite>
     </testsuites>
     <php>

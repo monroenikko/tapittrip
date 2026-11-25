@@ -141,6 +141,28 @@ class User extends Authenticatable
     }
 
     /**
+     * Encrypted travel documents owned by this user.
+     *
+     * @return HasMany<TravelDocument, $this>
+     */
+    public function travelDocuments(): HasMany
+    {
+        return $this->hasMany(TravelDocument::class, 'owner_id')
+            ->orderByDesc('created_at');
+    }
+
+    /**
+     * Booking imports initiated by this user.
+     *
+     * @return HasMany<BookingImport, $this>
+     */
+    public function bookingImports(): HasMany
+    {
+        return $this->hasMany(BookingImport::class)
+            ->orderByDesc('created_at');
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

@@ -13,4 +13,3 @@ final readonly class UpdateAnnouncementData
         public ?int $baseVersion = null,
     ) {}
 }
-

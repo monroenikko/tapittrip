@@ -6,8 +6,11 @@ namespace Tests\Feature;
 
 use App\Models\Checklist;
 use App\Models\ChecklistItem;
+use App\Models\ItineraryItem;
+use App\Models\Stay;
 use App\Models\SyncOperation;
 use App\Models\Trip;
+use App\Models\TripMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Str;
@@ -365,5 +368,334 @@ final class SyncTest extends TestCase
         $response = $this->getJson("/api/v1/sync/pull?device_key=device-test&cursor=0&trip_id={$trip->id}");
 
         $response->assertStatus(403);
+    }
+
+    public function test_multi_device_concurrent_stay_and_itinerary_edits_detect_conflicts_and_resolve(): void
+    {
+        $owner = User::factory()->create();
+        $editor = User::factory()->create();
+
+        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        TripMember::factory()->create([
+            'trip_id' => $trip->id,
+            'user_id' => $editor->id,
+            'role' => 'editor',
+            'invitation_status' => 'accepted',
+        ]);
+
+        $stay = Stay::factory()->create([
+            'trip_id' => $trip->id,
+            'name' => 'Shinjuku Hotel',
+            'stay_type' => 'hotel',
+            'booking_reference' => 'SECRET-BK-99',
+            'phone' => '+81-3-1111-2222',
+            'version' => 1,
+        ]);
+
+        $itineraryItem = ItineraryItem::factory()->create([
+            'trip_id' => $trip->id,
+            'title' => 'Visit Senso-ji',
+            'sort_order' => 0,
+            'version' => 1,
+        ]);
+
+        // Device A (Owner) syncs online first, bumping both entities to v2
+        Sanctum::actingAs($owner);
+        $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'device-a',
+            'operations' => [
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'stay',
+                    'entity_id' => $stay->id,
+                    'operation_type' => 'update',
+                    'base_version' => 1,
+                    'payload' => ['name' => 'Shinjuku Prince Hotel'],
+                ],
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'itinerary_item',
+                    'entity_id' => $itineraryItem->id,
+                    'operation_type' => 'update',
+                    'base_version' => 1,
+                    'payload' => ['title' => 'Morning Walk at Senso-ji'],
+                ],
+            ],
+        ])->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted')
+            ->assertJsonPath('data.results.0.current_version', 2)
+            ->assertJsonPath('data.results.1.status', 'accepted')
+            ->assertJsonPath('data.results.1.current_version', 2);
+
+        // Device B (Editor) comes back online with stale v1 edits
+        Sanctum::actingAs($editor);
+        $conflictResponse = $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'device-b',
+            'operations' => [
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'stay',
+                    'entity_id' => $stay->id,
+                    'operation_type' => 'update',
+                    'base_version' => 1,
+                    'payload' => ['name' => 'Shinjuku Boutique Inn'],
+                ],
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'itinerary_item',
+                    'entity_id' => $itineraryItem->id,
+                    'operation_type' => 'update',
+                    'base_version' => 1,
+                    'payload' => ['title' => 'Afternoon Senso-ji Visit'],
+                ],
+            ],
+        ]);
+
+        $conflictResponse->assertOk()
+            ->assertJsonPath('data.results.0.status', 'conflict')
+            ->assertJsonPath('data.results.0.current_version', 2)
+            ->assertJsonPath('data.results.0.conflict_details.server_version', 2)
+            ->assertJsonPath('data.results.0.conflict_details.server_payload.name', 'Shinjuku Prince Hotel')
+            ->assertJsonPath('data.results.0.conflict_details.server_payload.booking_reference', null)
+            ->assertJsonPath('data.results.0.conflict_details.server_payload.phone', null)
+            ->assertJsonPath('data.results.1.status', 'conflict')
+            ->assertJsonPath('data.results.1.current_version', 2)
+            ->assertJsonPath('data.results.1.conflict_details.server_payload.title', 'Morning Walk at Senso-ji');
+
+        // Device B resolves both conflicts keeping local edits at base_version 2
+        $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'device-b',
+            'operations' => [
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'stay',
+                    'entity_id' => $stay->id,
+                    'operation_type' => 'update',
+                    'base_version' => 2,
+                    'payload' => ['name' => 'Shinjuku Boutique Inn'],
+                ],
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'itinerary_item',
+                    'entity_id' => $itineraryItem->id,
+                    'operation_type' => 'update',
+                    'base_version' => 2,
+                    'payload' => ['title' => 'Afternoon Senso-ji Visit'],
+                ],
+            ],
+        ])->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted')
+            ->assertJsonPath('data.results.0.current_version', 3)
+            ->assertJsonPath('data.results.1.status', 'accepted')
+            ->assertJsonPath('data.results.1.current_version', 3);
+
+        $stay->refresh();
+        $itineraryItem->refresh();
+        $this->assertSame('Shinjuku Boutique Inn', $stay->name);
+        $this->assertSame(3, $stay->version);
+        $this->assertSame('SECRET-BK-99', $stay->booking_reference);
+        $this->assertSame('Afternoon Senso-ji Visit', $itineraryItem->title);
+        $this->assertSame(3, $itineraryItem->version);
+    }
+
+    public function test_remote_delete_triggers_conflict_and_allows_offline_edit_restore_resolution(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        $checklist = Checklist::factory()->create(['trip_id' => $trip->id]);
+        $item = ChecklistItem::factory()->create([
+            'checklist_id' => $checklist->id,
+            'trip_id' => $trip->id,
+            'title' => 'Universal Adapter',
+            'version' => 1,
+        ]);
+
+        // Device A deletes the item while online (bumps version to 2 & soft-deletes)
+        $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'device-a',
+            'operations' => [
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'checklist_item',
+                    'entity_id' => $item->id,
+                    'operation_type' => 'delete',
+                    'base_version' => 1,
+                ],
+            ],
+        ])->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted');
+
+        // Device B reconnects with an offline update based on stale v1
+        $conflictRes = $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'device-b',
+            'operations' => [
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'checklist_item',
+                    'entity_id' => $item->id,
+                    'operation_type' => 'update',
+                    'base_version' => 1,
+                    'payload' => ['title' => 'Type-A/C Travel Adapter', 'is_packed' => true],
+                ],
+            ],
+        ]);
+
+        $conflictRes->assertOk()
+            ->assertJsonPath('data.results.0.status', 'conflict')
+            ->assertJsonPath('data.results.0.current_version', 2)
+            ->assertJsonPath('data.results.0.conflict_details.server_version', 2)
+            ->assertJsonPath('data.results.0.conflict_details.server_payload.deleted', true);
+
+        // User on Device B chooses "Keep My Offline Edit" (base_version = 2)
+        $resolveRes = $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'device-b',
+            'operations' => [
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'checklist_item',
+                    'entity_id' => $item->id,
+                    'operation_type' => 'update',
+                    'base_version' => 2,
+                    'payload' => ['title' => 'Type-A/C Travel Adapter', 'is_packed' => true],
+                ],
+            ],
+        ]);
+
+        $resolveRes->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted')
+            ->assertJsonPath('data.results.0.current_version', 3);
+
+        $restored = ChecklistItem::find($item->id);
+        $this->assertNotNull($restored);
+        $this->assertFalse($restored->trashed());
+        $this->assertSame('Type-A/C Travel Adapter', $restored->title);
+        $this->assertTrue($restored->is_packed);
+        $this->assertSame(3, $restored->version);
+    }
+
+    public function test_sync_sanitizes_sensitive_stay_fields_from_ledger_and_companion_pulls(): void
+    {
+        $owner = User::factory()->create();
+        $companion = User::factory()->create();
+
+        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        TripMember::factory()->create([
+            'trip_id' => $trip->id,
+            'user_id' => $companion->id,
+            'role' => 'editor',
+            'invitation_status' => 'accepted',
+        ]);
+
+        $stayId = (string) Str::uuid();
+        $opId = (string) Str::uuid();
+
+        Sanctum::actingAs($owner);
+        $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'owner-phone',
+            'operations' => [
+                [
+                    'operation_id' => $opId,
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'stay',
+                    'entity_id' => $stayId,
+                    'operation_type' => 'create',
+                    'base_version' => 1,
+                    'payload' => [
+                        'name' => "Auntie May's Apartment",
+                        'stay_type' => 'friends_family',
+                        'address' => '42 Secret Lane, Kyoto',
+                        'latitude' => 35.0116,
+                        'longitude' => 135.7681,
+                        'phone' => '+81-75-555-0199',
+                        'booking_reference' => 'FAMILY-CODE-77',
+                        'notes' => 'Key is under the planter',
+                    ],
+                ],
+            ],
+        ])->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted');
+
+        // Verify ledger row does NOT persist booking_reference or phone in sync_operations.payload
+        $ledgerRow = SyncOperation::where('operation_id', $opId)->firstOrFail();
+        $this->assertArrayNotHasKey('booking_reference', $ledgerRow->payload ?? []);
+        $this->assertArrayNotHasKey('phone', $ledgerRow->payload ?? []);
+
+        // Companion pulls updates and must NOT see friends_family private address, coords, notes, phone, or booking ref
+        Sanctum::actingAs($companion);
+        $pullRes = $this->getJson("/api/v1/sync/pull?device_key=companion-phone&cursor=0&trip_id={$trip->id}");
+        $pullRes->assertOk();
+
+        $ops = collect($pullRes->json('data.operations'));
+        $stayOp = $ops->firstWhere('operation_id', $opId);
+        $this->assertNotNull($stayOp);
+        $pulledPayload = $stayOp['payload'];
+        $this->assertSame("Auntie May's Apartment", $pulledPayload['name']);
+        $this->assertArrayNotHasKey('booking_reference', $pulledPayload);
+        $this->assertArrayNotHasKey('phone', $pulledPayload);
+        $this->assertArrayNotHasKey('address', $pulledPayload);
+        $this->assertArrayNotHasKey('latitude', $pulledPayload);
+        $this->assertArrayNotHasKey('longitude', $pulledPayload);
+        $this->assertArrayNotHasKey('notes', $pulledPayload);
+    }
+
+    public function test_consecutive_offline_updates_in_single_batch_apply_without_self_conflict(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $trip = Trip::factory()->create(['owner_id' => $owner->id]);
+        $stay = Stay::factory()->create([
+            'trip_id' => $trip->id,
+            'name' => 'Initial Lodge',
+            'version' => 1,
+        ]);
+
+        $response = $this->postJson('/api/v1/sync/push', [
+            'device_key' => 'offline-tablet',
+            'operations' => [
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'stay',
+                    'entity_id' => $stay->id,
+                    'operation_type' => 'update',
+                    'base_version' => 1,
+                    'payload' => ['name' => 'Updated Lodge'],
+                ],
+                [
+                    'operation_id' => (string) Str::uuid(),
+                    'trip_id' => $trip->id,
+                    'entity_type' => 'stay',
+                    'entity_id' => $stay->id,
+                    'operation_type' => 'update',
+                    'base_version' => 2,
+                    'payload' => ['notes' => 'Checked luggage policy', 'latitude' => 35.69, 'longitude' => 139.70],
+                ],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted')
+            ->assertJsonPath('data.results.0.current_version', 2)
+            ->assertJsonPath('data.results.1.status', 'accepted')
+            ->assertJsonPath('data.results.1.current_version', 3);
+
+        $stay->refresh();
+        $this->assertSame('Updated Lodge', $stay->name);
+        $this->assertSame('Checked luggage policy', $stay->notes);
+        $this->assertEquals(35.69, $stay->latitude);
+        $this->assertEquals(139.70, $stay->longitude);
+        $this->assertSame(3, $stay->version);
     }
 }

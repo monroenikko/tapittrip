@@ -20,4 +20,3 @@ final class VersionConflictException extends RuntimeException implements Shouldn
         parent::__construct($message);
     }
 }
-

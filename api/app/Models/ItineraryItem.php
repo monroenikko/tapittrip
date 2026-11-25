@@ -116,4 +116,14 @@ final class ItineraryItem extends Model
         return $this->hasMany(VisitEvent::class)
             ->orderBy('detected_at', 'desc');
     }
+
+    /**
+     * All Trip Circle member votes (up / down) cast on this item.
+     *
+     * @return HasMany<ItineraryItemVote, $this>
+     */
+    public function votes(): HasMany
+    {
+        return $this->hasMany(ItineraryItemVote::class, 'itinerary_item_id');
+    }
 }

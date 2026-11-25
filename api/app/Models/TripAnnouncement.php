@@ -67,4 +67,3 @@ final class TripAnnouncement extends Model
         return $this->hasMany(TripNotification::class, 'announcement_id');
     }
 }
-

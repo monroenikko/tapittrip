@@ -32,6 +32,10 @@ final class TodaySummaryResource extends JsonResource
             'current_stay' => $this->resource->currentStay
                 ? new StayResource($this->resource->currentStay)
                 : null,
+            'upcoming_flight' => $this->resource->upcomingFlight
+                ? new FlightResource($this->resource->upcomingFlight)
+                : null,
+            'flights' => FlightResource::collection($this->resource->flights),
             'metrics' => $this->resource->metrics,
             'budget_pacing' => $this->resource->budgetPacing,
             'weather' => $this->resource->weather?->toArray(),

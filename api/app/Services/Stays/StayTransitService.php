@@ -179,6 +179,63 @@ final class StayTransitService
             ];
         }
 
+        if (str_contains($text, 'hong kong') || str_contains($text, 'hongkong') || str_contains($text, 'kowloon') || str_contains($text, 'tsim sha tsui') || str_contains($text, 'central') || str_contains($text, 'hkg')) {
+            $station = 'Hong Kong Station / Central MTR Hub (Exit A)';
+            if (str_contains($text, 'kowloon') || str_contains($text, 'tsim sha tsui')) {
+                $station = 'Kowloon Station / West Kowloon MTR Hub';
+            }
+
+            return [
+                'station_name' => $station,
+                'station_address' => 'Airport Express & MTR Island Line',
+                'walking_distance_meters' => 310,
+                'walking_minutes' => 4,
+                'nearest_airport_name' => 'Hong Kong International Airport',
+                'nearest_airport_code' => 'HKG',
+                'airport_distance_km' => 34.0,
+                'has_airport_rail' => true,
+            ];
+        }
+
+        if (str_contains($text, 'taipei') || str_contains($text, 'taiwan') || str_contains($text, 'xinyi') || str_contains($text, 'ximending') || str_contains($text, 'tpe')) {
+            return [
+                'station_name' => 'Taipei Main Station (MRT Taoyuan Airport Line)',
+                'station_address' => 'No. 8, Zhengzhou Rd, Zhongzheng District, Taipei',
+                'walking_distance_meters' => 330,
+                'walking_minutes' => 4,
+                'nearest_airport_name' => 'Taoyuan International Airport',
+                'nearest_airport_code' => 'TPE',
+                'airport_distance_km' => 40.0,
+                'has_airport_rail' => true,
+            ];
+        }
+
+        if (str_contains($text, 'sydney') || str_contains($text, 'australia') || str_contains($text, 'haymarket') || str_contains($text, 'circular quay') || str_contains($text, 'syd')) {
+            return [
+                'station_name' => 'Sydney Central Station (Eddy Avenue Exit)',
+                'station_address' => 'Eddy Ave, Haymarket NSW 2000, Sydney',
+                'walking_distance_meters' => 340,
+                'walking_minutes' => 4,
+                'nearest_airport_name' => 'Sydney Kingsford Smith Airport',
+                'nearest_airport_code' => 'SYD',
+                'airport_distance_km' => 8.5,
+                'has_airport_rail' => true,
+            ];
+        }
+
+        if (str_contains($text, 'kuala lumpur') || str_contains($text, 'malaysia') || str_contains($text, 'bukit bintang') || str_contains($text, 'klcc') || str_contains($text, 'kul')) {
+            return [
+                'station_name' => 'KL Sentral Transport Hub',
+                'station_address' => 'Jalan Stesen Sentral 5, Brickfields, Kuala Lumpur',
+                'walking_distance_meters' => 290,
+                'walking_minutes' => 4,
+                'nearest_airport_name' => 'Kuala Lumpur International Airport',
+                'nearest_airport_code' => 'KUL',
+                'airport_distance_km' => 55.0,
+                'has_airport_rail' => true,
+            ];
+        }
+
         // Generic intelligent fallback derived from stay address / name
         $addressParts = array_filter(array_map('trim', explode(',', $stay->address ?? '')));
         $cityOrDistrict = count($addressParts) > 1 ? $addressParts[count($addressParts) - 2] : ($addressParts[0] ?? $stay->name ?? 'City');

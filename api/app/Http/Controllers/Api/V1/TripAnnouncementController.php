@@ -73,4 +73,3 @@ final class TripAnnouncementController extends Controller
         return $this->response->noContent();
     }
 }
-

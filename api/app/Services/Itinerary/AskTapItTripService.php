@@ -37,6 +37,7 @@ final class AskTapItTripService
 
         // Context summary for caller
         $contextSummary = [
+            'source' => 'local_fallback',
             'trip_id' => $trip->id,
             'destination' => $destination,
             'has_stay' => $stay !== null,
@@ -218,12 +219,22 @@ final class AskTapItTripService
     {
         if ($stay) {
             $stayName = $stay->name;
-            $address = $stay->address ?? 'your hotel location';
+            $isPrivateHost = $stay->stay_type === 'friends_family';
+            $address = (! $isPrivateHost && $stay->address !== null) ? $stay->address : 'your accommodation area';
             $reply = "Since you're staying at **{$stayName}** ({$address}), here are curated dining suggestions within a 5–10 minute stroll:\n\n"
                 ."• **Morning Bakery / Cafe**: Local artisanal roasters with fresh pastries and espresso for a quick start.\n"
                 ."• **Casual Neighborhood Lunch**: Authentic neighborhood noodle or bistro spot with fast seating and vegetarian options.\n"
                 ."• **Relaxed Dinner**: Quiet local eatery with family-friendly booths, welcoming staff, and English photo menus.\n\n"
                 .'💡 *Tip*: Stays often have convenience stores and 24h pharmacies within 2 blocks for emergency snacks and water.';
+
+            $actionPayload = [
+                'title' => "Dinner near {$stayName}",
+                'kind' => 'meal',
+                'place_name' => "Local Restaurant near {$stayName}",
+            ];
+            if (! $isPrivateHost && $stay->address !== null) {
+                $actionPayload['place_address'] = $stay->address;
+            }
 
             return new TripAssistantResult(
                 reply: $reply,
@@ -233,12 +244,7 @@ final class AskTapItTripService
                     [
                         'label' => "Add Dinner near {$stayName}",
                         'kind' => 'add_activity',
-                        'payload' => [
-                            'title' => "Dinner near {$stayName}",
-                            'kind' => 'meal',
-                            'place_name' => "Local Restaurant near {$stayName}",
-                            'place_address' => $address,
-                        ],
+                        'payload' => $actionPayload,
                     ],
                 ],
             );

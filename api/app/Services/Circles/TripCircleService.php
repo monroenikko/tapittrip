@@ -11,8 +11,11 @@ use App\DTOs\Circles\CreateDirectInvitationData;
 use App\DTOs\Circles\CreatedTripInvitationResult;
 use App\DTOs\Circles\CreateTripInvitationData;
 use App\Models\ChecklistItem;
+use App\Models\ItineraryItemVote;
+use App\Models\TravelDocument;
 use App\Models\Trip;
 use App\Models\TripInvitation;
+use App\Models\TripLocationShare;
 use App\Models\TripMember;
 use App\Models\TripOwnershipTransfer;
 use App\Models\TripTraveler;
@@ -171,6 +174,21 @@ final class TripCircleService
                 ->where('linked_member_id', $member->id)
                 ->where('managing_user_id', '!=', $member->user_id)
                 ->update(['linked_member_id' => null]);
+
+            TripLocationShare::query()
+                ->where('trip_id', $trip->id)
+                ->where('user_id', $member->user_id)
+                ->delete();
+
+            TravelDocument::query()
+                ->where('trip_id', $trip->id)
+                ->where('owner_id', $member->user_id)
+                ->delete();
+
+            ItineraryItemVote::query()
+                ->where('trip_id', $trip->id)
+                ->where('user_id', $member->user_id)
+                ->delete();
 
             $member->delete();
         });

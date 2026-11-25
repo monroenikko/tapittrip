@@ -281,4 +281,129 @@ final class StayTransportComparisonTest extends TestCase
         $this->assertStringContainsString('Private Driver', $driver['title']);
         $this->assertEquals('IDR', $driver['currency']);
     }
+
+    public function test_hong_kong_arrival_transport_provides_express_rail_and_urban_taxi(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create([
+            'owner_id' => $user->id,
+            'title' => 'Hong Kong Exploration',
+            'destination_country' => 'Hong Kong',
+        ]);
+
+        /** @var Stay $stay */
+        $stay = Stay::factory()->create([
+            'trip_id' => $trip->id,
+            'name' => 'The Murray, Hong Kong',
+            'address' => '22 Cotton Tree Dr, Central, Hong Kong',
+            'latitude' => 22.2785,
+            'longitude' => 114.1592,
+        ]);
+
+        $payload = [
+            'origin_name' => 'Hong Kong International Airport (HKG)',
+            'party_size' => 2,
+            'luggage_preset' => 'standard',
+        ];
+
+        $response = $this->postJson("/api/v1/stays/{$stay->id}/transport-options", $payload);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.verified', true)
+            ->assertJsonPath('data.nearest_transit.has_airport_rail', true)
+            ->assertJsonPath('data.nearest_transit.nearest_airport_code', 'HKG');
+
+        $options = collect($response->json('data.options'));
+
+        // Rail option (MTR Airport Express)
+        $rail = $options->firstWhere('mode', 'express_rail');
+        $this->assertNotNull($rail);
+        $this->assertStringContainsString('MTR Airport Express', $rail['title']);
+        $this->assertEquals('HKD', $rail['currency']);
+        $this->assertEquals(23000, $rail['estimated_cost_minor']); // 2 people * HK$115
+        $this->assertStringContainsString('Hong Kong Station', $rail['dropoff_location']);
+        $this->assertStringContainsString('travelmode=walking', $rail['last_mile_directions_url']);
+        $this->assertStringContainsString(urlencode($rail['dropoff_location']), $rail['last_mile_directions_url']);
+
+        // Taxi option (Urban Red Taxi)
+        $taxi = $options->firstWhere('mode', 'private_transfer');
+        $this->assertNotNull($taxi);
+        $this->assertStringContainsString('Urban Taxi', $taxi['title']);
+        $this->assertEquals('HKD', $taxi['currency']);
+    }
+
+    public function test_waypoint_guidance_walk_directions_url_encodes_origin_station_and_destination_stay(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create(['owner_id' => $user->id]);
+
+        /** @var Stay $stay */
+        $stay = Stay::factory()->create([
+            'trip_id' => $trip->id,
+            'name' => 'Hotel Gracery Shinjuku',
+            'address' => '1-19-1 Kabukicho, Shinjuku City, Tokyo',
+            'latitude' => 35.6953,
+            'longitude' => 139.7022,
+        ]);
+
+        $payload = [
+            'origin_name' => 'Tokyo Haneda Airport (HND)',
+            'party_size' => 1,
+            'luggage_preset' => 'standard',
+        ];
+
+        $response = $this->postJson("/api/v1/stays/{$stay->id}/transport-options", $payload);
+
+        $response->assertOk();
+        $options = collect($response->json('data.options'));
+
+        $rail = $options->firstWhere('mode', 'express_rail');
+        $this->assertNotNull($rail);
+        $this->assertNotNull($rail['last_mile_directions_url']);
+
+        // Must encode origin as Shinjuku Station (South Exit), destination as coordinates, and travelmode=walking
+        $expectedOriginPart = urlencode('Shinjuku Station (South Exit)');
+        $this->assertStringContainsString("origin={$expectedOriginPart}", $rail['last_mile_directions_url']);
+        $this->assertStringContainsString('destination=35.6953%2C139.7022', $rail['last_mile_directions_url']);
+        $this->assertStringContainsString('travelmode=walking', $rail['last_mile_directions_url']);
+    }
+
+    public function test_taipei_transit_hub_auto_detection(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        /** @var Trip $trip */
+        $trip = Trip::factory()->create([
+            'owner_id' => $user->id,
+            'title' => 'Taiwan Adventure',
+            'destination_country' => 'Taiwan',
+        ]);
+
+        /** @var Stay $stay */
+        $stay = Stay::factory()->create([
+            'trip_id' => $trip->id,
+            'name' => 'W Taipei',
+            'address' => '10 Zhongxiao East Road Sec. 5, Xinyi District, Taipei',
+            'latitude' => 25.0408,
+            'longitude' => 121.5670,
+        ]);
+
+        $response = $this->postJson("/api/v1/stays/{$stay->id}/transport-options", []);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.verified', true)
+            ->assertJsonPath('data.nearest_transit.nearest_airport_code', 'TPE')
+            ->assertJsonPath('data.nearest_transit.has_airport_rail', true);
+
+        $this->assertStringContainsString('Taipei Main Station', (string) $response->json('data.nearest_transit.station_name'));
+    }
 }

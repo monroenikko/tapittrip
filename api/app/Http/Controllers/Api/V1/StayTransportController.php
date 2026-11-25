@@ -28,6 +28,7 @@ final class StayTransportController extends Controller
         $result = $this->stayService->compareTransport(
             $stay,
             CompareStayTransportData::from($request->validated()),
+            $request->user(),
         );
 
         return response()->json([

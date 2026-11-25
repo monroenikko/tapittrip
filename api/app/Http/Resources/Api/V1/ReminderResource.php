@@ -29,6 +29,7 @@ final class ReminderResource extends JsonResource
             'title' => $this->title,
             'body' => $this->body,
             'trigger_at_utc' => $this->trigger_at_utc?->toIso8601String(),
+            'trigger_local_time' => $this->trigger_at_utc?->copy()->setTimezone($this->timezone ?: 'UTC')->format('H:i'),
             'timezone' => $this->timezone,
             'delivery_channel' => $this->delivery_channel,
             'status' => $this->status,

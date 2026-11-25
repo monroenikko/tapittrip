@@ -6,6 +6,7 @@ namespace App\Services\Notifications;
 
 use App\DTOs\Notifications\RegisterDeviceData;
 use App\DTOs\Notifications\UpdateNotificationPreferencesData;
+use App\Models\Flight;
 use App\Models\ItineraryItem;
 use App\Models\NotificationPreference;
 use App\Models\Reminder;
@@ -78,7 +79,41 @@ final class NotificationService
             $preferences->update($updates);
         }
 
-        return $preferences->refresh();
+        $refreshed = $preferences->refresh();
+
+        if (array_key_exists('circle_announcements_enabled', $updates) && ! $refreshed->circle_announcements_enabled) {
+            TripNotification::query()
+                ->where('user_id', $user->id)
+                ->where('category', 'circle_announcement')
+                ->whereIn('status', ['pending', 'suppressed_quiet_hours'])
+                ->update(['status' => 'cancelled']);
+        }
+
+        $reminderAffectingKeys = [
+            'morning_summary_enabled',
+            'morning_summary_time',
+            'activity_reminders_enabled',
+            'activity_reminder_lead_minutes',
+            'checklist_reminders_enabled',
+            'stay_reminders_enabled',
+            'quiet_hours_enabled',
+            'quiet_hours_start',
+            'quiet_hours_end',
+            'timezone_behavior',
+        ];
+
+        if (array_intersect(array_keys($updates), $reminderAffectingKeys) !== []) {
+            $tripsWithReminders = Trip::query()
+                ->where('owner_id', $user->id)
+                ->whereHas('reminders', fn ($q) => $q->where('status', 'scheduled'))
+                ->get();
+
+            foreach ($tripsWithReminders as $trip) {
+                $this->scheduleTripReminders($trip, $user);
+            }
+        }
+
+        return $refreshed;
     }
 
     /**
@@ -115,7 +150,10 @@ final class NotificationService
             [$hour, $minute] = explode(':', $preferences->morning_summary_time);
 
             foreach ($days as $day) {
-                $triggerLocal = Carbon::parse($day->local_date, $tripTz)->setTime((int) $hour, (int) $minute);
+                $localDateStr = $day->local_date instanceof CarbonInterface
+                    ? $day->local_date->format('Y-m-d')
+                    : (string) $day->local_date;
+                $triggerLocal = Carbon::parse($localDateStr, $tripTz)->setTime((int) $hour, (int) $minute);
                 $triggerUtc = $triggerLocal->copy()->utc();
                 $evalTz = $this->resolveQuietHoursTimezone($user, $preferences, $tripTz, $tripTz);
 
@@ -182,7 +220,10 @@ final class NotificationService
 
             foreach ($checklists as $checklist) {
                 if ($trip->start_date) {
-                    $triggerLocal = Carbon::parse($trip->start_date, $tripTz)->subDay()->setTime(10, 0);
+                    $startDateStr = $trip->start_date instanceof CarbonInterface
+                        ? $trip->start_date->format('Y-m-d')
+                        : (string) $trip->start_date;
+                    $triggerLocal = Carbon::parse($startDateStr, $tripTz)->subDay()->setTime(10, 0);
                     $triggerUtc = $triggerLocal->copy()->utc();
                     $evalTz = $this->resolveQuietHoursTimezone($user, $preferences, $tripTz, $tripTz);
 
@@ -209,6 +250,17 @@ final class NotificationService
                             ]
                         );
                     }
+                }
+            }
+        }
+
+        // 5. Flight Prep & Gate Departure Reminders
+        if ($preferences->activity_reminders_enabled) {
+            $flights = $trip->flights()->with('segments')->get();
+
+            foreach ($flights as $flight) {
+                foreach ($this->scheduleFlightReminders($trip, $user, $preferences, $flight) as $dedupeKey) {
+                    $activeDedupeKeys[] = $dedupeKey;
                 }
             }
         }
@@ -312,6 +364,40 @@ final class NotificationService
             ->where('trip_id', $stay->trip_id)
             ->whereIn('type', ['stay_checkin', 'stay_checkout'])
             ->where('dedupe_key', 'like', "{$stay->trip_id}:stay_%:{$stay->id}:%")
+            ->where('status', 'scheduled')
+            ->update(['status' => 'cancelled']);
+    }
+
+    /**
+     * Cancel and reschedule reminders for a created or updated flight.
+     */
+    public function syncRemindersForFlight(Flight $flight): void
+    {
+        $this->cancelRemindersForFlight($flight);
+
+        $trip = $flight->trip()->with('owner')->first();
+        if ($trip === null || $trip->owner === null) {
+            return;
+        }
+
+        $preferences = $this->getPreferences($trip->owner);
+        if (! $preferences->activity_reminders_enabled) {
+            return;
+        }
+
+        $flight->loadMissing('segments');
+        $this->scheduleFlightReminders($trip, $trip->owner, $preferences, $flight);
+    }
+
+    /**
+     * Cancel scheduled flight prep and gate departure reminders when a flight changes or is deleted.
+     */
+    public function cancelRemindersForFlight(Flight $flight): void
+    {
+        Reminder::query()
+            ->where('trip_id', $flight->trip_id)
+            ->whereIn('type', ['flight_prep', 'flight_gate_departure'])
+            ->where('dedupe_key', 'like', "{$flight->trip_id}:flight_%:{$flight->id}:%")
             ->where('status', 'scheduled')
             ->update(['status' => 'cancelled']);
     }
@@ -599,6 +685,89 @@ final class NotificationService
                         'delivery_channel' => 'local',
                         'status' => 'scheduled',
                         'source_version' => $stay->version ?? 1,
+                    ]
+                );
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Schedule flight prep (3 hours prior) and gate departure (45 minutes prior) reminders.
+     * Never includes booking_reference in reminder payloads.
+     *
+     * @return array<int, string>
+     */
+    private function scheduleFlightReminders(
+        Trip $trip,
+        User $user,
+        NotificationPreference $preferences,
+        Flight $flight,
+    ): array {
+        $tripTz = $trip->primary_timezone ?: 'UTC';
+        $keys = [];
+
+        foreach ($flight->segments as $segment) {
+            if ($segment->scheduled_departure_utc === null) {
+                continue;
+            }
+
+            $originTz = $segment->origin_timezone ?: $tripTz;
+            $evalTz = $this->resolveQuietHoursTimezone($user, $preferences, $originTz, $tripTz);
+            $depUtc = Carbon::parse($segment->scheduled_departure_utc)->utc();
+            $localDepStr = $depUtc->copy()->setTimezone($originTz)->format('H:i');
+
+            // 1. Flight Prep Reminder (3 hours before scheduled departure)
+            $prepTriggerUtc = $depUtc->copy()->subHours(3);
+            if (! $this->isInQuietHours($prepTriggerUtc->copy()->setTimezone($evalTz), $preferences)) {
+                $prepKey = "{$trip->id}:flight_prep:{$flight->id}:{$segment->id}:{$prepTriggerUtc->timestamp}";
+                $keys[] = $prepKey;
+                $terminalLabel = ! empty($segment->terminal) ? " from Terminal {$segment->terminal}" : '';
+
+                Reminder::updateOrCreate(
+                    [
+                        'trip_id' => $trip->id,
+                        'dedupe_key' => $prepKey,
+                    ],
+                    [
+                        'itinerary_item_id' => null,
+                        'checklist_id' => null,
+                        'type' => 'flight_prep',
+                        'title' => "Flight Prep: {$segment->flight_number} ({$segment->origin_airport} → {$segment->destination_airport})",
+                        'body' => "Scheduled departure at {$localDepStr}{$terminalLabel}. Verify check-in and live gate status with your airline.",
+                        'trigger_at_utc' => $prepTriggerUtc,
+                        'timezone' => $originTz,
+                        'delivery_channel' => 'local',
+                        'status' => 'scheduled',
+                        'source_version' => $flight->version ?? 1,
+                    ]
+                );
+            }
+
+            // 2. Gate Departure Reminder (45 minutes before scheduled departure)
+            $gateTriggerUtc = $depUtc->copy()->subMinutes(45);
+            if (! $this->isInQuietHours($gateTriggerUtc->copy()->setTimezone($evalTz), $preferences)) {
+                $gateKey = "{$trip->id}:flight_gate:{$flight->id}:{$segment->id}:{$gateTriggerUtc->timestamp}";
+                $keys[] = $gateKey;
+                $gateLabel = ! empty($segment->gate) ? " from Gate {$segment->gate}" : '';
+
+                Reminder::updateOrCreate(
+                    [
+                        'trip_id' => $trip->id,
+                        'dedupe_key' => $gateKey,
+                    ],
+                    [
+                        'itinerary_item_id' => null,
+                        'checklist_id' => null,
+                        'type' => 'flight_gate_departure',
+                        'title' => "Boarding Soon: {$segment->flight_number} to {$segment->destination_airport}",
+                        'body' => "Scheduled flight departs{$gateLabel} in 45 minutes. Allow 15 minutes to leave the lounge and reach your gate.",
+                        'trigger_at_utc' => $gateTriggerUtc,
+                        'timezone' => $originTz,
+                        'delivery_channel' => 'local',
+                        'status' => 'scheduled',
+                        'source_version' => $flight->version ?? 1,
                     ]
                 );
             }
