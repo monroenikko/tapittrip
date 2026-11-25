@@ -1,4 +1,4 @@
-# Laravel Application Service and API Patterns
+# Laravel Service and API Patterns
 
 Apply these patterns inside the root `api/` project. Adapt namespaces to the generated Laravel version, but preserve responsibility and dependency direction.
 
@@ -9,18 +9,18 @@ Route
   -> Form Request (authorize coarse access, validate, normalize)
   -> Versioned Controller (translate HTTP only)
   -> Policy (resource/trip membership authorization)
-  -> Application Service (one use case, transaction boundary)
+  -> Service (one use case, transaction boundary)
   -> Domain Model / Domain Service / Provider Port
   -> API Resource (stable response mapping)
 ```
 
-The controller must not contain business decisions, persistence orchestration, provider calls, or multi-step transactions. The application service must not receive the framework `Request` object or return an HTTP response.
+The controller must not contain business decisions, persistence orchestration, provider calls, or multi-step transactions. The service must not receive the framework `Request` object or return an HTTP response.
 
 ## Service pattern
 
 Use “service” only when the class has a clear role:
 
-### Application service
+### Use-case service
 
 Orchestrates one user/system use case such as `CreateTrip`, `UpdateStay`, or `PushSyncOperations`.
 
@@ -28,7 +28,7 @@ Orchestrates one user/system use case such as `CreateTrip`, `UpdateStay`, or `Pu
 - Enforce use-case ordering and transaction boundaries.
 - Call domain models/services and provider ports.
 - Return a model or explicit result object, not a JSON response.
-- Place it under `app/Application/<Feature>/Services` and name by behavior with a `Service` suffix. Prefer `CreateTripService` over `TripService`.
+- Place it under `app/Services/<Feature>` and name by behavior with a `Service` suffix. Prefer `CreateTripService` over `TripService`.
 
 ```php
 final class CreateTripService
@@ -82,10 +82,8 @@ Prefer a domain/feature structure that keeps a capability together:
 
 ```text
 api/app/
-  Application/Trips/
-    Services/CreateTripService.php
-    Data/CreateTripData.php
-    Exceptions/
+  Services/Trips/
+    CreateTripService.php
   Domain/Trips/
     Models/Trip.php
     Rules/
@@ -112,7 +110,7 @@ For each operation, implement in this order:
 2. Add the versioned route and select only required resource actions.
 3. Add a Form Request using `validated()`/`safe()` data; normalize carefully and reject unknown or unsafe input according to the contract.
 4. Add or update the Policy. Authorize nested resources against the parent trip and prevent cross-trip binding mistakes.
-5. Add the application service and its transaction/idempotency boundary.
+5. Add the service and its transaction/idempotency boundary.
 6. Persist with explicit constraints, indexes, casts, fillable/guarded strategy, and UTC/timezone/currency rules.
 7. Return an API Resource and documented status/headers; do not expose Eloquent models directly.
 8. Add unit tests for domain rules and feature tests for the complete HTTP contract.
@@ -167,7 +165,7 @@ The OpenAPI schema is authoritative for status codes, headers, payload fields, p
 
 ## Testing seams
 
-- Application service tests: use-case ordering, transaction outcomes, domain errors, and idempotent retry behavior.
+- Service tests: use-case ordering, transaction outcomes, domain errors, and idempotent retry behavior.
 - Domain service tests: table-driven deterministic rules and edge cases without Laravel HTTP.
 - API feature tests: validation, unauthenticated/unauthorized/cross-trip access, success resource, not found, conflict, pagination, rate limits, and database effects.
 - Provider contract tests: adapter translation with recorded synthetic fixtures or controlled sandboxes; default tests use fakes.

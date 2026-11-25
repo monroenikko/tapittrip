@@ -13,6 +13,8 @@ Travelers can easily create stops (attractions, meals, transport, hotels, flight
 
 ## How it works
 
+- **Activity day picker**: Selected labels fit the sheet width using an ellipsis; opening the picker shows full titles and dates in wrapping rows. Verified at 320 logical pixels and 200% text scaling in both themes with keyboard coverage via `flutter test test/activity_sheet_test.dart` (2026-11-10). API, security, and offline behavior are unchanged; device verification remains manual.
+
 1. **Trip Days**: Trips organize itinerary stops by local calendar dates (`local_date`). The `EnsureTripDayService` automatically gets or creates a day entry with optional notes.
 2. **Places & Providers**:
    - Every physical stop can be linked to a `places` record containing geographical coordinates (`latitude`, `longitude`), formatted address, country code, and attribution.
@@ -53,6 +55,8 @@ Documented in [`docs/api/openapi.yaml`](../api/openapi.yaml):
 - `GET /api/v1/trips/{trip}/itinerary-items` (`listItineraryItems`)
 - `POST /api/v1/trips/{trip}/itinerary-items` (`createItineraryItem`)
 - `POST /api/v1/trips/{trip}/itinerary-items/reorder` (`reorderItineraryItems`)
+- `POST /api/v1/trips/{trip}/itinerary-items/optimize-route` (`optimizeItineraryRoute`)
+- `GET /api/v1/trips/{trip}/food-suggestions` (`listTripFoodSuggestions`)
 - `GET /api/v1/itinerary-items/{item}` (`getItineraryItem`)
 - `PATCH /api/v1/itinerary-items/{item}` (`updateItineraryItem`)
 - `DELETE /api/v1/itinerary-items/{item}` (`deleteItineraryItem`)
@@ -85,3 +89,18 @@ Removed a duplicate activity-card `onEdit` argument while retaining the existing
 ### Autocomplete suggestion surface — 2026-11-06
 
 Shared place suggestions use a clipped Material surface so ListTile backgrounds and ink feedback remain visible inside the rounded container. This applies to activity, stay/address, and trip destination fields. `client/test/place_autocomplete_test.dart` exercises name/address search and selection with a fake repository; both cases reproduced the assertion before the fix. Analysis and all 53 Flutter tests pass; device rendering remains unverified. API and offline behavior are unchanged.
+
+### Constrained Route Optimization, Stop-to-Stop Transit Comparisons & Restaurant Discovery — 2026-11-20
+
+- **Constrained Route Optimization (`RouteOptimizationService`, `POST /api/v1/trips/{trip}/itinerary-items/optimize-route`)**:
+  - Evaluates geographic stop order within each day (`trip_day_id`) using Haversine coordinates with a 1.3x urban road detour factor anchored to the trip's primary `Stay` coordinates (when available) or the day's first stop.
+  - Respects constraints (`preserve_fixed_times`, `max_walking_meters_per_leg`): items with explicit `starts_at_utc` or `kind` in `['flight', 'hotel']` remain pinned in their slot index while flexible geocoded stops are ordered by nearest-neighbor distance.
+  - Defaults to `apply: false` (**"AI suggests; the user approves"**), returning `current_total_distance_km`, `optimized_total_distance_km`, `distance_saved_km`, `estimated_co2_saved_kg`, `proposed_item_ids`, `pinned_item_ids`, and stop-to-stop transit `segments`. When `apply: true`, atomically updates `sort_order` and increments `version` via `ItineraryService::reorderItems()` with `expected_versions` optimistic locking (requires `TripPolicy@update`).
+- **Stop-to-Stop Itinerary Transit Mode Comparisons**:
+  - Compares `walk`, `public_transit`, and `taxi_rideshare` for consecutive same-day itinerary stops with estimated minutes, suitability (`recommended`, `alternative`, `long_walk`, `unknown`), encoded Google Maps directions URLs (`https://www.google.com/maps/dir/?api=1&...`), and explicit limitation notices (`verified: false`).
+  - When coordinates are missing on either stop, returns `recommended_mode: 'unknown_coordinates'` and `null` distances/durations without fabricating values.
+  - Rendered on mobile inside the **Transport** tab (`ItineraryTransitSegmentsSection`) alongside arrival transport, and live route distance/CO2 metrics are displayed on `RouteSummaryCard` with a one-tap **Optimize Route** trigger (`RouteOptimizationSheet`).
+- **Restaurant & Food Discovery (`FoodSuggestionService`, `GET /api/v1/trips/{trip}/food-suggestions`)**:
+  - Returns curated destination- and stay-aware dining suggestions (`breakfast`, `lunch`, `dinner`, `cafe`) with optional `meal_type`, `dietary` (`vegetarian`, `halal`, `kid_friendly`, `local_specialty`), and `near` (`stay`, `itinerary`) filters.
+  - Labels proximity using `$stay->name` (e.g., `"5–10 min walk from <stay name>"`) while never exposing private `friends_family` stay addresses or booking references.
+  - Deduplicates meals already present in the trip's `itinerary_items` and provides one-tap **Add to Itinerary** and Google Maps search links in `FoodDiscoverySection` under the **Recommendations** tab.

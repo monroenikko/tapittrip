@@ -31,7 +31,7 @@ Do not build abstractions for speculative later features. Extract shared code af
 ### Boundaries
 
 - Version public controllers under `/api/v1`; keep controllers responsible for HTTP translation only.
-- Use Form Requests for validation and normalization, Policies for trip-scoped authorization, API Resources for response shape, and behavior-focused services under `app/Application/<Feature>/Services` for use-case orchestration. Application services receive typed DTOs or explicit inputs and return domain/result objects, never HTTP requests or responses.
+- Use Form Requests for validation and normalization, Policies for trip-scoped authorization, API Resources for response shape, and behavior-focused services under `app/Services/<Feature>` for use-case orchestration. Services receive typed DTOs or explicit inputs and return domain/result objects, never HTTP requests or responses.
 - Reserve `app/Domain/<Feature>/Services` for framework-independent business rules. Laravel facades, Eloquent persistence, token/session handling, queues, and transaction orchestration remain in the application layer.
 - Keep shared response construction in one reusable HTTP-layer response class/factory. A controller trait may delegate to it but must not become a second implementation. Avoid generic base services, catch-all CRUD services, and duplicated response arrays in controllers.
 - Organize business behavior by domain capability, not by framework file type alone. Keep external maps, transit, AI, OCR, notification, flight, and storage providers behind interfaces/adapters.

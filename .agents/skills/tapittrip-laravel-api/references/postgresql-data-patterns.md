@@ -108,7 +108,7 @@ Treat zero affected rows as not-found/unauthorized/conflict according to a safe 
 - Use the default isolation level unless a demonstrated invariant requires another level. Document and test any stronger isolation.
 - Prefer optimistic version checks for offline edits. Use `SELECT ... FOR UPDATE`/Laravel locking only when a specific read-modify-write invariant needs row locking.
 - Lock rows in a consistent order to reduce deadlocks. Catch and boundedly retry deadlock/serialization failures only when the whole operation is safe to retry.
-- Never hide transaction boundaries inside low-level helpers when callers need to compose operations. The application service/action normally owns the use-case transaction.
+- Never hide transaction boundaries inside low-level helpers when callers need to compose operations. The use-case service/action normally owns the transaction.
 - Dispatch jobs/events after commit when consumers require committed data, and make consumers idempotent.
 
 ## Migration and rollout pattern

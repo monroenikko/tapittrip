@@ -9,6 +9,15 @@
 
 Allows travelers to create, list, view, update, and delete trips across all four supported planning modes (`diy`, `existing`, `guided`, `simple`). Itinerary creation is strictly optional: travelers who already have bookings or are joining a guided tour can organize their journey immediately without being forced into a detailed schedule.
 
+## Bottom navigation (2026-11-11)
+
+- **Home** shows the existing trip list. **Itinerary** shows a trip picker and opens that trip's existing itinerary; all planning modes and trips without activities are supported.
+- **Bookings** is a saved-accommodation overview grouped by authorized trip. Each trip loads/retries its stays independently; empty trips retain a Manage accommodation action. Stay rows and management actions open `/trips/{tripId}/itinerary?tab=stays` directly on the Stays tab. No flight import or live reservation functionality is implied.
+- **Profile** opens the existing account/settings route and returns to the prior selected tab. Home/list scroll positions use PageStorage keys. English/Filipino navigation copy follows the resolved app locale.
+- Loading, no-trip, no-stay, trip-error and per-trip stay-error states are explicit. Empty lists offer trip creation. UI uses existing authorized trip/stay providers and their cached offline reads; cached freshness is not currently exposed by those providers. The overview shows saved stay names, not booking references, private addresses or notes.
+- No API, migration, dependency or credential changes. API membership checks and existing revoked-trip cache handling remain authoritative. Tests use fakes; device navigation/offline checks remain manual.
+- Verification: `main_navigation_test.dart` covers actual bottom-bar taps, real Profile rendering, the real Stays route, all four planning modes, no activities, correct trip context, errors/retry, and 320 px/200% text in light/dark themes. Next smallest check: hot restart, switch all four tabs and open stays from two different trips.
+
 ## How it works
 
 1. **Trip Creation**: An authenticated traveler creates a trip with a title, optional travel dates (`start_date`, `end_date`), primary IANA timezone, destination country, and planning mode preference. The creator is automatically assigned as the trip `owner` in `trip_members`.

@@ -84,3 +84,7 @@ Successful JSON uses a top-level `data` member. Failures use a top-level `error`
 
 - Proceed to Slice 2: Trips & Memberships CRUD API (`/api/v1/trips`) with `TripPolicy` and planning mode support.
 
+
+### Profile ink surface correction (2026-11-11)
+
+The Friend Code panel paints its background/border with Material, allowing its switch tile ink to remain visible. The bottom-navigation regression test opens the real Profile screen and scrolls to the direct-invite switch without framework assertions. Authentication, privacy and offline contracts are unchanged.

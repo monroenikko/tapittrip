@@ -1,9 +1,9 @@
 # Notifications and Geofencing
 
 - Milestone: `M5`
-- Status: `implemented`
+- Status: `implemented` (Timezone-aware quiet hours, auto-rescheduling & circle removal cleanup audited)
 - Owner: `TapItTrip Engineering`
-- Last verified: `2026-11-08`
+- Last verified: `2026-11-20`
 
 ## Purpose and traveler outcome
 
@@ -19,13 +19,14 @@ Travelers receive proactive, timely alerts without being overwhelmed or having t
 1. **Preference Configuration**:
    - The traveler configures preferences in `NotificationPreferencesPage` (daily summary time, activity lead time, quiet hours, arrival suggestions).
    - If OS notification permissions are denied, an informative, non-blocking `NotificationPermissionBanner` appears with a one-tap action to system settings.
-2. **Deterministic Scheduling & Deduplication**:
-   - The backend `ScheduleTripRemindersService` computes upcoming triggers based on trip activities, stays, checklists, and user preferences.
-   - Generates reproducible `dedupe_key` hashes (`{trip_id}:{type}:{target_id}:{trigger_utc}`). Re-running never produces duplicate notifications.
-   - Rescheduling an itinerary activity or stay automatically cancels outdated reminders (`status = 'cancelled'`) and schedules updated ones.
-3. **Local Offline Engine**:
-   - The mobile client caches scheduled reminders in `FlutterSecureStorage` (`scheduled_local_notifications_$tripId`).
-   - Scheduled alerts survive app termination, reboots, and offline airplane mode.
+2. **Deterministic Scheduling, Timezone Rescheduling & Deduplication**:
+   - [`NotificationService`](../../api/app/Services/Notifications/NotificationService.php) computes upcoming triggers based on trip activities, stays, flights, checklists, and user preferences (`timezone_behavior`: `destination` vs `home`, `quiet_hours_*`, `activity_reminder_lead_minutes`).
+   - `TripDay::local_date` and `Trip::start_date` date casts are normalized via `->format('Y-m-d')` before parsing in `$tripTz`, and stay check-in/out inputs (`CreateStayData` / `UpdateStayData`) normalize offset timestamps via `->utc()` for accurate PostgreSQL UTC storage.
+   - Creating, updating (including timezone changes), or deleting stays (`StayService`), timed itinerary items (`ItineraryService`), flights (`CreateFlightService`), trips (`TripService`), or notification preferences (`NotificationService::updatePreferences`) immediately cancels stale reminders and reschedules updated triggers; `ReminderResource` exposes `trigger_local_time` (`HH:mm`).
+   - Generates reproducible `dedupe_key` strings (`{trip_id}:{type}:{target_id}:{trigger_utc}`). Re-running never produces duplicate notifications.
+3. **Local Offline Engine & Access Revocation Cleanup**:
+   - [`LocalNotificationService`](../../client/lib/features/notifications/services/local_notification_service.dart) evaluates quiet hours against destination/home wall-clock time (`triggerLocalTime` or IANA UTC offset resolution) rather than raw UTC hours, then persists active reminders in `FlutterSecureStorage` (`scheduled_local_notifications_$tripId`).
+   - Member removal or `403` revocation triggers `TripCircleService::removeMember` + `NotificationService::cancelMemberTripNotifications` on the backend and `TripCircleRepository::purgeAllTripCachesForStorage` on mobile, cancelling local trip reminders, clearing prefixed caches (including `cached_weather_${tripId}_*`), and stripping revoked-trip entries from `cached_user_notifications`.
 4. **Arrival Detection & Confirmation**:
    - `GeofenceService` monitors distance between the traveler's coordinates and the next upcoming activity place using the Haversine formula (250m radius).
    - Upon proximity, `ArrivalSuggestionDialog` prompts: *"You've arrived at [Place]! Would you like to mark this activity as visited?"*
@@ -75,7 +76,6 @@ Documented in `docs/api/openapi.yaml`:
 
 ## Testing and acceptance evidence
 
-- **Backend**: `NotificationTest.php` (6 tests) and `VisitEventTest.php` (4 tests). Full PHPUnit suite passes at 76/76 tests (446 assertions).
-- **Mobile**: `notification_test.dart` (7 tests) and `geofence_test.dart` (6 tests). Full Flutter test suite passes at 83/83 tests.
-- **Code Style & Analyzer**: `./vendor/bin/sail bin pint --test` (0 issues) and `flutter analyze` (0 issues).
+- **Backend**: `NotificationTest.php` (**10/10 tests**), `TripCollaborationSlice3Test.php`, and `VisitEventTest.php`; full PostgreSQL PHPUnit suite passes at **210/210 tests (1,557 assertions)** with Pint (`0` issues) and OpenAPI `contracts` validation passing.
+- **Mobile**: `notification_test.dart` (**9 tests**), `trip_circle_slice3_test.dart`, and `geofence_test.dart`; full Flutter test suite passes at **273/273 tests** with `dart format` clean and `flutter analyze` (`0` issues).
 

@@ -72,3 +72,7 @@ Travelers often worry about leaving behind vital travel documents, prescription 
 - **Backend Tests**: `api/tests/Feature/ChecklistTest.php` (5 tests, 53 assertions). Full PostgreSQL suite: 62/62 tests passing.
 - **Mobile Tests**: `client/test/checklist_test.dart` (8 tests). Full Flutter suite: 65/65 tests passing.
 
+
+### Itinerary add-item callback compatibility (2026-11-10)
+
+The itinerary page uses the assignment-aware checklist sheet callback and forwards member/traveler assignment IDs during creation. The sheet retains legacy callback compatibility. Flutter analysis and the eight existing checklist tests pass; no API or offline behavior changes. Device hot-restart verification remains manual.

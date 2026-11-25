@@ -1,9 +1,9 @@
 # Trip Circles — Travel Together
 
-- Milestone: `M10 (Trip Circles Slices 1–5)`
-- Status: `implemented` (Shareable Invite Links, Targeted Friend Code Invites, Circle Inbox, Ownership Transfer, Conflict Resolution, Announcements, Managed Traveler Profiles, Collaborative Checklist Assignments & Group Expense Splits / Multi-Currency Settlement)
+- Milestone: `M10 (Trip Circles Slices 1–6)`
+- Status: `implemented` (Shareable Invite Links, Targeted Friend Code Invites, Circle Inbox, Ownership Transfer, Conflict Resolution, Announcements, Managed Traveler Profiles, Collaborative Checklist Assignments, Group Expense Splits / Multi-Currency Settlement, and temporary map-pin sharing)
 - Owner: `engineering`
-- Last verified: `2026-11-10`
+- Last verified: `2026-11-11`
 
 ## Purpose and traveler outcome
 
@@ -47,6 +47,12 @@ Enables trip organizers to invite friends, partners, and family into a single sh
     - Personal (`single` / `visibility: 'private'`) expenses remain omitted from companion list, `/summary`, `/today`, `/settlements`, and `/sync/pull` responses (`403` on direct access) until explicitly shared (`visibility: 'shared'`).
     - Multi-currency conversions store dated attributed snapshots (`exchange_rate`, `rate_source`, `rate_captured_at`, `conversion_status`), never fabricate rates offline or return `1.0` when providers fail (`503 exchange_rate_unavailable`, or `conversion_status: 'unavailable'` with `null` `base_amount_minor` flagged in `unconverted_expenses` / `unconverted_totals`), preserve historical snapshots across later budget currency updates, and settle cross-currency repayments honestly.
     - Retries and offline mutations enqueue in `OutboxStorage` (`entityType: 'expense'`), use `client_operation_id` idempotency, reconcile via `SyncService` (`expense`), retain auditable history when a companion departs (`is_departed: true`, omitting companion `email` PII), purge all cached trip ledger state on HTTP `403`/`401`, and display non-transfer ledger disclaimers (`accounting_notice`).
+  - **Slice 6 (TC-9 — Temporary Opt-In Location Sharing & Meeting Assistance)**:
+    - Sharing is disabled by default. Consenting travelers can enable location sharing with an explicit duration selection (`60`, `240`, `480`, or `1440` minutes), audience selection (`circle` or `organizer_only`), and a complete map-pin coordinate pair.
+    - Child profiles (`TripTraveler`) cannot have location sharing enabled on their behalf.
+    - Active shares auto-expire when `expires_at` passes or upon manual stop. Stale locations (>15 min) are explicitly indicated, preventing deceptive "live" claims.
+    - Member departure or circle removal immediately revokes location sharing and deletes share records.
+    - Coordinates support honest map handoffs without fabricating ETAs or route safety guarantees. This mobile slice deliberately uses an explicitly entered map pin; it neither requests device GPS permission nor claims background/live tracking.
 
 ## Architecture and contracts
 
@@ -56,17 +62,18 @@ Enables trip organizers to invite friends, partners, and family into a single sh
   - [`docs/decisions/0006-trip-circles-sync-conflicts-and-announcements.md`](../decisions/0006-trip-circles-sync-conflicts-and-announcements.md)
   - [`docs/decisions/0007-trip-circles-managed-travelers-and-checklists.md`](../decisions/0007-trip-circles-managed-travelers-and-checklists.md)
   - [`docs/decisions/0008-trip-circles-group-expense-splits-and-currency-snapshots.md`](../decisions/0008-trip-circles-group-expense-splits-and-currency-snapshots.md)
-- OpenAPI: [`docs/api/openapi.yaml`](../api/openapi.yaml) (`listTripCircleMembers`, `updateTripCircleMemberRole`, `removeOrLeaveTripCircleMember`, `listTripInvitations`, `createTripInvitation`, `createDirectTripInvitation`, `revokeTripInvitation`, `previewTripInvitation`, `acceptTripInvitation`, `listIncomingInvitations`, `acceptDirectInvitation`, `declineDirectInvitation`, `getPendingOwnershipTransfer`, `initiateOwnershipTransfer`, `cancelOwnershipTransfer`, `listIncomingOwnershipTransfers`, `acceptOwnershipTransfer`, `declineOwnershipTransfer`, `regenerateFriendCode`, `getTripActivityFeed`, `listTripAnnouncements`, `createTripAnnouncement`, `updateTripAnnouncement`, `deleteTripAnnouncement`, `listTripTravelers`, `createTripTraveler`, `updateTripTraveler`, `deleteTripTraveler`, `listUserNotifications`, `markUserNotificationRead`, `getCurrencyRate` (`503 exchange_rate_unavailable`), `listTripExpenses`, `createTripExpense`, `updateTripExpense`, `deleteTripExpense`, `getTripExpensesSummary`, `getTripSettlements`, `recordTripSettlement`, `pushSyncOperations` (`expense` entity type), checklist assignee/attribution fields, and `409 version_conflict` on itinerary/reorder/stays/announcements/checklists/travelers/expenses)
+  - [`docs/decisions/0009-trip-circles-location-sharing.md`](../decisions/0009-trip-circles-location-sharing.md)
+- OpenAPI: [`docs/api/openapi.yaml`](../api/openapi.yaml) (`getTripLocationShare`, `storeTripLocationShare`, `updateTripLocationShare`, `listTripLocationShares`, and `TripLocationShare` schema)
 - Migrations:
   - [`2026_11_10_030000_create_trip_invitations_table.php`](../../api/database/migrations/2026_11_10_030000_create_trip_invitations_table.php)
   - [`2026_11_10_040000_add_trip_circles_slice2_tables.php`](../../api/database/migrations/2026_11_10_040000_add_trip_circles_slice2_tables.php)
   - [`2026_11_10_050000_add_trip_circles_slice3_tables.php`](../../api/database/migrations/2026_11_10_050000_add_trip_circles_slice3_tables.php)
   - [`2026_11_10_060000_add_trip_circles_slice4_tables.php`](../../api/database/migrations/2026_11_10_060000_add_trip_circles_slice4_tables.php)
   - [`2026_11_10_070000_add_trip_circles_slice5_expense_hardening.php`](../../api/database/migrations/2026_11_10_070000_add_trip_circles_slice5_expense_hardening.php)
+  - [`2026_11_10_080000_create_trip_location_shares_table.php`](../../api/database/migrations/2026_11_10_080000_create_trip_location_shares_table.php)
 
 ## Known limitations & next slices
 
-- Optional temporary opt-in location sharing and meeting assistance (`TC-9`) remains deferred until a future approved slice and dedicated privacy/battery ADR.
 - OS universal links (`tapittrip.com` or custom app-link hosts) are intentionally omitted until domain ownership is approved; shareable invite codes work directly in-app and respect `INVITE_LINK_BASE_URL` when configured.
 
 ## Testing and verification
@@ -77,9 +84,11 @@ Enables trip organizers to invite friends, partners, and family into a single sh
   - [`api/tests/Feature/TripCollaborationSlice3Test.php`](../../api/tests/Feature/TripCollaborationSlice3Test.php) — `TC-4` & `TC-5`: multi-editor propagation, idempotent itinerary/stay offline sync + cross-trip isolation, `409 version_conflict` on itinerary/reorder/stays, non-owner stay redaction (`booking_reference`, `phone`, `friends_family` private address), organizer announcements without push devices + edit/retry deduplication, `destination` vs `home` quiet-hours evaluation, automatic reminder rescheduling/cancellation, and removed-member notification cancellation.
   - [`api/tests/Feature/TripCollaborationSlice4Test.php`](../../api/tests/Feature/TripCollaborationSlice4Test.php) — `TC-6`: exclusive checklist assignments to accepted members and managed travelers, automatic unassignment and cleanup when members or travelers are removed, `viewer` completion-only authorization + offline sync isolation + `409 version_conflict` checks, and `trip_travelers` encrypted/redacted `restricted_notes` lifecycle.
   - [`api/tests/Feature/TripCollaborationSlice5Test.php`](../../api/tests/Feature/TripCollaborationSlice5Test.php) — `TC-7`: exact group splits (`single`/`equal`/`selected`/`custom`), `viewer` write blocking, `base_version` `409 version_conflict` + split recomputation, private expense isolation across list/summary/today/settlements/sync, live/missing FX snapshot integrity across budget changes, cross-currency settlement conversion, idempotent sync/retries, and departed-member auditable retention without PII leaks.
+  - [`api/tests/Feature/TripCollaborationSlice6Test.php`](../../api/tests/Feature/TripCollaborationSlice6Test.php) — `TC-9`: optional opt-in location sharing, duration and audience validation, automatic expiry, stop and member removal revocation, and organizer-only audience isolation.
 - Mobile Tests:
   - [`client/test/trip_circle_test.dart`](../../client/test/trip_circle_test.dart) — model parsing, URL token extraction, 403 cache cleanup, `TripCirclePage`, `CircleInboxPage`, and `JoinTripSheet`.
   - [`client/test/trip_circle_slice3_test.dart`](../../client/test/trip_circle_slice3_test.dart) — offline outbox queueing, `409` conflict recording, multi-conflict selector sheet & `ConflictResolutionDialog`, full per-trip cache + reminder purge isolation, redacted `StayCard`, `CircleAnnouncementsSection`, `CircleNoticesSection`, and `NotificationPreferencesPage` announcement/timezone controls.
   - [`client/test/trip_circle_slice4_test.dart`](../../client/test/trip_circle_slice4_test.dart) — `TC-6` checklist assignment picker & filters, `viewer` completion-only UI & API guard, offline checklist completion restart persistence in `OutboxStorage`/cache, `409` conflict & `403` cache purge, and `ManagedTravelersSection` privacy redaction & creation flow.
   - [`client/test/trip_circle_slice5_test.dart`](../../client/test/trip_circle_slice5_test.dart) — `TC-7` `allocateEqualMinor` invariants, honest offline FX failure (`CurrencyRateUnavailableException`), `AddExpenseBottomSheet` payer/split/custom-sum/offline FX flows, `TripExpensesPage` viewer read-only & unconverted/multi-currency rendering, `SettleUpDialog` non-transfer disclaimer + idempotency key, `OutboxStorage` restart persistence, `409` conflict recording, and `403` cache purge.
+  - [`client/test/trip_circle_slice6_test.dart`](../../client/test/trip_circle_slice6_test.dart) — `TC-9` inactive defaults, map-pin validation/explicit enablement, honest no-placeholder copy, stale/recent presentation, and directions handoff rendering.
 

@@ -143,6 +143,53 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/LoginRequest"
+  /auth/{provider}/exchange:
+    post:
+      operationId: exchangeOAuthToken
+      summary: Exchange a verified Google or Apple OAuth ID token for a Sanctum API bearer token
+      tags:
+        - Auth
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google, apple]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [id_token]
+              properties:
+                id_token: {type: string, minLength: 10, maxLength: 8192}
+                device_name: {type: string, maxLength: 120, nullable: true}
+                display_name: {type: string, maxLength: 120, nullable: true}
+                locale: {type: string, maxLength: 16, nullable: true}
+                home_timezone: {type: string, nullable: true}
+      responses:
+        "200":
+          description: Existing traveler signed in via OAuth.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "201":
+          description: New traveler account created and signed in via OAuth.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "422":
+          description: Invalid OAuth token, unsupported provider, or validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
       responses:
         "200":
           description: Token issued successfully.
@@ -916,6 +963,112 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /trips/{trip}/itinerary-items/optimize-route:
+    post:
+      operationId: optimizeItineraryRoute
+      summary: Evaluate stop-to-stop transit mode comparisons and optimize itinerary route order with constraints
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OptimizeItineraryRouteRequest"
+      responses:
+        "200":
+          description: Route optimization proposal or applied ordering with stop-to-stop transit mode comparisons.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteOptimizationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view or modify this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Optimistic concurrency conflict when apply is true and expected_versions mismatch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /trips/{trip}/food-suggestions:
+    get:
+      operationId: listTripFoodSuggestions
+      summary: List curated restaurant and food discovery suggestions for a trip
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: meal_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, breakfast, lunch, dinner, cafe]
+            default: all
+        - name: dietary
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [vegetarian, halal, kid_friendly, local_specialty]
+        - name: near
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [stay, itinerary]
+            default: stay
+      responses:
+        "200":
+          description: Curated destination and stay-aware food suggestions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoodSuggestionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /trips/{trip}/ai-plan/generate:
     post:
       operationId: generateAiItinerary
@@ -1030,6 +1183,50 @@ paths:
           description: Not authorized to modify this trip.
         "422":
           description: Validation error.
+
+  /trips/{trip}/ai-plan/replan:
+    post:
+      operationId: replanTripItinerary
+      summary: Propose or apply a non-destructive in-trip itinerary replan (weather, delay, skipped stop, pacing)
+      tags:
+        - Itinerary
+        - AI
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SmartReplanItineraryRequest"
+      responses:
+        "200":
+          description: Non-destructive replanning proposal or applied schedule preserving visited stops.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmartReplanResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view or modify this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /trips/{trip}/assistant/query:
     post:
@@ -1223,6 +1420,49 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Item not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /itinerary-items/{item}/vote:
+    post:
+      operationId: voteItineraryItem
+      summary: Cast or clear a Trip Circle member vote (up, down, or none) on an itinerary item
+      tags:
+        - Itinerary
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VoteItineraryItemRequest"
+      responses:
+        "200":
+          description: Updated itinerary item with aggregated vote counts and viewer vote.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItineraryItemResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Not authorized to view this trip.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error.
           content:
             application/json:
               schema:
@@ -1427,6 +1667,615 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /trips/{trip}/flights:
+    get:
+      operationId: listTripFlights
+      summary: List scheduled flight bookings for a trip
+      tags: [Flights]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Flight bookings. Schedules are not live airline data.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FlightListResponse"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to view this trip.}
+    post:
+      operationId: createTripFlight
+      summary: Save a manually entered or reviewed flight booking
+      tags: [Flights]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/StoreFlightRequest"}
+      responses:
+        "201":
+          description: Flight created.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FlightResponse"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to modify this trip.}
+        "422": {$ref: "#/components/responses/ValidationError"}
+
+  /flights/{flight}:
+    patch:
+      operationId: updateFlight
+      summary: Update a flight booking with optimistic concurrency
+      tags: [Flights]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: flight
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UpdateFlightRequest"}
+      responses:
+        "200": {description: Flight updated, content: {application/json: {schema: {$ref: "#/components/schemas/FlightResponse"}}}}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to modify this flight.}
+        "409": {description: Version conflict.}
+        "422": {$ref: "#/components/responses/ValidationError"}
+    delete:
+      operationId: deleteFlight
+      summary: Delete a flight booking and its segments
+      tags: [Flights]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: flight
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "204": {description: Flight deleted.}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to modify this flight.}
+
+  /safety/countries:
+    get:
+      operationId: listSafetyCountries
+      summary: List curated destination safety and emergency profiles
+      tags: [Safety]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: {type: string}
+      responses:
+        "200":
+          description: Curated destination safety profiles.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/DestinationSafetyProfile"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+
+  /safety/countries/{country}:
+    get:
+      operationId: getCountrySafetyProfile
+      summary: Get destination safety and emergency profile by country code or name
+      tags: [Safety]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: country
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        "200":
+          description: Destination safety profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/DestinationSafetyProfile"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+
+  /trips/{trip}/safety:
+    get:
+      operationId: getTripSafetyProfile
+      summary: Get destination safety and emergency profile for a trip
+      tags: [Safety]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - name: country
+          in: query
+          required: false
+          schema: {type: string}
+      responses:
+        "200":
+          description: Trip destination safety profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/DestinationSafetyProfile"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to view this trip.}
+
+  /translation/languages:
+    get:
+      operationId: listTranslationLanguages
+      summary: List supported destination phrasebook languages
+      tags: [Translation]
+      security: [{BearerAuth: []}]
+      responses:
+        "200":
+          description: Supported languages.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [language_code, language_name, native_name, flag_emoji, country_code, phrase_count]
+                      properties:
+                        language_code: {type: string}
+                        language_name: {type: string}
+                        native_name: {type: string}
+                        flag_emoji: {type: string}
+                        country_code: {type: string}
+                        phrase_count: {type: integer}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+
+  /translation/phrasebook/{language}:
+    get:
+      operationId: getPhrasebook
+      summary: Get curated offline travel phrasebook by language or country
+      tags: [Translation]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: language
+          in: path
+          required: true
+          schema: {type: string}
+        - name: category
+          in: query
+          required: false
+          schema: {type: string}
+        - name: q
+          in: query
+          required: false
+          schema: {type: string}
+      responses:
+        "200":
+          description: Phrasebook bundle.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/PhrasebookBundle"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+
+  /trips/{trip}/phrasebook:
+    get:
+      operationId: getTripPhrasebook
+      summary: Get curated phrasebook for a trip destination country
+      tags: [Translation]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - name: language
+          in: query
+          required: false
+          schema: {type: string}
+        - name: category
+          in: query
+          required: false
+          schema: {type: string}
+        - name: q
+          in: query
+          required: false
+          schema: {type: string}
+      responses:
+        "200":
+          description: Trip phrasebook bundle.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/PhrasebookBundle"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to view this trip.}
+
+  /translation/translate:
+    post:
+      operationId: translateText
+      summary: Translate a phrase via offline phrasebook match or consented cloud provider
+      tags: [Translation]
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [text, target_language, consent_cloud]
+              properties:
+                text: {type: string, minLength: 1, maxLength: 500}
+                source_language: {type: string, maxLength: 32}
+                target_language: {type: string, maxLength: 64}
+                consent_cloud: {type: boolean}
+      responses:
+        "200":
+          description: Translation result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/TranslationResult"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "422": {$ref: "#/components/responses/ValidationError"}
+        "503": {description: Cloud translation provider unavailable.}
+
+  /trips/{trip}/documents:
+    get:
+      operationId: listTripDocuments
+      summary: List encrypted travel documents visible to the authenticated trip member
+      tags: [Documents]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Travel documents list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/TravelDocument"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to view this trip.}
+    post:
+      operationId: createTripDocument
+      summary: Create an encrypted travel document entry for a trip
+      tags: [Documents]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/StoreTravelDocumentRequest"}
+      responses:
+        "200":
+          description: Idempotent replay of previously created document.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/TravelDocument"}
+        "201":
+          description: Travel document created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/TravelDocument"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to modify this trip.}
+        "422": {$ref: "#/components/responses/ValidationError"}
+
+  /documents/{document}/attachment:
+    post:
+      operationId: uploadTravelDocumentAttachment
+      summary: Upload or replace an encrypted binary PDF/image attachment on a travel document (owner only)
+      tags: [Documents]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: document
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        "200":
+          description: Encrypted attachment uploaded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/TravelDocument"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Only the document owner may attach files.}
+        "422": {$ref: "#/components/responses/ValidationError"}
+
+  /documents/{document}/download:
+    get:
+      operationId: downloadTravelDocumentAttachment
+      summary: Download decrypted private attachment via short-lived signed URL (owner only)
+      tags: [Documents]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: document
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Decrypted binary attachment stream with private no-store headers.
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Invalid/expired signature or caller is not the document owner.}
+        "404": {description: Attachment not found.}
+
+  /imports/{import}/download:
+    get:
+      operationId: downloadBookingImportAttachment
+      summary: Download decrypted private booking attachment via short-lived signed URL (creator or trip owner only)
+      tags: [Imports]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: import
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Decrypted binary attachment stream with private no-store headers.
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Invalid/expired signature or caller is not authorized.}
+        "404": {description: Attachment not found.}
+
+  /documents/{document}:
+    patch:
+      operationId: updateTravelDocument
+      summary: Update an encrypted travel document with optimistic concurrency
+      tags: [Documents]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: document
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/UpdateTravelDocumentRequest"}
+      responses:
+        "200":
+          description: Travel document updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/TravelDocument"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to modify this document.}
+        "409": {description: Version conflict.}
+        "422": {$ref: "#/components/responses/ValidationError"}
+    delete:
+      operationId: deleteTravelDocument
+      summary: Delete a travel document
+      tags: [Documents]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: document
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "204": {description: Travel document deleted.}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to delete this document.}
+
+  /trips/{trip}/imports:
+    get:
+      operationId: listTripBookingImports
+      summary: List booking imports and inbox items for a trip
+      tags: [Imports]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: List of booking imports.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: "#/components/schemas/BookingImport"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to view this trip.}
+    post:
+      operationId: createTripBookingImport
+      summary: Parse raw confirmation text or email and create an import record
+      tags: [Imports]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/StoreBookingImportRequest"}
+      responses:
+        "200":
+          description: Idempotent replay of previously parsed import.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/BookingImport"}
+        "201":
+          description: Booking import created and parsed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/BookingImport"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to modify this trip.}
+        "422": {$ref: "#/components/responses/ValidationError"}
+
+  /imports/{import}:
+    get:
+      operationId: getBookingImport
+      summary: Get details of a single booking import
+      tags: [Imports]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: import
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Booking import details.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/BookingImport"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to access this import.}
+        "404":
+          description: Booking import not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteBookingImport
+      summary: Delete or dismiss a booking import
+      tags: [Imports]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: import
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "204": {description: Booking import deleted.}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to delete this import.}
+        "404":
+          description: Booking import not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /imports/{import}/confirm:
+    post:
+      operationId: confirmBookingImport
+      summary: Confirm and materialize an extracted booking into a Flight, Stay, or Itinerary Item
+      tags: [Imports]
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: import
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ConfirmBookingImportRequest"}
+      responses:
+        "200":
+          description: Booking confirmed and materialized.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: {$ref: "#/components/schemas/BookingImport"}
+        "401": {$ref: "#/components/responses/Unauthenticated"}
+        "403": {description: Not authorized to confirm this import.}
+        "409": {description: Version conflict.}
+        "422": {$ref: "#/components/responses/ValidationError"}
 
   /trips/{trip}/stays:
     get:
@@ -3720,6 +4569,183 @@ paths:
         "422":
           description: Sole organizer cannot leave without deleting trip.
 
+  /trips/{trip}/location-share:
+    get:
+      operationId: getTripLocationShare
+      summary: Get current user's location sharing status for this trip (TC-9)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Location sharing status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripLocationShare"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+    post:
+      operationId: storeTripLocationShare
+      summary: Enable or configure temporary location sharing for this trip (TC-9)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [enabled, duration_minutes, audience, latitude, longitude]
+              properties:
+                enabled:
+                  type: boolean
+                  enum: [true]
+                duration_minutes:
+                  type: integer
+                  enum: [60, 240, 480, 1440]
+                  default: 60
+                audience:
+                  type: string
+                  enum: [circle, organizer_only]
+                  default: circle
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+      responses:
+        "201":
+          description: Location sharing enabled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripLocationShare"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation error.
+    patch:
+      operationId: updateTripLocationShare
+      summary: Update location sharing status or push location update (TC-9)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                duration_minutes:
+                  type: integer
+                  enum: [60, 240, 480, 1440]
+                audience:
+                  type: string
+                  enum: [circle, organizer_only]
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+      responses:
+        "200":
+          description: Location sharing updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/TripLocationShare"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+        "422":
+          description: Validation error.
+
+  /trips/{trip}/location-shares:
+    get:
+      operationId: listTripLocationShares
+      summary: List active location shares for this trip circle (TC-9)
+      tags:
+        - Circles & Activity Feed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Active circle member location shares.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TripLocationShare"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Forbidden.
+
   /trips/{trip}/invitations:
     get:
       operationId: listTripInvitations
@@ -4703,6 +5729,14 @@ components:
           enum: [planned, visited, skipped]
         version:
           type: integer
+        upvotes_count:
+          type: integer
+        downvotes_count:
+          type: integer
+        viewer_vote:
+          type: string
+          enum: [up, down]
+          nullable: true
         place:
           $ref: "#/components/schemas/Place"
         day:
@@ -4830,6 +5864,74 @@ components:
           description: Optional map of item UUID to expected integer version for optimistic concurrency checks
           additionalProperties:
             type: integer
+
+    FlightSegment:
+      type: object
+      required: [flight_number, origin_airport, destination_airport, scheduled_departure_utc, scheduled_arrival_utc, origin_timezone, destination_timezone]
+      properties:
+        id: {type: string, format: uuid}
+        flight_number: {type: string}
+        origin_airport: {type: string, pattern: "^[A-Z]{3}$"}
+        destination_airport: {type: string, pattern: "^[A-Z]{3}$"}
+        scheduled_departure_utc: {type: string, format: date-time}
+        scheduled_arrival_utc: {type: string, format: date-time}
+        origin_timezone: {type: string}
+        destination_timezone: {type: string}
+        terminal: {type: string, nullable: true}
+        gate: {type: string, nullable: true}
+    Flight:
+      type: object
+      required: [id, trip_id, segments, version]
+      properties:
+        id: {type: string, format: uuid}
+        trip_id: {type: string, format: uuid}
+        airline: {type: string, nullable: true}
+        booking_reference:
+          type: string
+          nullable: true
+          description: Returned only to the trip owner.
+        segments:
+          type: array
+          items: {$ref: "#/components/schemas/FlightSegment"}
+        version: {type: integer}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    FlightResponse:
+      type: object
+      required: [data]
+      properties:
+        data: {$ref: "#/components/schemas/Flight"}
+    FlightListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: "#/components/schemas/Flight"}
+    StoreFlightRequest:
+      type: object
+      required: [segments]
+      properties:
+        airline: {type: string, nullable: true}
+        booking_reference: {type: string, nullable: true}
+        client_operation_id: {type: string, format: uuid, nullable: true}
+        segments:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items: {$ref: "#/components/schemas/FlightSegment"}
+    UpdateFlightRequest:
+      type: object
+      required: [base_version]
+      properties:
+        airline: {type: string, nullable: true}
+        booking_reference: {type: string, nullable: true}
+        base_version: {type: integer, minimum: 1}
+        segments:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items: {$ref: "#/components/schemas/FlightSegment"}
 
     Stay:
       type: object
@@ -5139,6 +6241,24 @@ components:
           type: string
         accessibility_notes:
           type: string
+        boarding_location:
+          type: string
+          nullable: true
+        dropoff_location:
+          type: string
+          nullable: true
+        dropoff_address:
+          type: string
+          nullable: true
+        last_mile_walk_meters:
+          type: integer
+          nullable: true
+        last_mile_walk_minutes:
+          type: integer
+          nullable: true
+        last_mile_directions_url:
+          type: string
+          nullable: true
         convenience_score:
           type: integer
         is_most_convenient:
@@ -5180,6 +6300,30 @@ components:
               type: string
             google_maps_directions_url:
               type: string
+              nullable: true
+            nearest_transit:
+              type: object
+              nullable: true
+              properties:
+                station_name:
+                  type: string
+                station_address:
+                  type: string
+                  nullable: true
+                walking_distance_meters:
+                  type: integer
+                walking_minutes:
+                  type: integer
+                nearest_airport_name:
+                  type: string
+                  nullable: true
+                nearest_airport_code:
+                  type: string
+                  nullable: true
+                airport_distance_km:
+                  type: number
+                has_airport_rail:
+                  type: boolean
             luggage_preset:
               type: string
             party_size:
@@ -5245,6 +6389,16 @@ components:
           nullable: true
         current_stay:
           $ref: "#/components/schemas/Stay"
+          nullable: true
+        upcoming_flight:
+          $ref: "#/components/schemas/Flight"
+          nullable: true
+        flights:
+          type: array
+          items:
+            $ref: "#/components/schemas/Flight"
+        budget_pacing:
+          type: object
           nullable: true
         metrics:
           type: object
@@ -5825,7 +6979,7 @@ components:
           nullable: true
         type:
           type: string
-          enum: [morning_summary, activity_reminder, departure_checklist, stay_checkin, stay_checkout, custom]
+          enum: [morning_summary, activity_reminder, departure_checklist, stay_checkin, stay_checkout, flight_prep, flight_gate_departure, custom]
         title:
           type: string
         body:
@@ -5833,6 +6987,10 @@ components:
         trigger_at_utc:
           type: string
           format: date-time
+        trigger_local_time:
+          type: string
+          nullable: true
+          description: Wall-clock HH:mm in the reminder timezone
         timezone:
           type: string
         delivery_channel:
@@ -7237,6 +8395,65 @@ components:
           format: date-time
           nullable: true
 
+    TripLocationShare:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+        - is_active
+        - is_stale
+        - duration_minutes
+        - audience
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        trip_id:
+          type: string
+          format: uuid
+          nullable: true
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        user_name:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        is_active:
+          type: boolean
+        is_stale:
+          type: boolean
+        duration_minutes:
+          type: integer
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        audience:
+          type: string
+          enum: [circle, organizer_only]
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        last_shared_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
     TripInvitation:
       type: object
       additionalProperties: false
@@ -7672,11 +8889,640 @@ components:
           type: integer
           nullable: true
 
+    DestinationSafetyProfile:
+      type: object
+      additionalProperties: false
+      required:
+        - country_code
+        - country_name
+        - flag_emoji
+        - is_curated
+        - emergency_numbers
+        - official_resources
+        - emergency_phrases
+        - last_verified_at
+        - disclaimer
+      properties:
+        country_code:
+          type: string
+        country_name:
+          type: string
+        flag_emoji:
+          type: string
+        is_curated:
+          type: boolean
+        emergency_numbers:
+          type: object
+          additionalProperties: false
+          properties:
+            police: {type: string, nullable: true}
+            ambulance: {type: string, nullable: true}
+            fire: {type: string, nullable: true}
+            general_emergency: {type: string, nullable: true}
+            tourist_hotline: {type: string, nullable: true}
+        official_resources:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [title, publisher, category, url, last_verified_at]
+            properties:
+              title: {type: string}
+              publisher: {type: string}
+              category: {type: string}
+              url: {type: string, format: uri}
+              last_verified_at: {type: string}
+        emergency_phrases:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [category, english, local_text, phonetic]
+            properties:
+              category: {type: string}
+              english: {type: string}
+              local_text: {type: string}
+              phonetic: {type: string}
+        last_verified_at:
+          type: string
+        disclaimer:
+          type: string
 
+    PhrasebookBundle:
+      type: object
+      additionalProperties: false
+      required:
+        - language_code
+        - language_name
+        - native_name
+        - flag_emoji
+        - country_code
+        - categories
+        - phrases
+        - disclaimer
+      properties:
+        language_code: {type: string}
+        language_name: {type: string}
+        native_name: {type: string}
+        flag_emoji: {type: string}
+        country_code: {type: string}
+        categories:
+          type: array
+          items: {type: string}
+        phrases:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, category, english, local_text, phonetic]
+            properties:
+              id: {type: string}
+              category: {type: string}
+              english: {type: string}
+              local_text: {type: string}
+              phonetic: {type: string}
+              context_note: {type: string, nullable: true}
+        disclaimer: {type: string}
 
+    TranslationResult:
+      type: object
+      additionalProperties: false
+      required:
+        - source_text
+        - translated_text
+        - phonetic
+        - source_language
+        - target_language
+        - provider
+        - is_offline_match
+        - disclaimer
+      properties:
+        source_text: {type: string}
+        translated_text: {type: string}
+        phonetic: {type: string}
+        source_language: {type: string}
+        target_language: {type: string}
+        provider: {type: string}
+        is_offline_match: {type: boolean}
+        disclaimer: {type: string}
 
+    TravelDocument:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - owner_id
+        - is_owner
+        - document_type
+        - display_name
+        - is_expired
+        - access_policy
+        - version
+      properties:
+        id: {type: string, format: uuid}
+        trip_id: {type: string, format: uuid}
+        owner_id: {type: string, format: uuid}
+        is_owner: {type: boolean}
+        document_type:
+          type: string
+          enum: [passport_note, visa_reference, travel_insurance, ticket_voucher, health_certificate, other]
+        display_name: {type: string}
+        issuer: {type: string, nullable: true}
+        reference_number: {type: string, nullable: true}
+        notes_private: {type: string, nullable: true}
+        expires_on: {type: string, format: date, nullable: true}
+        is_expired: {type: boolean}
+        days_until_expiry: {type: integer, nullable: true}
+        access_policy:
+          type: string
+          enum: [owner_only, circle_members]
+        has_attachment: {type: boolean}
+        original_filename: {type: string, nullable: true}
+        mime_type: {type: string, nullable: true}
+        file_size_bytes: {type: integer, nullable: true}
+        download_url: {type: string, format: uri, nullable: true}
+        version: {type: integer}
+        created_at: {type: string, format: date-time, nullable: true}
+        updated_at: {type: string, format: date-time, nullable: true}
 
+    StoreTravelDocumentRequest:
+      type: object
+      additionalProperties: false
+      required: [document_type, display_name]
+      properties:
+        document_type:
+          type: string
+          enum: [passport_note, visa_reference, travel_insurance, ticket_voucher, health_certificate, other]
+        display_name: {type: string, minLength: 1, maxLength: 160}
+        issuer: {type: string, maxLength: 160, nullable: true}
+        reference_number: {type: string, maxLength: 160, nullable: true}
+        notes_private: {type: string, maxLength: 2000, nullable: true}
+        expires_on: {type: string, format: date, nullable: true}
+        access_policy:
+          type: string
+          enum: [owner_only, circle_members]
+        client_operation_id: {type: string, format: uuid, nullable: true}
 
+    UpdateTravelDocumentRequest:
+      type: object
+      additionalProperties: false
+      required: [base_version]
+      properties:
+        base_version: {type: integer, minimum: 1}
+        document_type:
+          type: string
+          enum: [passport_note, visa_reference, travel_insurance, ticket_voucher, health_certificate, other]
+        display_name: {type: string, minLength: 1, maxLength: 160}
+        issuer: {type: string, maxLength: 160, nullable: true}
+        reference_number: {type: string, maxLength: 160, nullable: true}
+        notes_private: {type: string, maxLength: 2000, nullable: true}
+        expires_on: {type: string, format: date, nullable: true}
+        access_policy:
+          type: string
+          enum: [owner_only, circle_members]
+
+    BookingImport:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - trip_id
+        - user_id
+        - source
+        - booking_type
+        - extraction_status
+        - version
+      properties:
+        id: {type: string, format: uuid}
+        trip_id: {type: string, format: uuid}
+        user_id: {type: string, format: uuid}
+        source: {type: string, enum: [paste_text, upload_file, share_link]}
+        has_attachment: {type: boolean}
+        original_filename: {type: string, nullable: true}
+        mime_type: {type: string, nullable: true}
+        file_size_bytes: {type: integer, nullable: true}
+        download_url: {type: string, format: uri, nullable: true}
+        booking_type: {type: string, enum: [flight, stay, activity, auto]}
+        raw_text: {type: string, nullable: true}
+        extraction_status: {type: string, enum: [pending, extracted, confirmed, failed, dismissed]}
+        extracted_data:
+          type: object
+          nullable: true
+          properties:
+            booking_type: {type: string}
+            confidence: {type: number}
+            summary: {type: string}
+            flight: {type: object, nullable: true}
+            stay: {type: object, nullable: true}
+            activity: {type: object, nullable: true}
+            raw_extracted: {type: object, nullable: true}
+        confidence_score: {type: number, nullable: true}
+        confirmed_entity_type: {type: string, nullable: true, enum: [flight, stay, itinerary_item]}
+        confirmed_entity_id: {type: string, format: uuid, nullable: true}
+        reviewed_at: {type: string, format: date-time, nullable: true}
+        error_message: {type: string, nullable: true}
+        version: {type: integer}
+        created_at: {type: string, format: date-time, nullable: true}
+        updated_at: {type: string, format: date-time, nullable: true}
+
+    StoreBookingImportRequest:
+      type: object
+      additionalProperties: false
+      required: [raw_text]
+      properties:
+        raw_text: {type: string, maxLength: 50000}
+        booking_type: {type: string, enum: [flight, stay, activity, auto], default: auto}
+        source: {type: string, enum: [paste_text, upload_file, share_link], default: paste_text}
+        client_operation_id: {type: string, format: uuid, nullable: true}
+
+    ConfirmBookingImportRequest:
+      type: object
+      additionalProperties: false
+      required: [base_version]
+      properties:
+        base_version: {type: integer, minimum: 1}
+        booking_type: {type: string, enum: [flight, stay, activity]}
+        flight:
+          type: object
+          nullable: true
+          properties:
+            airline: {type: string, maxLength: 160, nullable: true}
+            booking_reference: {type: string, maxLength: 160, nullable: true}
+            segments:
+              type: array
+              items:
+                type: object
+                required: [flight_number, origin_airport, destination_airport, scheduled_departure_utc, scheduled_arrival_utc, origin_timezone, destination_timezone]
+                properties:
+                  flight_number: {type: string, maxLength: 32}
+                  origin_airport: {type: string, minLength: 3, maxLength: 3}
+                  destination_airport: {type: string, minLength: 3, maxLength: 3}
+                  scheduled_departure_utc: {type: string, format: date-time}
+                  scheduled_arrival_utc: {type: string, format: date-time}
+                  origin_timezone: {type: string}
+                  destination_timezone: {type: string}
+                  terminal: {type: string, nullable: true}
+                  gate: {type: string, nullable: true}
+        stay:
+          type: object
+          nullable: true
+          properties:
+            name: {type: string, maxLength: 160}
+            stay_type: {type: string, maxLength: 32}
+            address: {type: string, nullable: true}
+            check_in_at: {type: string, format: date-time, nullable: true}
+            check_out_at: {type: string, format: date-time, nullable: true}
+            timezone: {type: string}
+            phone: {type: string, nullable: true}
+            booking_reference: {type: string, nullable: true}
+            notes: {type: string, nullable: true}
+        activity:
+          type: object
+          nullable: true
+          properties:
+            title: {type: string, maxLength: 160}
+            kind: {type: string, maxLength: 32}
+            place_name: {type: string, nullable: true}
+            starts_at_utc: {type: string, format: date-time, nullable: true}
+            ends_at_utc: {type: string, format: date-time, nullable: true}
+            timezone: {type: string}
+            notes: {type: string, nullable: true}
+
+    OptimizeItineraryRouteRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        trip_day_id:
+          type: string
+          format: uuid
+          nullable: true
+        apply:
+          type: boolean
+          default: false
+        preserve_fixed_times:
+          type: boolean
+          default: true
+        max_walking_meters_per_leg:
+          type: integer
+          minimum: 200
+          maximum: 10000
+          default: 1500
+        expected_versions:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 1
+
+    ItineraryTransitModeComparison:
+      type: object
+      required:
+        - mode
+        - label
+        - estimated_duration_minutes
+        - suitability
+        - advisory_note
+        - google_maps_directions_url
+      properties:
+        mode:
+          type: string
+          enum: [walk, public_transit, taxi_rideshare]
+        label:
+          type: string
+        estimated_duration_minutes:
+          type: integer
+          nullable: true
+        suitability:
+          type: string
+          enum: [recommended, alternative, long_walk, unknown]
+        advisory_note:
+          type: string
+        google_maps_directions_url:
+          type: string
+          format: uri
+
+    ItineraryTransitSegment:
+      type: object
+      required:
+        - from_item_id
+        - from_title
+        - from_place_name
+        - to_item_id
+        - to_title
+        - to_place_name
+        - trip_day_id
+        - distance_meters
+        - distance_km
+        - recommended_mode
+        - estimated_duration_minutes
+        - exceeds_walking_limit
+        - mode_comparisons
+        - provider_attribution
+        - verified
+        - limitation_notice
+      properties:
+        from_item_id: {type: string, format: uuid}
+        from_title: {type: string}
+        from_place_name: {type: string}
+        to_item_id: {type: string, format: uuid}
+        to_title: {type: string}
+        to_place_name: {type: string}
+        trip_day_id: {type: string, format: uuid, nullable: true}
+        distance_meters: {type: integer, nullable: true}
+        distance_km: {type: number, nullable: true}
+        recommended_mode:
+          type: string
+          enum: [walk, public_transit, taxi_rideshare, unknown_coordinates]
+        estimated_duration_minutes: {type: integer, nullable: true}
+        exceeds_walking_limit: {type: boolean}
+        mode_comparisons:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItineraryTransitModeComparison"
+        provider_attribution: {type: string}
+        verified: {type: boolean}
+        limitation_notice: {type: string}
+
+    RouteOptimizationResult:
+      type: object
+      required:
+        - trip_id
+        - trip_day_id
+        - applied
+        - is_already_optimal
+        - current_item_ids
+        - proposed_item_ids
+        - pinned_item_ids
+        - current_total_distance_km
+        - optimized_total_distance_km
+        - distance_saved_km
+        - estimated_co2_saved_kg
+        - constraints_applied
+        - segments
+        - items
+        - provider_attribution
+        - verified
+        - advisory_notice
+      properties:
+        trip_id: {type: string, format: uuid}
+        trip_day_id: {type: string, format: uuid, nullable: true}
+        applied: {type: boolean}
+        is_already_optimal: {type: boolean}
+        current_item_ids:
+          type: array
+          items: {type: string, format: uuid}
+        proposed_item_ids:
+          type: array
+          items: {type: string, format: uuid}
+        pinned_item_ids:
+          type: array
+          items: {type: string, format: uuid}
+        current_total_distance_km: {type: number}
+        optimized_total_distance_km: {type: number}
+        distance_saved_km: {type: number}
+        estimated_co2_saved_kg: {type: number}
+        constraints_applied:
+          type: object
+          properties:
+            preserve_fixed_times: {type: boolean}
+            max_walking_meters_per_leg: {type: integer}
+            anchor_stay_name: {type: string, nullable: true}
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItineraryTransitSegment"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItineraryItem"
+        provider_attribution: {type: string}
+        verified: {type: boolean}
+        advisory_notice: {type: string}
+
+    RouteOptimizationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/RouteOptimizationResult"
+
+    FoodSuggestionItem:
+      type: object
+      required:
+        - id
+        - name
+        - cuisine
+        - meal_type
+        - neighborhood
+        - proximity_label
+        - dietary_tags
+        - price_tier
+        - notes
+        - google_maps_search_url
+        - suggested_action
+        - provider_attribution
+        - verified
+      properties:
+        id: {type: string}
+        name: {type: string}
+        cuisine: {type: string}
+        meal_type:
+          type: string
+          enum: [breakfast, lunch, dinner, cafe]
+        neighborhood: {type: string}
+        proximity_label: {type: string}
+        dietary_tags:
+          type: array
+          items: {type: string}
+        price_tier:
+          type: string
+          enum: [budget, moderate, splurge]
+        notes: {type: string}
+        google_maps_search_url:
+          type: string
+          format: uri
+        suggested_action:
+          type: object
+          required: [label, kind, payload]
+          properties:
+            label: {type: string}
+            kind: {type: string}
+            payload:
+              type: object
+              additionalProperties: true
+        provider_attribution: {type: string}
+        verified: {type: boolean}
+
+    FoodSuggestionsResult:
+      type: object
+      required:
+        - trip_id
+        - destination
+        - anchor_stay_name
+        - filters_applied
+        - source
+        - verified
+        - advisory_notice
+        - suggestions
+      properties:
+        trip_id: {type: string, format: uuid}
+        destination: {type: string}
+        anchor_stay_name: {type: string, nullable: true}
+        filters_applied:
+          type: object
+          properties:
+            meal_type: {type: string}
+            dietary: {type: string, nullable: true}
+            near: {type: string}
+        source: {type: string}
+        verified: {type: boolean}
+        advisory_notice: {type: string}
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FoodSuggestionItem"
+
+    FoodSuggestionsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/FoodSuggestionsResult"
+
+    VoteItineraryItemRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        vote:
+          type: string
+          enum: [up, down, none]
+          nullable: true
+
+    SmartReplanItineraryRequest:
+      type: object
+      additionalProperties: false
+      required: [trigger_reason]
+      properties:
+        trigger_reason:
+          type: string
+          enum: [rain_weather, flight_delay, skipped_stop, tired_family_pacing]
+        trip_day_id:
+          type: string
+          format: uuid
+          nullable: true
+        apply:
+          type: boolean
+          default: false
+        delay_minutes:
+          type: integer
+          minimum: 15
+          maximum: 720
+          nullable: true
+
+    SmartReplanProposedChange:
+      type: object
+      required:
+        - action
+        - target_item_id
+        - title
+        - kind
+        - place_name
+        - notes
+        - reason
+        - starts_at_utc
+        - ends_at_utc
+      properties:
+        action:
+          type: string
+          enum: [keep_visited, shift_time, add_alternative]
+        target_item_id: {type: string, format: uuid, nullable: true}
+        title: {type: string}
+        kind: {type: string}
+        place_name: {type: string, nullable: true}
+        notes: {type: string, nullable: true}
+        reason: {type: string}
+        starts_at_utc: {type: string, format: date-time, nullable: true}
+        ends_at_utc: {type: string, format: date-time, nullable: true}
+
+    SmartReplanResult:
+      type: object
+      required:
+        - trip_id
+        - trip_day_id
+        - trigger_reason
+        - applied
+        - preserved_visited_count
+        - summary
+        - proposed_changes
+        - items
+        - provider_attribution
+        - verified
+        - advisory_notice
+      properties:
+        trip_id: {type: string, format: uuid}
+        trip_day_id: {type: string, format: uuid, nullable: true}
+        trigger_reason: {type: string}
+        applied: {type: boolean}
+        preserved_visited_count: {type: integer}
+        summary: {type: string}
+        proposed_changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SmartReplanProposedChange"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItineraryItem"
+        provider_attribution: {type: string}
+        verified: {type: boolean}
+        advisory_notice: {type: string}
+
+    SmartReplanResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/SmartReplanResult"
 
 
 
