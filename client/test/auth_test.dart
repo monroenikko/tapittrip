@@ -1,10 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tapittrip/core/network/api_exceptions.dart';
 import 'package:tapittrip/core/storage/token_storage.dart';
+import 'package:tapittrip/core/theme/app_theme.dart';
 import 'package:tapittrip/features/auth/data/auth_repository.dart';
+import 'package:tapittrip/features/auth/data/social_auth_service.dart';
 import 'package:tapittrip/features/auth/domain/models/auth_state.dart';
 import 'package:tapittrip/features/auth/domain/models/auth_user.dart';
+import 'package:tapittrip/features/auth/presentation/pages/login_page.dart';
 import 'package:tapittrip/features/auth/presentation/providers/auth_provider.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -427,5 +432,121 @@ void main() {
       expect(state, isA<AuthFailure>());
       expect((state as AuthFailure).errorMessage, 'Invalid OAuth token.');
     });
+
+    testWidgets(
+      'LoginPage Continue with Google and Continue with Facebook authenticate via SocialAuthService',
+      (tester) async {
+        final fakeSocial = _FakeSocialAuthService(
+          googleResult: const SocialSignInResult.success(
+            token: 'valid-google-token:g1|g@example.com|Google User',
+            displayName: 'Google User',
+          ),
+          facebookResult: const SocialSignInResult.success(
+            token: 'valid-facebook-token:f1|f@example.com|FB User',
+            displayName: 'FB User',
+          ),
+        );
+
+        final router = GoRouter(
+          initialLocation: '/login',
+          routes: [
+            GoRoute(
+              path: '/login',
+              builder: (context, state) => const LoginPage(),
+            ),
+            GoRoute(
+              path: '/trips',
+              builder: (context, state) =>
+                  const Scaffold(body: Text('Trips Home')),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tokenStorageProvider.overrideWithValue(InMemoryTokenStorage()),
+              authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+              socialAuthServiceProvider.overrideWithValue(fakeSocial),
+            ],
+            child: MaterialApp.router(
+              theme: AppTheme.light(),
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Continue with Google'), findsOneWidget);
+        expect(find.text('Continue with Facebook'), findsOneWidget);
+
+        await tester.ensureVisible(find.text('Continue with Google'));
+        await tester.tap(find.text('Continue with Google'));
+        await tester.pumpAndSettle();
+
+        expect(fakeSocial.googleCalls, 1);
+        expect(find.text('Trips Home'), findsOneWidget);
+        expect(find.text('Welcome back, Traveler!'), findsOneWidget);
+      },
+    );
+
+    test('signInWithSocialProvider handles Facebook success, cancellation, and error', () async {
+      final fakeSocial = _FakeSocialAuthService(
+        googleResult: const SocialSignInResult.cancelled(),
+        facebookResult: const SocialSignInResult.success(
+          token: 'valid-facebook-token:fb-1|fb@example.com|FB Traveler',
+          displayName: 'FB Traveler',
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          tokenStorageProvider.overrideWithValue(InMemoryTokenStorage()),
+          authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+          socialAuthServiceProvider.overrideWithValue(fakeSocial),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await Future<void>.delayed(Duration.zero);
+
+      // Cancelled Google sign-in does not set AuthFailure
+      final cancelled = await container
+          .read(authProvider.notifier)
+          .signInWithSocialProvider('google');
+      expect(cancelled, isFalse);
+      expect(container.read(authProvider), isA<Unauthenticated>());
+
+      // Facebook sign-in succeeds
+      final fbOk = await container
+          .read(authProvider.notifier)
+          .signInWithSocialProvider('facebook');
+      expect(fbOk, isTrue);
+      expect(container.read(authProvider), isA<Authenticated>());
+    });
   });
+}
+
+class _FakeSocialAuthService implements SocialAuthService {
+  _FakeSocialAuthService({
+    required this.googleResult,
+    required this.facebookResult,
+  });
+
+  final SocialSignInResult googleResult;
+  final SocialSignInResult facebookResult;
+  int googleCalls = 0;
+  int facebookCalls = 0;
+
+  @override
+  Future<SocialSignInResult> signInWithGoogle() async {
+    googleCalls++;
+    return googleResult;
+  }
+
+  @override
+  Future<SocialSignInResult> signInWithFacebook() async {
+    facebookCalls++;
+    return facebookResult;
+  }
 }

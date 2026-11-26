@@ -20,7 +20,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 final class AuthService
 {
-    public const SUPPORTED_OAUTH_PROVIDERS = ['google', 'apple'];
+    public const SUPPORTED_OAUTH_PROVIDERS = ['google', 'facebook', 'apple'];
 
     public function __construct(
         private readonly ?OAuthTokenVerifierInterface $oauthVerifier = null,
@@ -94,7 +94,7 @@ final class AuthService
         $normalizedProvider = strtolower(trim($provider));
         if (! in_array($normalizedProvider, self::SUPPORTED_OAUTH_PROVIDERS, true)) {
             throw ValidationException::withMessages([
-                'provider' => ['Unsupported OAuth provider. Supported providers: google, apple.'],
+                'provider' => ['Unsupported OAuth provider. Supported providers: google, facebook, apple.'],
             ]);
         }
 

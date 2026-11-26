@@ -146,7 +146,7 @@ paths:
   /auth/{provider}/exchange:
     post:
       operationId: exchangeOAuthToken
-      summary: Exchange a verified Google or Apple OAuth ID token for a Sanctum API bearer token
+      summary: Exchange a verified Google, Facebook, or Apple OAuth token for a Sanctum API bearer token
       tags:
         - Auth
       security: []
@@ -156,7 +156,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [google, apple]
+            enum: [google, facebook, apple]
       requestBody:
         required: true
         content:

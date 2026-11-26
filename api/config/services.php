@@ -44,6 +44,11 @@ return [
         'client_id' => env('APPLE_OAUTH_CLIENT_ID'),
     ],
 
+    'facebook' => [
+        'app_id' => env('FACEBOOK_OAUTH_APP_ID'),
+        'app_secret' => env('FACEBOOK_OAUTH_APP_SECRET'),
+    ],
+
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-flash-lite-latest'),

@@ -31,7 +31,15 @@ class ApiClient {
         },
         onError: (DioException error, handler) async {
           if (error.response?.statusCode == 401) {
-            await tokenStorage.deleteToken();
+            final sentAuth =
+                error.requestOptions.headers['Authorization'] as String?;
+            if (sentAuth != null && sentAuth.startsWith('Bearer ')) {
+              final sentToken = sentAuth.substring(7);
+              final currentToken = await tokenStorage.readToken();
+              if (currentToken == sentToken) {
+                await tokenStorage.deleteToken();
+              }
+            }
           }
           return handler.next(error);
         },

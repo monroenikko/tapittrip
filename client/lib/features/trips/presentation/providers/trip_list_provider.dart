@@ -5,7 +5,7 @@ import '../../domain/models/planning_mode.dart';
 import '../../domain/models/trip.dart';
 
 class TripListNotifier extends AsyncNotifier<List<Trip>> {
-  late final TripRepository _repository;
+  late TripRepository _repository;
 
   @override
   Future<List<Trip>> build() async {

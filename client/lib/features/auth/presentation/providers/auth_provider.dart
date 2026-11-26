@@ -3,13 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_exceptions.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../circles/data/trip_circle_repository.dart';
+import '../../../trips/presentation/providers/trip_list_provider.dart';
 import '../../data/auth_repository.dart';
+import '../../data/social_auth_service.dart';
 import '../../domain/models/auth_state.dart';
 import '../../domain/models/auth_user.dart';
 
 class AuthNotifier extends Notifier<AuthState> {
-  late final AuthRepository _repository;
-  late final TokenStorage _tokenStorage;
+  late AuthRepository _repository;
+  late TokenStorage _tokenStorage;
 
   @override
   AuthState build() {
@@ -40,6 +42,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final result = await _repository.login(email: email, password: password);
       state = Authenticated(user: result.user, token: result.token);
+      ref.invalidate(tripListProvider);
       return true;
     } on ApiException catch (e) {
       state = AuthFailure(e.message);
@@ -67,6 +70,7 @@ class AuthNotifier extends Notifier<AuthState> {
         homeTimezone: homeTimezone,
       );
       state = Authenticated(user: result.user, token: result.token);
+      ref.invalidate(tripListProvider);
       return true;
     } on ValidationException catch (e) {
       state = AuthFailure(
@@ -80,6 +84,38 @@ class AuthNotifier extends Notifier<AuthState> {
       state = AuthFailure('Unable to complete sign-in right now.');
       return false;
     }
+  }
+
+  Future<bool> signInWithSocialProvider(String provider) async {
+    final normalized = provider.trim().toLowerCase();
+    final socialService = ref.read(socialAuthServiceProvider);
+
+    final SocialSignInResult result;
+    if (normalized == 'google') {
+      result = await socialService.signInWithGoogle();
+    } else if (normalized == 'facebook') {
+      result = await socialService.signInWithFacebook();
+    } else {
+      state = const AuthFailure('Unsupported social sign-in provider.');
+      return false;
+    }
+
+    if (result.cancelled) {
+      return false;
+    }
+
+    if (!result.isSuccess) {
+      state = AuthFailure(
+        result.errorMessage ?? 'Unable to complete sign-in right now.',
+      );
+      return false;
+    }
+
+    return exchangeOAuthToken(
+      provider: normalized,
+      idToken: result.token!,
+      displayName: result.displayName,
+    );
   }
 
   Future<bool> register({
@@ -103,6 +139,7 @@ class AuthNotifier extends Notifier<AuthState> {
         homeCurrency: homeCurrency,
       );
       state = Authenticated(user: result.user, token: result.token);
+      ref.invalidate(tripListProvider);
       return true;
     } on ValidationException catch (e) {
       state = AuthFailure(e.fieldErrors.join('\n'));
@@ -123,6 +160,7 @@ class AuthNotifier extends Notifier<AuthState> {
       await ref.read(tripCircleRepositoryProvider).purgeInboxCaches();
     } finally {
       state = const Unauthenticated();
+      ref.invalidate(tripListProvider);
     }
   }
 
@@ -133,6 +171,7 @@ class AuthNotifier extends Notifier<AuthState> {
       await _repository.deleteAccount();
       await ref.read(tripCircleRepositoryProvider).purgeInboxCaches();
       state = const Unauthenticated();
+      ref.invalidate(tripListProvider);
       return null;
     } on ValidationException catch (e) {
       state = previousState;

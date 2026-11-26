@@ -1,5 +1,21 @@
 # TapItTrip Milestone Log
 
+## 2026-11-25 — Google & Facebook Social Sign-In (Completed)
+
+- Implemented end-to-end **Google & Facebook Social Sign-In** across Laravel (`api/`), OpenAPI (`docs/api/openapi.yaml`), and Flutter (`client/`):
+  - **Backend (`api/`)**:
+    - Added `'facebook'` to `AuthService::SUPPORTED_OAUTH_PROVIDERS` (`['google', 'facebook', 'apple']`) in [`AuthService.php`](../api/app/Services/Identity/AuthService.php).
+    - Implemented `LiveOAuthTokenVerifier::verifyFacebookToken()` in [`LiveOAuthTokenVerifier.php`](../api/app/Services/Identity/LiveOAuthTokenVerifier.php) verifying tokens via Meta Graph API `debug_token` (`is_valid === true` & `app_id` match) and `/me?fields=id,name,email,picture.type(large)` with redacted failure logs.
+    - Documented `FACEBOOK_OAUTH_APP_ID` and `FACEBOOK_OAUTH_APP_SECRET` in [`api/config/services.php`](../api/config/services.php) and [`api/.env.example`](../api/.env.example).
+    - Updated `POST /api/v1/auth/{provider}/exchange` enum in [`docs/api/openapi.yaml`](../docs/api/openapi.yaml) and added Facebook exchange & live verifier tests in [`OAuthExchangeTest.php`](../api/tests/Feature/OAuthExchangeTest.php).
+  - **Mobile (`client/`)**:
+    - Added provider boundary [`SocialAuthService`](../client/lib/features/auth/data/social_auth_service.dart) (`SocialSignInResult`, `PlatformSocialAuthService`, `socialAuthServiceProvider`) checking `.env` (`GOOGLE_OAUTH_CLIENT_ID`, `FACEBOOK_APP_ID` documented in [`client/.env.example`](../client/.env.example)) and failing transparently when native SDK credentials are not yet configured.
+    - Wired `AuthNotifier.signInWithSocialProvider()` in [`auth_provider.dart`](../client/lib/features/auth/presentation/providers/auth_provider.dart) and added reusable [`SocialAuthButtons`](../client/lib/features/auth/presentation/widgets/social_auth_buttons.dart) (**Continue with Google** & **Continue with Facebook**) to [`login_page.dart`](../client/lib/features/auth/presentation/pages/login_page.dart) and [`register_page.dart`](../client/lib/features/auth/presentation/pages/register_page.dart).
+    - Added widget and notifier tests for Google/Facebook sign-in, cancellation, and errors in [`auth_test.dart`](../client/test/auth_test.dart).
+- **Verification**:
+  - Backend: `./vendor/bin/sail bin pint --test` passed; `./vendor/bin/sail --profile tools run --rm --no-deps contracts` passed; `OAuthExchangeTest.php` (`6/6 tests, 36 assertions`) and full PostgreSQL suite (`phpunit.postgres.xml`) passed (**227/227 tests, 1,754 assertions**).
+  - Mobile: `dart format --output=none --set-exit-if-changed lib/ test/` (`232 files, 0 changed`); `flutter analyze` (`No issues found!`); `test/auth_test.dart` (`13/13`) and full `flutter test` passed (**290/290 tests**).
+
 ## 2026-11-25 — Trips Live Search & Filter Bar + Chip Contrast & Paper Card Polish (Completed)
 
 - Upgraded [`search_pill_bar.dart`](../client/lib/features/trips/presentation/widgets/search_pill_bar.dart) and [`trip_list_page.dart`](../client/lib/features/trips/presentation/pages/trip_list_page.dart) so the Home search pill bar now performs live offline trip filtering across trip title, destination country, planning mode, and trip type (replacing the `/trips/new` stub):

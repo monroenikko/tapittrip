@@ -87,9 +87,89 @@ final class OAuthExchangeTest extends TestCase
             'id_token' => 'invalid-garbage-token-value',
         ])->assertStatus(422);
 
-        $this->postJson('/api/v1/auth/facebook/exchange', [
-            'id_token' => 'valid-facebook-token:fb-1|user@example.com|User',
+        $this->postJson('/api/v1/auth/twitter/exchange', [
+            'id_token' => 'valid-twitter-token:tw-1|user@example.com|User',
         ])->assertUnprocessable();
+    }
+
+    public function test_facebook_oauth_exchange_creates_user_and_reuses_identity_on_repeat_sign_in(): void
+    {
+        $first = $this->postJson('/api/v1/auth/facebook/exchange', [
+            'id_token' => 'valid-facebook-token:fb-sub-2002|juan.fb@example.com|Juan Dela Cruz',
+            'device_name' => 'Pixel 9',
+        ]);
+
+        $first
+            ->assertCreated()
+            ->assertJsonPath('data.token_type', 'Bearer')
+            ->assertJsonPath('data.is_new_user', true)
+            ->assertJsonPath('data.user.email', 'juan.fb@example.com')
+            ->assertJsonPath('data.user.display_name', 'Juan Dela Cruz');
+
+        $userId = $first->json('data.user.id');
+
+        $this->assertDatabaseHas('user_oauth_identities', [
+            'user_id' => $userId,
+            'provider' => 'facebook',
+            'provider_subject' => 'fb-sub-2002',
+            'email' => 'juan.fb@example.com',
+            'email_verified' => true,
+        ]);
+
+        $second = $this->postJson('/api/v1/auth/facebook/exchange', [
+            'id_token' => 'valid-facebook-token:fb-sub-2002|juan.fb@example.com|Juan Dela Cruz',
+        ]);
+
+        $second
+            ->assertOk()
+            ->assertJsonPath('data.is_new_user', false)
+            ->assertJsonPath('data.user.id', $userId);
+    }
+
+    public function test_live_facebook_verifier_validates_app_id_and_fetches_profile(): void
+    {
+        config()->set('services.facebook.app_id', 'fb-app-123456');
+        config()->set('services.facebook.app_secret', 'fb-secret-xyz');
+
+        Http::fake([
+            'https://graph.facebook.com/debug_token*' => Http::sequence()
+                ->push([
+                    'data' => [
+                        'app_id' => 'fb-app-123456',
+                        'is_valid' => true,
+                        'user_id' => 'fb-live-user-88',
+                    ],
+                ], 200)
+                ->push([
+                    'data' => [
+                        'app_id' => 'other-malicious-app',
+                        'is_valid' => true,
+                        'user_id' => 'fb-live-user-99',
+                    ],
+                ], 200),
+            'https://graph.facebook.com/me*' => Http::response([
+                'id' => 'fb-live-user-88',
+                'name' => 'Facebook Traveler',
+                'email' => 'fb.live@example.com',
+                'picture' => [
+                    'data' => [
+                        'url' => 'https://example.com/fb-avatar.jpg',
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $verifier = new LiveOAuthTokenVerifier;
+
+        $valid = $verifier->verify('facebook', 'mock-fb-access-token');
+        $this->assertNotNull($valid);
+        $this->assertSame('facebook', $valid->provider);
+        $this->assertSame('fb-live-user-88', $valid->providerSubject);
+        $this->assertSame('fb.live@example.com', $valid->email);
+        $this->assertTrue($valid->emailVerified);
+
+        $wrongApp = $verifier->verify('facebook', 'mock-wrong-app-fb-token');
+        $this->assertNull($wrongApp);
     }
 
     public function test_live_google_verifier_validates_audience_and_rejects_mismatched_aud(): void

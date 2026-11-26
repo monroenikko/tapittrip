@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/countries.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/social_auth_buttons.dart';
 import '../../domain/models/auth_state.dart';
 import '../widgets/country_residence_dialog.dart';
 
@@ -40,6 +41,52 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     super.dispose();
   }
 
+  void _showWelcomeMessage({bool isNewAccount = true}) {
+    final authState = ref.read(authProvider);
+    final rawName = authState is Authenticated
+        ? (authState.user.displayName.trim().isNotEmpty
+              ? authState.user.displayName.trim()
+              : authState.user.name.trim())
+        : '';
+    final firstName = rawName.isNotEmpty ? rawName.split(' ').first : '';
+    final message = isNewAccount
+        ? (firstName.isNotEmpty
+              ? 'Welcome to TapItTrip, $firstName!'
+              : 'Welcome to TapItTrip!')
+        : (firstName.isNotEmpty
+              ? 'Welcome back, $firstName!'
+              : 'Welcome back!');
+    final colorScheme = Theme.of(context).colorScheme;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                Icons.check_circle_rounded,
+                size: 18,
+                color: colorScheme.secondary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    color: colorScheme.onPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: colorScheme.primary,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -56,6 +103,18 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         );
 
     if (success && mounted) {
+      _showWelcomeMessage(isNewAccount: true);
+      context.go('/trips');
+    }
+  }
+
+  Future<void> _signInWithSocial(String provider) async {
+    final success = await ref
+        .read(authProvider.notifier)
+        .signInWithSocialProvider(provider);
+
+    if (success && mounted) {
+      _showWelcomeMessage(isNewAccount: false);
       context.go('/trips');
     }
   }
@@ -380,9 +439,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           )
                         : const Text('Register'),
                   ),
+                  const SizedBox(height: 18),
+                  SocialAuthButtons(
+                    isLoading: isLoading,
+                    onGooglePressed: () => _signInWithSocial('google'),
+                    onFacebookPressed: () => _signInWithSocial('facebook'),
+                  ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
                         'Already have an account?',

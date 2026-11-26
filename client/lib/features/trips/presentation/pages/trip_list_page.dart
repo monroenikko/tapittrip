@@ -340,12 +340,13 @@ class _TripListPageState extends ConsumerState<TripListPage> {
     final strings = NavigationStrings(Localizations.localeOf(context));
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final tripsAsync = ref.watch(tripListProvider);
     final authState = ref.watch(authProvider);
+    if (authState is! Authenticated) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final tripsAsync = ref.watch(tripListProvider);
 
-    final userName = authState is Authenticated
-        ? authState.user.name
-        : 'Traveler';
+    final userName = authState.user.name;
 
     return Scaffold(
       appBar: AppBar(
@@ -468,9 +469,7 @@ class _TripListPageState extends ConsumerState<TripListPage> {
               }
             },
             itemBuilder: (context) {
-              final email = authState is Authenticated
-                  ? authState.user.email
-                  : '';
+              final email = authState.user.email;
               final initial = userName.isNotEmpty
                   ? userName[0].toUpperCase()
                   : 'T';
